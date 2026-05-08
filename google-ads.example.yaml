@@ -1,0 +1,6 @@
+developer_token: "TU_DEVELOPER_TOKEN"
+client_id: "TU_CLIENT_ID.apps.googleusercontent.com"
+client_secret: "TU_CLIENT_SECRET"
+refresh_token: "TU_REFRESH_TOKEN"
+login_customer_id: "TU_LOGIN_CUSTOMER_ID"
+use_proto_plus: true

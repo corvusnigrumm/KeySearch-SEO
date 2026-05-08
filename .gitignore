@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+google-ads.yaml
+archivo google-ads.yaml.txt
+google-ads.customer-id.txt
+client_secret_*.json
+outputs/
+dist/
+build/
+downloaded_files/
+*.exe
