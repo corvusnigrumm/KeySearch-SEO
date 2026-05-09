@@ -19,6 +19,7 @@ from config import (
     LANG,
     COUNTRY,
     USER_AGENTS,
+    USER_AGENT_PROFILES,
     QUESTION_MODIFIERS,
     SEARCH_SUFFIXES,
     ALPHABET_EXPANSION,
@@ -26,11 +27,21 @@ from config import (
     DELAY_BETWEEN_REQUESTS,
     CACHE_DIR,
     HTTP_CACHE_TTL_SECONDS,
+    AUTOCOMPLETE_DEEP_MIN_DELAY,
+    AUTOCOMPLETE_DEEP_MAX_DELAY,
+    AUTOCOMPLETE_PAA_RECURSIVE_DEPTH,
+    AUTOCOMPLETE_DEEP_EXPANSION_LIMIT,
+    SCRAPE_PROFILE,
 )
 from scraper.utils import dedupe_key, limpiar_texto
 from scraper.http_cache import get_text, make_key, set_text
 
 logger = logging.getLogger(__name__)
+
+
+def _perfil_extremo(search_context: dict | None = None) -> bool:
+    profile = (search_context or {}).get("scrape_profile", SCRAPE_PROFILE)
+    return str(profile).strip().lower() in {"extreme", "ultra", "max"}
 
 
 def _resolver_contexto(search_context: dict | None = None) -> dict:
@@ -45,25 +56,36 @@ def _fetch_suggestions(
     query: str,
     search_context: dict | None = None,
     session: requests.Session | None = None,
-) -> List[str]:
+) -> list:
     """
     Consulta el endpoint de autocompletado de Google y retorna la lista
-    de sugerencias.
+    de sugerencias con headers anti-detección.
     """
     contexto = _resolver_contexto(search_context)
+    lang = contexto["language_code"]
+    country = contexto["country_code"].upper()
+
     url = AUTOCOMPLETE_URL.format(
-        lang=contexto["language_code"],
+        lang=lang,
         country=contexto["country_code"],
         query=requests.utils.quote(query),
     )
 
+    # Usar un perfil completo para el autocompletado también
+    perfil = random.choice(USER_AGENT_PROFILES)
     headers = {
-        "User-Agent": random.choice(USER_AGENTS),
-        "Accept-Language": (
-            f"{contexto['language_code']}-{contexto['country_code'].upper()},"
-            f"{contexto['language_code']};q=0.9"
-        ),
+        "User-Agent": perfil["ua"],
+        "Accept": "*/*",
+        "Accept-Language": f"{lang}-{country},{lang};q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Referer": "https://www.google.com/",
+        "sec-ch-ua": perfil.get("sec-ch-ua", ""),
+        "sec-ch-ua-mobile": perfil.get("sec-ch-ua-mobile", "?0"),
+        "sec-ch-ua-platform": perfil.get("sec-ch-ua-platform", '"Windows"'),
     }
+    # Limpiar keys vacias (ej. Firefox no tiene sec-ch-ua)
+    headers = {k: v for k, v in headers.items() if v}
 
     try:
         session = session or requests.Session()
@@ -85,6 +107,7 @@ def _fetch_suggestions(
     except Exception as exc:
         logger.debug("Autocomplete fallo para %s: %s", query, exc)
         return []
+
 
 
 def get_autocomplete_suggestions(
@@ -132,6 +155,27 @@ def get_autocomplete_suggestions(
             _agregar(_fetch_suggestions(f"{keyword} {letra}", search_context, session=session))
             time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
 
+    # En modo extremo: rondas recursivas sobre las mejores sugerencias encontradas
+    if _perfil_extremo(search_context) and todas:
+        factor = 2
+        profundidad = max(1, int(AUTOCOMPLETE_PAA_RECURSIVE_DEPTH)) * factor
+        limite = max(1, int(AUTOCOMPLETE_DEEP_EXPANSION_LIMIT)) * factor
+        semillas = list(todas[:limite])
+        for _ in range(profundidad):
+            nuevas = []
+            for semilla in semillas:
+                sugerencias_extra = _fetch_suggestions(semilla, search_context, session=session)
+                for s in sugerencias_extra:
+                    key = dedupe_key(s)
+                    if key and key not in vistas:
+                        vistas.add(key)
+                        todas.append(s)
+                        nuevas.append(s)
+                time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
+            if not nuevas:
+                break
+            semillas = nuevas[:limite]
+
     return todas
 
 
@@ -175,6 +219,46 @@ def get_question_suggestions(keyword: str, search_context: dict | None = None) -
         "desventajas de ",
     ]
 
+    if _perfil_extremo(search_context):
+        prefijos_preguntas.extend([
+            "ejemplos de ",
+            "tipos de ",
+            "cuales son los ",
+            "historia de ",
+            "origen de ",
+            "caracteristicas de ",
+            "beneficios de ",
+            "riesgos de ",
+            "alternativas a ",
+            "precio de ",
+            "costo de ",
+            "donde comprar ",
+            "donde conseguir ",
+            "como arreglar ",
+            "como solucionar ",
+            "por que es importante ",
+            "es necesario ",
+            "es obligatorio ",
+            "es seguro ",
+            "es legal ",
+            "opiniones sobre ",
+            "reseñas de ",
+            "tutorial de ",
+            "guia de ",
+            "pasos para ",
+            "requisitos para ",
+            "mejores ",
+            "el mejor ",
+            "la mejor ",
+            "peores ",
+            "mitos sobre ",
+            "verdades sobre ",
+            "secretos de ",
+            "trucos para ",
+            "tips para ",
+        ])
+
+
     for prefijo in prefijos_preguntas:
         query = f"{prefijo}{keyword}"
         sugerencias = _fetch_suggestions(query, search_context, session=session)
@@ -183,6 +267,26 @@ def get_question_suggestions(keyword: str, search_context: dict | None = None) -
             if key and key not in vistas:
                 vistas.add(key)
                 preguntas.append(s)
-        time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
+        time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
+
+    # Expansion recursiva para no dejar preguntas sin descubrir
+    extra_factor = 2 if _perfil_extremo(search_context) else 1
+    profundidad = max(1, int(AUTOCOMPLETE_PAA_RECURSIVE_DEPTH)) * extra_factor
+    limite_semillas = max(1, int(AUTOCOMPLETE_DEEP_EXPANSION_LIMIT)) * extra_factor
+    semillas = list(preguntas[:limite_semillas])
+    for _ in range(profundidad):
+        nuevas = []
+        for semilla in semillas:
+            sugerencias = _fetch_suggestions(semilla, search_context, session=session)
+            for s in sugerencias:
+                key = dedupe_key(s)
+                if key and key not in vistas:
+                    vistas.add(key)
+                    preguntas.append(s)
+                    nuevas.append(s)
+            time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
+        if not nuevas:
+            break
+        semillas = nuevas[:limite_semillas]
 
     return preguntas

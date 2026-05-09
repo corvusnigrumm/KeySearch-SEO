@@ -23,6 +23,8 @@ def _runtime_base_dir() -> str:
 
 
 BASE_DIR = _runtime_base_dir()
+APP_NAME = "KeySearch Diarrea de Perro con Sangre sin Coagular"
+APP_VERSION = "6.0"
 
 
 def _read_optional_value(path: str) -> str:
@@ -31,6 +33,32 @@ def _read_optional_value(path: str) -> str:
 
     with open(path, "r", encoding="utf-8") as file_handle:
         return file_handle.read().strip()
+
+
+def _resolve_template_path() -> str:
+    """
+    Resuelve la plantilla Excel priorizando:
+    1) EXCEL_TEMPLATE_PATH en entorno
+    2) Junto al ejecutable/proyecto (BASE_DIR)
+    3) Recursos embebidos de PyInstaller (_MEIPASS)
+    """
+    env_value = os.getenv("EXCEL_TEMPLATE_PATH", "").strip()
+    if env_value and os.path.exists(env_value):
+        return env_value
+
+    filename = "PLANTILLA CON INFORME.xlsx"
+    candidate_base = os.path.join(BASE_DIR, filename)
+    if os.path.exists(candidate_base):
+        return candidate_base
+
+    meipass = getattr(sys, "_MEIPASS", "")
+    if meipass:
+        candidate_meipass = os.path.join(meipass, filename)
+        if os.path.exists(candidate_meipass):
+            return candidate_meipass
+
+    # Fallback final (mantiene comportamiento previo)
+    return candidate_base
 
 
 # Idioma y pais
@@ -84,21 +112,90 @@ COUNTRY_ALIASES = {
 }
 
 # HTTP / Requests
-HTTP_TIMEOUT = 15
-HTTP_MAX_RETRIES = 3
-HTTP_RETRY_DELAY = (1, 3)
-DELAY_BETWEEN_REQUESTS = (0.5, 1.5)
+HTTP_TIMEOUT = 20
+HTTP_MAX_RETRIES = 4
+HTTP_RETRY_DELAY = (3, 8)
+DELAY_BETWEEN_REQUESTS = (2.0, 5.0)
 HTTP_CACHE_TTL_SECONDS = int(os.getenv("HTTP_CACHE_TTL_SECONDS", "86400"))
 CACHE_DIR = os.path.join(BASE_DIR, "downloaded_files", "cache")
+SERP_MIN_REQUEST_INTERVAL = (
+    float(os.getenv("SERP_MIN_REQUEST_INTERVAL_MIN", "4.0")),
+    float(os.getenv("SERP_MIN_REQUEST_INTERVAL_MAX", "8.0")),
+)
+SERP_429_BREAKER_THRESHOLD = int(os.getenv("SERP_429_BREAKER_THRESHOLD", "2"))
+SERP_429_BREAKER_COOLDOWN = (
+    float(os.getenv("SERP_429_BREAKER_COOLDOWN_MIN", "120.0")),
+    float(os.getenv("SERP_429_BREAKER_COOLDOWN_MAX", "240.0")),
+)
 
+# Pool amplio de User-Agents reales con versiones modernas (2024-2025)
 USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    # Chrome Windows
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+    # Chrome macOS
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    # Chrome Linux
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    # Firefox Windows
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    # Firefox macOS
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.7; rv:138.0) Gecko/20100101 Firefox/138.0",
+    # Safari macOS
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+    # Edge Windows
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0",
+]
+
+# Perfiles de headers completos (cada UA tiene su sec-ch-ua correspondiente)
+USER_AGENT_PROFILES = [
+    {
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        "sec-ch-ua": '"Chromium";v="136", "Google Chrome";v="136", "Not-A.Brand";v="99"',
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-ch-ua-mobile": "?0",
+    },
+    {
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+        "sec-ch-ua": '"Chromium";v="135", "Google Chrome";v="135", "Not-A.Brand";v="99"',
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-ch-ua-mobile": "?0",
+    },
+    {
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        "sec-ch-ua": '"Chromium";v="136", "Google Chrome";v="136", "Not-A.Brand";v="99"',
+        "sec-ch-ua-platform": '"macOS"',
+        "sec-ch-ua-mobile": "?0",
+    },
+    {
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+        "sec-ch-ua": '"Chromium";v="135", "Google Chrome";v="135", "Not-A.Brand";v="99"',
+        "sec-ch-ua-platform": '"macOS"',
+        "sec-ch-ua-mobile": "?0",
+    },
+    {
+        "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        "sec-ch-ua": '"Chromium";v="136", "Google Chrome";v="136", "Not-A.Brand";v="99"',
+        "sec-ch-ua-platform": '"Linux"',
+        "sec-ch-ua-mobile": "?0",
+    },
+    {
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+        "sec-ch-ua": '"Chromium";v="136", "Microsoft Edge";v="136", "Not-A.Brand";v="99"',
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-ch-ua-mobile": "?0",
+    },
 ]
 
 # Autocomplete
@@ -133,28 +230,54 @@ SEARCH_SUFFIXES = [
 
 ALPHABET_EXPANSION = list("abcdefghijklmnopqrstuvwxyz")
 AUTOCOMPLETE_ALPHABET_LIMIT = int(os.getenv("AUTOCOMPLETE_ALPHABET_LIMIT", "26"))
+SCRAPE_PROFILE = os.getenv("SCRAPE_PROFILE", "normal").strip().lower()
+IS_EXTREME_PROFILE = SCRAPE_PROFILE in {"extreme", "ultra", "max"}
+
+AUTOCOMPLETE_DEEP_EXPANSION_LIMIT = int(
+    os.getenv("AUTOCOMPLETE_DEEP_EXPANSION_LIMIT", "200" if IS_EXTREME_PROFILE else "60")
+)
+AUTOCOMPLETE_DEEP_RELATED_ROUNDS = int(
+    os.getenv("AUTOCOMPLETE_DEEP_RELATED_ROUNDS", "8" if IS_EXTREME_PROFILE else "4")
+)
+AUTOCOMPLETE_DEEP_MIN_DELAY = float(
+    os.getenv("AUTOCOMPLETE_DEEP_MIN_DELAY", "0.4" if IS_EXTREME_PROFILE else "0.3")
+)
+AUTOCOMPLETE_DEEP_MAX_DELAY = float(
+    os.getenv("AUTOCOMPLETE_DEEP_MAX_DELAY", "1.0" if IS_EXTREME_PROFILE else "0.95")
+)
+AUTOCOMPLETE_PAA_RECURSIVE_DEPTH = int(
+    os.getenv("AUTOCOMPLETE_PAA_RECURSIVE_DEPTH", "5" if IS_EXTREME_PROFILE else "2")
+)
+AUTOCOMPLETE_RELATED_RECURSIVE_DEPTH = int(
+    os.getenv("AUTOCOMPLETE_RELATED_RECURSIVE_DEPTH", "5" if IS_EXTREME_PROFILE else "2")
+)
+AUTOCOMPLETE_DEEP_SEED_LIMIT = int(
+    os.getenv("AUTOCOMPLETE_DEEP_SEED_LIMIT", "400" if IS_EXTREME_PROFILE else "80")
+)
 
 # Google Search URL
+# IMPORTANTE: Mantener SERP_NUM_RESULTS bajo y SERP_PAGES en 1.
+# Con 6 variantes x 3 modos x 2 páginas = 36 requests → Google bloquea siempre.
+# Con 2 variantes x 1 modo x 1 página = 2 requests → nivel de bloqueo bajo.
 SERP_NUM_RESULTS = int(os.getenv("SERP_NUM_RESULTS", "10"))
-SERP_PAGES = int(os.getenv("SERP_PAGES", "2"))
+SERP_PAGES = int(os.getenv("SERP_PAGES", "3" if IS_EXTREME_PROFILE else "1"))
 GOOGLE_SEARCH_URL = "https://www.google.com/search?q={query}&hl={lang}&gl={country}&num={num}&start={start}"
 
-SERP_DEEP_MODE = int(os.getenv("SERP_DEEP_MODE", "1"))
-SERP_QUERY_VARIANT_LIMIT = int(os.getenv("SERP_QUERY_VARIANT_LIMIT", "6"))
+SERP_DEEP_MODE = int(os.getenv("SERP_DEEP_MODE", "1" if IS_EXTREME_PROFILE else "0"))
+SERP_QUERY_VARIANT_LIMIT = int(os.getenv("SERP_QUERY_VARIANT_LIMIT", "6" if IS_EXTREME_PROFILE else "2"))
 
+# Sin modos tbm (nws, vid) por defecto → multiplican las peticiones x3
 _raw_tbm = os.getenv("SERP_TBM_MODES", "").strip()
 _tbm_values = [item.strip() for item in _raw_tbm.split(",") if item.strip()] if _raw_tbm else []
 if SERP_DEEP_MODE:
-    SERP_TBM_MODES = [""] + (_tbm_values if _tbm_values else ["nws", "vid"])
+    SERP_TBM_MODES = [""] + (_tbm_values if _tbm_values else [])
 else:
-    SERP_TBM_MODES = [""] + _tbm_values if _tbm_values else [""]
+    SERP_TBM_MODES = [""]  # Solo búsqueda normal, sin news/video
+
 
 # Exportacion
 OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
-EXCEL_TEMPLATE_PATH = os.getenv(
-    "EXCEL_TEMPLATE_PATH",
-    os.path.join(BASE_DIR, "PLANTILLA CON INFORME.xlsx"),
-)
+EXCEL_TEMPLATE_PATH = _resolve_template_path()
 
 # Google Ads API
 GOOGLE_ADS_CONFIG_PATH = os.getenv(

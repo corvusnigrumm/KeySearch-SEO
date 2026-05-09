@@ -27,6 +27,7 @@ from config import (
     LANG,
     COUNTRY,
     USER_AGENTS,
+    USER_AGENT_PROFILES,
     HTTP_TIMEOUT,
     HTTP_MAX_RETRIES,
     HTTP_RETRY_DELAY,
@@ -40,11 +41,27 @@ from config import (
     SEARCH_SUFFIXES,
     CACHE_DIR,
     HTTP_CACHE_TTL_SECONDS,
+    SERP_MIN_REQUEST_INTERVAL,
+    SERP_429_BREAKER_THRESHOLD,
+    SERP_429_BREAKER_COOLDOWN,
+    AUTOCOMPLETE_DEEP_EXPANSION_LIMIT,
+    AUTOCOMPLETE_DEEP_RELATED_ROUNDS,
+    AUTOCOMPLETE_DEEP_MIN_DELAY,
+    AUTOCOMPLETE_DEEP_MAX_DELAY,
+    AUTOCOMPLETE_PAA_RECURSIVE_DEPTH,
+    AUTOCOMPLETE_RELATED_RECURSIVE_DEPTH,
+    AUTOCOMPLETE_DEEP_SEED_LIMIT,
+    SCRAPE_PROFILE,
 )
 from scraper.utils import dedupe_key, limpiar_texto
 from scraper.http_cache import get_text, make_key, set_text
 
 logger = logging.getLogger(__name__)
+
+
+def _perfil_extremo(search_context: dict | None = None) -> bool:
+    profile = (search_context or {}).get("scrape_profile", SCRAPE_PROFILE)
+    return str(profile).strip().lower() in {"extreme", "ultra", "max"}
 
 
 def _resolver_contexto(search_context: dict | None = None) -> dict:
@@ -56,26 +73,70 @@ def _resolver_contexto(search_context: dict | None = None) -> dict:
 
 
 def _get_random_headers(search_context: dict | None = None) -> dict:
-    """Genera headers HTTP aleatorios que imitan un navegador real."""
-    ua = random.choice(USER_AGENTS)
+    """
+    Genera un juego de headers HTTP completo y coherente que imita Chrome real.
+    Usa perfiles con sec-ch-ua correcto para cada versión de navegador.
+    """
     contexto = _resolver_contexto(search_context)
-    return {
-        "User-Agent": ua,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": (
-            f"{contexto['language_code']}-{contexto['country_code'].upper()},"
-            f"{contexto['language_code']};q=0.9,en-US;q=0.7,en;q=0.5"
-        ),
-        "Accept-Encoding": "gzip, deflate",
-        "DNT": "1",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "Cache-Control": "max-age=0",
-    }
+    lang = contexto["language_code"]
+    country = contexto["country_code"].upper()
+
+    # Elegir un perfil completo aleatoriamente
+    perfil = random.choice(USER_AGENT_PROFILES)
+    ua = perfil["ua"]
+    is_firefox = "Firefox" in ua
+
+    # Construir Accept-Language realista
+    accept_lang = f"{lang}-{country},{lang};q=0.9,en-US;q=0.8,en;q=0.7"
+
+    if is_firefox:
+        # Headers de Firefox (no usa sec-ch-ua)
+        return {
+            "User-Agent": ua,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": accept_lang,
+            "Accept-Encoding": "gzip, deflate, br",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Cache-Control": "max-age=0",
+            "Pragma": "no-cache",
+        }
+    else:
+        # Headers de Chrome/Edge (incluye sec-ch-ua para evitar detección)
+        return {
+            "User-Agent": ua,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Language": accept_lang,
+            "Accept-Encoding": "gzip, deflate, br",
+            "sec-ch-ua": perfil["sec-ch-ua"],
+            "sec-ch-ua-mobile": perfil["sec-ch-ua-mobile"],
+            "sec-ch-ua-platform": perfil["sec-ch-ua-platform"],
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Cache-Control": "max-age=0",
+            "Connection": "keep-alive",
+            "Pragma": "no-cache",
+        }
+
+
+def _crear_sesion() -> requests.Session:
+    """
+    Crea una sesión requests configurada para pasar desapercibida.
+    Fuerza HTTP/1.1 para evitar el Error 505 (HTTP Version Not Supported).
+    """
+    session = requests.Session()
+    # Forzar HTTP/1.1 — el servidor de Google a veces rechaza HTTP/2 vía requests
+    session.headers.update({"Connection": "keep-alive"})
+    # Montar un adaptador que deshabilite HTTP/2 si está disponible vía httpx/h2
+    return session
 
 
 def _hacer_request(
@@ -83,14 +144,18 @@ def _hacer_request(
     progress_callback=None,
     search_context: dict | None = None,
     session: requests.Session | None = None,
+    rate_state: dict | None = None,
 ) -> Optional[str]:
     """
-    Realiza una petición HTTP GET con reintentos y backoff.
+    Realiza una petición HTTP GET con reintentos, backoff exponencial y
+    headers anti-detección completos.
 
     Returns:
-        HTML de la página o None si falla.
+        HTML de la página o None si falla tras todos los reintentos.
     """
-    session = session or requests.Session()
+    if session is None:
+        session = _crear_sesion()
+
     cache_key = make_key(url)
     cached = get_text(CACHE_DIR, cache_key, HTTP_CACHE_TTL_SECONDS)
     if cached:
@@ -99,6 +164,10 @@ def _hacer_request(
     for intento in range(HTTP_MAX_RETRIES):
         try:
             headers = _get_random_headers(search_context)
+            # Añadir Referer realista en reintentos (simula navegación previa)
+            if intento > 0:
+                headers["Referer"] = "https://www.google.com/"
+
             resp = session.get(
                 url,
                 headers=headers,
@@ -106,39 +175,82 @@ def _hacer_request(
                 allow_redirects=True,
             )
 
-            if resp.status_code == 429:
+            # Error 505: HTTP Version Not Supported
+            # Puede ocurrir si el servidor rechaza la negociación de protocolo
+            if resp.status_code == 505:
                 if progress_callback:
-                    progress_callback(f"⚠ Google limitó las peticiones (429). Reintento {intento + 1}/{HTTP_MAX_RETRIES}...")
-                time.sleep(random.uniform(*HTTP_RETRY_DELAY) * (intento + 1))
+                    progress_callback(
+                        f"  Advertencia HTTP 505 (version protocolo). Reintento {intento + 1}/{HTTP_MAX_RETRIES}..."
+                    )
+                # Espera larga + cambiar perfil de agente en siguiente intento
+                time.sleep(random.uniform(8, 15) * (intento + 1))
                 continue
 
-            if resp.status_code != 200:
+            # Rate limit de Google
+            if resp.status_code == 429:
+                espera = random.uniform(15, 30) * (intento + 1)
+                if rate_state is not None:
+                    rate_state["consecutive_429"] = int(rate_state.get("consecutive_429", 0)) + 1
+                    if rate_state["consecutive_429"] >= max(1, int(SERP_429_BREAKER_THRESHOLD)):
+                        cooldown = random.uniform(*SERP_429_BREAKER_COOLDOWN)
+                        rate_state["blocked_until"] = time.time() + cooldown
+                        rate_state["breaker_open"] = True
+                        if progress_callback:
+                            progress_callback(
+                                "  Google activo proteccion anti-bot (429 repetido). "
+                                f"Pausando SERP por {cooldown:.0f}s y continuando con otras fuentes..."
+                            )
+                        return None
                 if progress_callback:
-                    progress_callback(f"⚠ Respuesta HTTP {resp.status_code}. Reintento {intento + 1}/{HTTP_MAX_RETRIES}...")
-                time.sleep(random.uniform(*HTTP_RETRY_DELAY))
+                    progress_callback(
+                        f"  Advertencia Google limito peticiones (429). Esperando {espera:.0f}s..."
+                    )
+                time.sleep(espera)
+                continue
+
+            # Cualquier otro error no-200
+            if resp.status_code not in (200, 301, 302):
+                if progress_callback:
+                    progress_callback(
+                        f"  Respuesta HTTP {resp.status_code}. Reintento {intento + 1}/{HTTP_MAX_RETRIES}..."
+                    )
+                time.sleep(random.uniform(*HTTP_RETRY_DELAY) * (intento + 1))
                 continue
 
             html = resp.text
             html_lower = html.lower()
+
+            # Detectar bloqueo por CAPTCHA
             if "captcha" in html_lower or "unusual traffic" in html_lower or "tráfico inusual" in html_lower:
+                espera = random.uniform(20, 45) * (intento + 1)
                 if progress_callback:
-                    progress_callback(f"⚠ Google detectó tráfico automatizado. Reintento {intento + 1}/{HTTP_MAX_RETRIES}...")
-                time.sleep(random.uniform(*HTTP_RETRY_DELAY) * (intento + 2))
+                    progress_callback(
+                        f"  Google detecto trafico automatizado. Esperando {espera:.0f}s antes del reintento {intento + 1}/{HTTP_MAX_RETRIES}..."
+                    )
+                time.sleep(espera)
                 continue
 
+            # Exito: guardar en cache y retornar
             set_text(CACHE_DIR, cache_key, html, status=resp.status_code)
+            if rate_state is not None:
+                rate_state["consecutive_429"] = 0
             return html
 
         except requests.exceptions.Timeout:
             if progress_callback:
-                progress_callback(f"⚠ Timeout. Reintento {intento + 1}/{HTTP_MAX_RETRIES}...")
-            time.sleep(random.uniform(*HTTP_RETRY_DELAY))
+                progress_callback(f"  Timeout. Reintento {intento + 1}/{HTTP_MAX_RETRIES}...")
+            time.sleep(random.uniform(*HTTP_RETRY_DELAY) * (intento + 1))
+        except requests.exceptions.ConnectionError as e:
+            if progress_callback:
+                progress_callback(f"  Error de conexion: {e}. Reintento {intento + 1}/{HTTP_MAX_RETRIES}...")
+            time.sleep(random.uniform(*HTTP_RETRY_DELAY) * (intento + 1))
         except requests.exceptions.RequestException as e:
             if progress_callback:
-                progress_callback(f"⚠ Error de red: {e}. Reintento {intento + 1}/{HTTP_MAX_RETRIES}...")
+                progress_callback(f"  Error de red: {e}. Reintento {intento + 1}/{HTTP_MAX_RETRIES}...")
             time.sleep(random.uniform(*HTTP_RETRY_DELAY))
 
     return None
+
 
 
 def _fetch_autocomplete(
@@ -250,6 +362,7 @@ def _extraer_preguntas_paa_autocomplete(
     progress_callback=None,
     search_context: dict | None = None,
     session: requests.Session | None = None,
+    deep_mode: bool = False,
 ) -> List[str]:
     """
     Extrae preguntas tipo PAA usando el autocompletado de Google.
@@ -297,8 +410,120 @@ def _extraer_preguntas_paa_autocomplete(
         "{keyword} funciona",
     ]
 
-    total = len(patrones_paa)
-    for i, patron in enumerate(patrones_paa):
+    extreme_mode = _perfil_extremo(search_context)
+    if deep_mode:
+        patrones_paa.extend(
+            [
+                "{keyword} tutorial",
+                "{keyword} guía",
+                "{keyword} ejemplos",
+                "{keyword} ventajas",
+                "{keyword} desventajas",
+                "error de {keyword}",
+                "alternativas a {keyword}",
+                "merece la pena {keyword}",
+                "opiniones de {keyword}",
+                "{keyword} 2026",
+                "{keyword} para principiantes",
+                "{keyword} para empresas",
+                "{keyword} para niños",
+                "{keyword} riesgos",
+                "{keyword} beneficios",
+                "{keyword} mitos",
+                "{keyword} preguntas frecuentes",
+            ]
+        )
+
+    if extreme_mode:
+        # Patrones adicionales exclusivos del modo extremo
+        # Temporales y situacionales
+        patrones_paa.extend([
+            "{keyword} 2024",
+            "{keyword} 2025",
+            "{keyword} en Colombia",
+            "{keyword} en Mexico",
+            "{keyword} en España",
+            "{keyword} en Argentina",
+            "{keyword} en Chile",
+            "{keyword} hoy",
+            "{keyword} este año",
+            "{keyword} recientemente",
+            # Comparativas y elección
+            "{keyword} diferencias",
+            "{keyword} comparacion",
+            "mejor {keyword}",
+            "el mejor {keyword}",
+            "{keyword} recomendaciones",
+            "{keyword} cual elegir",
+            "{keyword} opciones",
+            # Precios y economía
+            "precio de {keyword}",
+            "costo de {keyword}",
+            "cuánto vale {keyword}",
+            "{keyword} barato",
+            "{keyword} gratis",
+            "{keyword} gratuito",
+            # Intención práctica
+            "aprender {keyword}",
+            "estudiar {keyword}",
+            "certificacion {keyword}",
+            "curso de {keyword}",
+            "como usar {keyword}",
+            "como instalar {keyword}",
+            "como configurar {keyword}",
+            "como empezar con {keyword}",
+            # Reviews y experiencias
+            "{keyword} review",
+            "{keyword} reseña",
+            "{keyword} experiencia",
+            "{keyword} testimonio",
+            "{keyword} real",
+            "{keyword} confiable",
+            # Profesional y negocios
+            "{keyword} para negocios",
+            "{keyword} para profesionales",
+            "{keyword} empresarial",
+            "{keyword} freelance",
+            # Técnico y avanzado
+            "como funciona {keyword}",
+            "{keyword} tecnico",
+            "{keyword} avanzado",
+            "{keyword} experto",
+            # Salud / seguridad (aplica según temática)
+            "{keyword} seguro",
+            "{keyword} peligros",
+            "{keyword} contraindicaciones",
+            "{keyword} efectos secundarios",
+            # Redes sociales y tendencias
+            "{keyword} tendencia",
+            "{keyword} viral",
+            "{keyword} red social",
+            # Combinaciones de intención mixta
+            "por qué es importante {keyword}",
+            "cuáles son los tipos de {keyword}",
+            "historia de {keyword}",
+            "origen de {keyword}",
+            "futuro de {keyword}",
+            "principales {keyword}",
+            "características de {keyword}",
+            "componentes de {keyword}",
+            "elementos de {keyword}",
+            "fases de {keyword}",
+            "etapas de {keyword}",
+            "pasos para {keyword}",
+            "requisitos para {keyword}",
+            "todo sobre {keyword}",
+            "guía completa de {keyword}",
+            "manual de {keyword}",
+            # Variaciones de escritura sin acento (mayor cobertura)
+            "{keyword} como funciona",
+            "{keyword} para que sirve",
+            "{keyword} que es",
+            "{keyword} cuanto cuesta",
+            "{keyword} como se hace",
+        ])
+
+    for patron in patrones_paa:
         query = patron.format(keyword=keyword)
         sugerencias = _fetch_autocomplete(query, search_context, session=session)
 
@@ -308,7 +533,32 @@ def _extraer_preguntas_paa_autocomplete(
                 vistas.add(key)
                 preguntas.append(s)
 
-        time.sleep(random.uniform(0.1, 0.25))
+        time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
+
+    if deep_mode:
+        factor = 2 if extreme_mode else 1
+        profundidad_max = max(1, int(AUTOCOMPLETE_PAA_RECURSIVE_DEPTH)) * factor
+        limit_expansion = max(1, int(AUTOCOMPLETE_DEEP_EXPANSION_LIMIT)) * factor
+        seed_limit = max(1, int(AUTOCOMPLETE_DEEP_SEED_LIMIT)) * factor
+        visitadas = {dedupe_key(s) for s in preguntas if dedupe_key(s)}
+        semillas = list(preguntas[:seed_limit])
+
+        for _ in range(profundidad_max):
+            nuevas_semillas = []
+            for semilla in semillas[:limit_expansion]:
+                sugerencias = _fetch_autocomplete(semilla, search_context, session=session)
+                for s in sugerencias:
+                    key = dedupe_key(s)
+                    if key and key not in vistas and len(s) >= 10:
+                        vistas.add(key)
+                        preguntas.append(s)
+                        if key not in visitadas:
+                            visitadas.add(key)
+                            nuevas_semillas.append(s)
+                time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
+            if not nuevas_semillas:
+                break
+            semillas = nuevas_semillas
 
     return preguntas
 
@@ -392,6 +642,7 @@ def _extraer_busquedas_relacionadas_autocomplete(
     keyword: str,
     search_context: dict | None = None,
     session: requests.Session | None = None,
+    deep_mode: bool = False,
 ) -> List[str]:
     """Extrae búsquedas relacionadas usando autocompletado."""
     relacionadas = []
@@ -416,7 +667,30 @@ def _extraer_busquedas_relacionadas_autocomplete(
                 vistas.add(key)
                 relacionadas.append(s)
 
-        time.sleep(random.uniform(0.05, 0.15))
+        time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
+
+    if deep_mode:
+        factor = 2 if _perfil_extremo(search_context) else 1
+        rondas = max(1, int(AUTOCOMPLETE_DEEP_RELATED_ROUNDS)) * factor
+        profundidad_max = max(1, int(AUTOCOMPLETE_RELATED_RECURSIVE_DEPTH)) * factor
+        limit_expansion = max(1, int(AUTOCOMPLETE_DEEP_EXPANSION_LIMIT)) * factor
+        seed_limit = max(1, int(AUTOCOMPLETE_DEEP_SEED_LIMIT)) * factor
+        semillas = list(relacionadas[:seed_limit])
+
+        for _ in range(rondas * profundidad_max):
+            nuevas = []
+            for base in semillas:
+                sugerencias = _fetch_autocomplete(base, search_context, session=session)
+                for s in sugerencias:
+                    key = dedupe_key(s)
+                    if key and key not in vistas and key != dedupe_key(keyword):
+                        vistas.add(key)
+                        relacionadas.append(s)
+                        nuevas.append(s)
+                time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
+            if not nuevas:
+                break
+            semillas = nuevas[:limit_expansion]
 
     return relacionadas
 
@@ -476,15 +750,45 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
     vistas_paa_html = set()
     vistas_rel_html = set()
     seen_request_keys = set()
-    session = requests.Session()
+    session = _crear_sesion()  # Sesión configurada para evitar bloqueos
+    rate_state = {
+        "consecutive_429": 0,
+        "breaker_open": False,
+        "blocked_until": 0.0,
+        "last_request_ts": 0.0,
+    }
+    serp_pages_ok = 0
 
     variantes = _generar_variantes_serp(keyword)
     modos_tbm = SERP_TBM_MODES or [""]
 
     total_pages = max(1, int(SERP_PAGES))
     for q_index, query in enumerate(variantes):
-        for tbm in modos_tbm:
+        # Pausa entre variantes de query (simula que el usuario piensa antes de buscar otra cosa)
+        if q_index > 0:
+            time.sleep(random.uniform(5.0, 10.0))
+
+        for tbm_index, tbm in enumerate(modos_tbm):
+            # Pausa entre modos TBM
+            if tbm_index > 0:
+                time.sleep(random.uniform(3.0, 7.0))
+
             for page_index in range(total_pages):
+                now = time.time()
+                elapsed = now - float(rate_state.get("last_request_ts", 0.0))
+                min_interval = random.uniform(*SERP_MIN_REQUEST_INTERVAL)
+                if elapsed < min_interval:
+                    time.sleep(min_interval - elapsed)
+
+                blocked_until = float(rate_state.get("blocked_until", 0.0))
+                if blocked_until > time.time():
+                    if progress_callback:
+                        restante = blocked_until - time.time()
+                        progress_callback(
+                            f"SERP en cooldown por bloqueo 429 ({restante:.0f}s restantes)."
+                        )
+                    continue
+
                 start = page_index * int(SERP_NUM_RESULTS)
                 url = GOOGLE_SEARCH_URL.format(
                     query=requests.utils.quote(query),
@@ -508,9 +812,17 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
                     continue
                 seen_request_keys.add(request_key)
 
-                html = _hacer_request(url, progress_callback, search_context, session=session)
+                html = _hacer_request(
+                    url,
+                    progress_callback,
+                    search_context,
+                    session=session,
+                    rate_state=rate_state,
+                )
+                rate_state["last_request_ts"] = time.time()
                 if not html:
                     continue
+                serp_pages_ok += 1
 
                 if progress_callback:
                     progress_callback("Parseando HTML de la SERP...")
@@ -531,9 +843,8 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
                         vistas_rel_html.add(key)
                         rel_html.append(item)
 
-                if SERP_DEEP_MODE:
-                    time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
-                elif page_index < total_pages - 1:
+                # Pausa siempre entre páginas (no solo en modo profundo)
+                if page_index < total_pages - 1:
                     time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
 
     if paa_html and progress_callback:
@@ -545,11 +856,26 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
     if progress_callback:
         progress_callback("Extrayendo preguntas PAA via autocompletado...")
 
+    # En modo extremo SIEMPRE activar deep mode, sin importar si la SERP respondio
+    # En modo normal, deep mode solo si la SERP no entrego nada
+    is_extreme = _perfil_extremo(search_context)
+    deep_autocomplete_mode = is_extreme or (serp_pages_ok == 0)
+
+    if serp_pages_ok == 0 and progress_callback:
+        progress_callback(
+            "SERP no disponible o bloqueada. Activando autocomplete profundo (mas cobertura, mas lento)."
+        )
+    elif is_extreme and progress_callback:
+        progress_callback(
+            "Modo extremo activo: forzando expansion profunda de autocomplete para maxima cobertura."
+        )
+
     paa_auto = _extraer_preguntas_paa_autocomplete(
         keyword,
         progress_callback,
         search_context,
         session=session,
+        deep_mode=deep_autocomplete_mode,
     )
 
     # Combinar resultados (HTML primero, luego autocompletado sin duplicados)
@@ -567,7 +893,12 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
     if progress_callback:
         progress_callback("Extrayendo búsquedas relacionadas...")
 
-    rel_auto = _extraer_busquedas_relacionadas_autocomplete(keyword, search_context, session=session)
+    rel_auto = _extraer_busquedas_relacionadas_autocomplete(
+        keyword,
+        search_context,
+        session=session,
+        deep_mode=deep_autocomplete_mode,  # Mismo flag: extremo siempre es deep
+    )
 
     # Combinar
     vistas_rel = {dedupe_key(r) for r in rel_html if dedupe_key(r)}

@@ -11,7 +11,8 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from config import EXCEL_TEMPLATE_PATH, OUTPUT_DIR
+from config import APP_NAME, APP_VERSION, EXCEL_TEMPLATE_PATH, OUTPUT_DIR
+from scraper.ai_filter import generar_bloques_editoriales
 from scraper.utils import generar_nombre_archivo
 from scraper.volume_estimator import ordenar_por_volumen
 
@@ -149,7 +150,8 @@ def _estado_google_ads(datos: dict) -> str:
 
 def _crear_hoja_datos(wb: Workbook, titulo: str, items: List[str], volumenes: dict, encabezado_item: str, header_fill=FILL_HEADER, language_code: str = "es"):
     """Crea una hoja con trazabilidad real de cada termino."""
-    if titulo in wb.sheetnames:
+    sheet_exists = titulo in wb.sheetnames
+    if sheet_exists:
         ws = wb[titulo]
         for row_idx in range(2, ws.max_row + 1):
             for col_idx in range(1, 20):
@@ -188,6 +190,12 @@ def _crear_hoja_datos(wb: Workbook, titulo: str, items: List[str], volumenes: di
             cell.alignment = ALIGN_CENTER
             cell.border = BORDER
             ws.column_dimensions[get_column_letter(col_idx)].width = ancho
+    else:
+        # Si la hoja ya existe (plantilla), solo nos aseguramos de que los encabezados coincidan
+        # pero no alteramos el diseño ni los anchos de columna originales.
+        for col_idx, encabezado in enumerate(encabezados, 1):
+            if ws.cell(row=1, column=col_idx).value is None:
+                ws.cell(row=1, column=col_idx, value=encabezado)
 
     estilos_base = {col: ws.cell(row=2, column=col) for col in range(1, 20)}
 
@@ -228,23 +236,25 @@ def _crear_hoja_datos(wb: Workbook, titulo: str, items: List[str], volumenes: di
             cell = ws.cell(row=row_idx, column=col_idx, value=value)
             base = estilos_base.get(col_idx)
             if base is not None and base.has_style:
-                cell._style = base._style
-                cell.number_format = base.number_format
-                cell.alignment = base.alignment
-                cell.border = base.border
-                cell.fill = base.fill
-                cell.font = base.font
+                try:
+                    # Intentamos copiar el estilo completo si es posible
+                    cell._style = base._style
+                except Exception:
+                    # Si falla, al menos mantenemos el formato basico si no es nuevo
+                    pass
 
-        for col_idx in range(1, 20):
-            cell = ws.cell(row=row_idx, column=col_idx)
-            if col_idx == 15:
-                cell.font = _font_score(score)
-                cell.fill = _fill_score(score)
-            elif col_idx == 16:
-                cell.font = _font_score(score)
-                cell.fill = row_fill
-            else:
-                cell.fill = row_fill
+        # Solo aplicamos recoloreo custom cuando NO trabajamos sobre la plantilla.
+        if not sheet_exists:
+            for col_idx in range(1, 20):
+                cell = ws.cell(row=row_idx, column=col_idx)
+                if col_idx == 15:
+                    cell.font = _font_score(score)
+                    cell.fill = _fill_score(score)
+                elif col_idx == 16:
+                    cell.font = _font_score(score)
+                    cell.fill = row_fill
+                else:
+                    cell.fill = row_fill
 
     ws.auto_filter.ref = ws.dimensions
     ws.freeze_panes = "A2"
@@ -264,89 +274,112 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
 
     if "Resumen" in wb.sheetnames:
         ws = wb["Resumen"]
-        for row_idx in range(1, ws.max_row + 1):
-            for col_idx in range(1, 5):
-                cell = ws.cell(row=row_idx, column=col_idx)
-                if isinstance(cell.value, str) and cell.value.strip():
-                    continue
-                cell.value = None
-
+        
+        # Escribir el título en A1 si existe la celda (manteniendo el estilo)
         ws.cell(row=1, column=1, value=f"Analisis de keyword: {keyword}")
-        ws.cell(row=2, column=1, value="Reporte generado por KeySearch V 4.0")
 
-        row = 6
-        stats = [
-            ("Keyword analizada", keyword, None),
-            ("Pais analizado", _geo_label(datos.get("country_name", ""), datos.get("country_code", "")), None),
-            ("Codigo de pais", datos.get("country_code", "-").upper(), None),
-            ("Idioma", _idioma_label(datos.get("language_code", "es")), None),
-            ("Categoria", datos.get("category_name", "-"), None),
-            ("Subcategoria", datos.get("subcategory_name", "-"), None),
-            ("Modo del reporte", _modo_reporte(datos), None),
-            ("Estado Google Ads", _estado_google_ads(datos), None),
-            ("Sugerencias de autocompletado", len(sugerencias), None),
-            ("Preguntas PAA (SERP)", len(preguntas), None),
-            ("Preguntas (Autocompletado)", len(preguntas_ac), None),
-            ("Busquedas relacionadas", len(relacionadas), None),
-            ("Keywords con Google Ads", con_ads, None),
-            ("Keywords con Google Trends", con_trends, None),
-        ]
+        # Mapeo de estadísticas según la estructura de la plantilla (Filas 14-27)
+        # Solo actualizamos los valores en la columna B para no tocar las etiquetas de la columna A
+        mapping = {
+            14: keyword,
+            15: _geo_label(datos.get("country_name", ""), datos.get("country_code", "")),
+            16: datos.get("country_code", "-").upper(),
+            17: _idioma_label(datos.get("language_code", "es")),
+            18: datos.get("category_name", "-"),
+            19: datos.get("subcategory_name", "-"),
+            20: _modo_reporte(datos),
+            21: _estado_google_ads(datos),
+            22: len(sugerencias),
+            23: len(preguntas),
+            24: len(preguntas_ac),
+            25: len(relacionadas),
+            26: con_ads,
+            27: con_trends,
+            28: total
+        }
 
-        for label, value, _row_fill in stats:
-            row += 1
-            ws.cell(row=row, column=1, value=label)
-            ws.cell(row=row, column=2, value=value)
+        for row_num, value in mapping.items():
+            ws.cell(row=row_num, column=2, value=value)
 
-        row += 1
-        ws.cell(row=row, column=1, value="TOTAL DE RESULTADOS")
-        ws.cell(row=row, column=2, value=total)
-
-        row += 3
-        ws.cell(row=row, column=1, value="DISTRIBUCION POR PRIORIDAD")
-
+        # Distribución por prioridad (Filas 33-37 en Columna B)
         categorias_orden = ["Muy alta", "Alta", "Media", "Baja", "Muy baja"]
         conteo = {categoria: 0 for categoria in categorias_orden}
         for metrica in volumenes.values():
             conteo[_categorizar_score_texto(metrica.get("score", 0))] += 1
+        
+        priority_rows = {
+            "Muy alta": 33,
+            "Alta": 34,
+            "Media": 35,
+            "Baja": 36,
+            "Muy baja": 37
+        }
 
-        row += 1
-        ws.cell(row=row, column=1, value="Prioridad")
-        ws.cell(row=row, column=2, value="Cantidad")
+        for cat in categorias_orden:
+            row_num = priority_rows[cat]
+            ws.cell(row=row_num, column=2, value=conteo[cat])
 
-        for categoria in categorias_orden:
-            row += 1
-            ws.cell(row=row, column=1, value=categoria)
-            ws.cell(row=row, column=2, value=conteo[categoria])
+        # Bloques editoriales con IA (Groq/Llama) basados en Top 5 por fuente.
+        top_autocomplete = ordenar_por_volumen(datos.get("sugerencias", []), volumenes)[:5]
+        top_paa = ordenar_por_volumen(datos.get("preguntas_paa", []), volumenes)[:5]
+        top_preguntas_ac = ordenar_por_volumen(datos.get("preguntas_autocompletado", []), volumenes)[:5]
+        top_relacionadas = ordenar_por_volumen(datos.get("busquedas_relacionadas", []), volumenes)[:5]
 
-        row += 3
-        ws.cell(row=row, column=1, value="LECTURA EJECUTIVA")
-        row += 1
-        ws.cell(
-            row=row,
-            column=1,
-            value=(
-                "Este archivo sirve para priorizar contenido, detectar preguntas reales del mercado y ordenar "
-                "la investigacion SEO. Cuando Google Ads no esta disponible, la lectura correcta es editorial: "
-                "Muy alta/Alta indica temas que conviene validar primero; Media amplia cobertura; Baja/Muy baja "
-                "apunta a nichos o temas secundarios. No usar este reporte para estimar ingresos, presupuestos "
-                "de pauta o forecasting financiero."
-            ),
+        def _score(item: str):
+            if not item:
+                return ""
+            value = volumenes.get(item, {}).get("score")
+            if value is None:
+                return ""
+            try:
+                return round(float(value), 1)
+            except Exception:
+                return value
+
+        # Tabla TOP 5 en Resumen (filas 41-45). Solo actualizamos valores.
+        # A:B Autocompletado | C:D PAA | E:F Preguntas AC | G:H slot extra | I:J Relacionadas
+        for idx in range(5):
+            row = 41 + idx
+            auto_item = top_autocomplete[idx] if idx < len(top_autocomplete) else ""
+            paa_item = top_paa[idx] if idx < len(top_paa) else ""
+            preg_item = top_preguntas_ac[idx] if idx < len(top_preguntas_ac) else ""
+            rel_item = top_relacionadas[idx] if idx < len(top_relacionadas) else ""
+
+            ws.cell(row=row, column=1, value=auto_item)
+            ws.cell(row=row, column=2, value=_score(auto_item))
+            ws.cell(row=row, column=3, value=paa_item)
+            ws.cell(row=row, column=4, value=_score(paa_item))
+            ws.cell(row=row, column=5, value=preg_item)
+            ws.cell(row=row, column=6, value=_score(preg_item))
+            ws.cell(row=row, column=7, value="")  # limpiamos arrastre viejo
+            ws.cell(row=row, column=8, value="")
+            ws.cell(row=row, column=9, value=rel_item)
+            ws.cell(row=row, column=10, value=_score(rel_item))
+
+        bloques = generar_bloques_editoriales(
+            keyword_base=keyword,
+            pais=datos.get("country_name", ""),
+            top_autocomplete=top_autocomplete,
+            top_paa=top_paa,
+            top_preguntas_autocomplete=top_preguntas_ac,
+            top_relacionadas=top_relacionadas,
         )
 
-        row += 6
-        ws.cell(row=row, column=1, value="METODOLOGIA")
-        row += 1
-        ws.cell(
-            row=row,
-            column=1,
-            value=(
-                "Este archivo no estima busquedas mensuales exactas ni muestra rangos inventados. "
-                "Solo conserva datos trazables de Google: la fuente donde se detecto cada termino, "
-                "su posicion dentro de esa fuente y, cuando esta disponible, metricas historicas reales "
-                "de Google Ads y el interes relativo de Google Trends. El score sirve solo para priorizar "
-                "temas dentro del reporte."
-            ),
-        )
+        ws.cell(row=48, column=1, value=bloques["ejes"][0])
+        ws.cell(row=49, column=1, value=bloques["ejes"][1])
+        ws.cell(row=50, column=1, value=bloques["ejes"][2])
+        ws.cell(row=51, column=1, value=bloques["ejes"][3])
+        ws.cell(row=55, column=1, value=bloques["propuesta"])
+        ws.cell(row=57, column=1, value=bloques["enfoque"])
+        ws.cell(row=59, column=1, value=bloques["titulos"][0])
+        ws.cell(row=60, column=1, value=bloques["titulos"][1])
+        ws.cell(row=61, column=1, value=bloques["titulos"][2])
+        ws.cell(row=62, column=1, value=bloques["titulos"][3])
+        ws.cell(row=63, column=1, value=bloques["titulos"][4])
+        ws.cell(row=65, column=1, value=bloques["subtitulos"][0])
+        ws.cell(row=66, column=1, value=bloques["subtitulos"][1])
+        ws.cell(row=67, column=1, value=bloques["subtitulos"][2])
+        ws.cell(row=68, column=1, value=bloques["subtitulos"][3])
 
         return ws
 
@@ -357,7 +390,14 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
     ws.row_dimensions[1].height = 35
 
     ws.merge_cells("A2:D2")
-    _aplicar_celda(ws, 2, 1, "Reporte generado por KeySearch V 4.0", font=FONT_SUBTITLE, alignment=ALIGN_LEFT)
+    _aplicar_celda(
+        ws,
+        2,
+        1,
+        f"Reporte generado por {APP_NAME} V {APP_VERSION}",
+        font=FONT_SUBTITLE,
+        alignment=ALIGN_LEFT,
+    )
     ws.row_dimensions[2].height = 20
 
     for col in range(1, 5):

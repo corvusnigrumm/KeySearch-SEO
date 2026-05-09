@@ -9,3 +9,4 @@ dist/
 build/
 downloaded_files/
 *.exe
+scratch/

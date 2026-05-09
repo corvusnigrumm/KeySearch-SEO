@@ -26,8 +26,13 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.text import Text
 
-from config import GROQ_API_KEY, normalize_country
+from config import APP_NAME, APP_VERSION, GROQ_API_KEY, SCRAPE_PROFILE, normalize_country
 from scraper.categorizer import auto_categorizar
+
+PROFILE_DISPLAY_LABELS = {
+    "normal": "Normal Precoz Eyaculation",
+    "extreme": "Sex Extreme Toro",
+}
 
 console = Console()
 _SCRAPERS = None
@@ -72,18 +77,23 @@ def _importar_scrapers():
 def mostrar_banner():
     """Muestra el banner de bienvenida."""
     banner = Text()
-    banner.append("KeySearch", style="bold cyan")
+    banner.append(APP_NAME, style="bold cyan")
     banner.append("\n")
     banner.append("   Descubre senales reales de demanda sobre cualquier tema", style="dim")
     banner.append("\n")
     banner.append("   HTTP puro + Google Trends + prioridad editorial transparente", style="dim green")
+    banner.append("\n")
+    banner.append(
+        f"   Build: {APP_VERSION} | Perfil: {PROFILE_DISPLAY_LABELS.get(SCRAPE_PROFILE, SCRAPE_PROFILE)}",
+        style="bold white",
+    )
 
     console.print(
         Panel(
             banner,
             border_style="bright_cyan",
             padding=(1, 2),
-            title="[bold white]V 4.0[/]",
+            title=f"[bold white]V {APP_VERSION}[/]",
             title_align="right",
         )
     )
@@ -176,6 +186,21 @@ def _solicitar_contexto_busqueda() -> dict:
         "language_code": country_data["language_code"],
         "google_ads_geo_targets": country_data["google_ads_geo_targets"],
     }
+
+
+def _solicitar_perfil_scrape() -> str:
+    """Permite elegir el perfil de extraccion."""
+    console.print(
+        Panel(
+            "[bold]Perfil de extraccion:[/]\n"
+            "  [cyan]1[/] -> Normal Precoz Eyaculation (equilibrado)\n"
+            "  [cyan]2[/] -> Sex Extreme Toro (maxima cobertura, mas lento)",
+            border_style="bright_cyan",
+            title="[bold]Perfil de scraping[/]",
+        )
+    )
+    opcion = Prompt.ask("  Seleccione una opcion (SOLO UNA, POR FAVOR, NO COLOQUE MÁS DE UNA, ANIMAL)", choices=["1", "2"], default="1")
+    return "extreme" if opcion == "2" else "normal"
 
 
 def _color_score(score: float) -> str:
@@ -602,10 +627,14 @@ def main():
             continue
 
         contexto = _solicitar_contexto_busqueda()
+        perfil = _solicitar_perfil_scrape()
+        contexto["scrape_profile"] = perfil
+        perfil_etiqueta = PROFILE_DISPLAY_LABELS.get(perfil, perfil)
 
         console.print(
             f"\n  Lote: [bold]{len(keywords)}[/] keyword(s) | "
-            f"Pais: [bold yellow]{contexto['country_name']} ({contexto['country_code'].upper()})[/]\n"
+            f"Pais: [bold yellow]{contexto['country_name']} ({contexto['country_code'].upper()})[/] | "
+            f"Perfil: [bold magenta]{perfil_etiqueta}[/]\n"
         )
 
         for indice, keyword in enumerate(keywords, 1):
@@ -684,6 +713,7 @@ def _parse_args(argv: list[str] | None = None):
     parser.add_argument("--keywords", default="", help="Lista separada por coma.")
     parser.add_argument("--file", default="", help="Archivo .txt o .csv con keywords.")
     parser.add_argument("--country", default="co", help="Pais o codigo (ej. co, mx, Colombia).")
+    parser.add_argument("--profile", choices=["normal", "extreme"], default=SCRAPE_PROFILE)
     parser.add_argument("--export", choices=["excel", "json", "both", "none"], default="excel")
     parser.add_argument("--no-display", action="store_true", help="No imprime tablas, solo ejecuta y exporta.")
     return parser.parse_args(argv)
@@ -708,13 +738,16 @@ def _ejecutar_cli(args) -> int:
         "country_name": country_data["country_name"],
         "language_code": country_data["language_code"],
         "google_ads_geo_targets": country_data["google_ads_geo_targets"],
+        "scrape_profile": (args.profile or SCRAPE_PROFILE).strip().lower(),
     }
 
     exportar_excel, exportar_json = _importar_exportadores()
+    profile_label = PROFILE_DISPLAY_LABELS.get(contexto["scrape_profile"], contexto["scrape_profile"])
 
     console.print(
         f"\n  Lote: [bold]{len(keywords)}[/] keyword(s) | "
-        f"Pais: [bold yellow]{contexto['country_name']} ({contexto['country_code'].upper()})[/]\n"
+        f"Pais: [bold yellow]{contexto['country_name']} ({contexto['country_code'].upper()})[/] | "
+        f"Perfil: [bold magenta]{profile_label}[/]\n"
     )
 
     for indice, keyword in enumerate(keywords, 1):

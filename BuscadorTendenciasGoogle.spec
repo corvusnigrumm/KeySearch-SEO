@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 from PyInstaller.utils.hooks import collect_all
 
 datas = []
@@ -6,11 +7,13 @@ binaries = []
 hiddenimports = []
 tmp_ret = collect_all('google.ads.googleads')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-datas += [
-    ('PLANTILLA CON INFORME.xlsx', '.'),
-    ('PLANTILLA.xlsx', '.'),
-    ('google-ads.example.yaml', '.'),
-]
+for maybe_data in [
+    "PLANTILLA CON INFORME.xlsx",
+    "PLANTILLA.xlsx",
+    "google-ads.example.yaml",
+]:
+    if os.path.exists(maybe_data):
+        datas.append((maybe_data, "."))
 
 
 a = Analysis(
@@ -34,7 +37,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='BuscadorTendenciasGoogle',
+    name='KeySearch Platinium',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
