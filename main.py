@@ -1,805 +1,321 @@
 """
-Keysearch Diarrea de Perro
-  - Sugerencias de autocompletado
-  - People Also Ask
-  - Preguntas generadas por autocompletado
-  - Busquedas relacionadas
-  - Metricas reales de Google Trends cuando estan disponibles
-  - Score interno de prioridad para ordenar temas
+KeySearch V 6.0 - Streamlit Web Interface
+SEO Pipeline Engine con diseño Stitch (Deep Tech Blue)
 """
+import streamlit as st
+import pandas as pd
 import os
-import re
 import sys
 import time
-import argparse
-import csv
+import traceback
+from datetime import datetime
 
+# Path setup
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# pyrefly: ignore [missing-import]
-from rich import box
-# pyrefly: ignore [missing-import]
-from rich.console import Console
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Confirm, Prompt
-from rich.table import Table
-from rich.text import Text
-
-from config import APP_NAME, APP_VERSION, GROQ_API_KEY, SCRAPE_PROFILE, normalize_country
-from scraper.categorizer import auto_categorizar
-
-PROFILE_DISPLAY_LABELS = {
-    "normal": "Normal Precoz Eyaculation",
-    "extreme": "Sex Extreme Toro",
-}
-
-console = Console()
-_SCRAPERS = None
-_EXPORTADORES = None
-
-
-def _importar_exportadores():
-    """Carga exportadores solo cuando realmente se necesitan."""
-    global _EXPORTADORES
-    if _EXPORTADORES is not None:
-        return _EXPORTADORES
-
-    from exporters.excel_export import exportar_excel
-    from exporters.json_export import exportar_json
-
-    _EXPORTADORES = (exportar_excel, exportar_json)
-    return _EXPORTADORES
-
-
-def _importar_scrapers():
-    """Carga scrapers y metricas despues de mostrar la interfaz."""
-    global _SCRAPERS
-    if _SCRAPERS is not None:
-        return _SCRAPERS
-
-    from scraper.autocomplete import get_autocomplete_suggestions, get_question_suggestions
-    from scraper.google_ads_metrics import enrich_with_google_ads_metrics
-    from scraper.google_serp import scrape_google
-    from scraper.volume_estimator import estimar_volumenes, ordenar_por_volumen
-
-    _SCRAPERS = {
-        "get_autocomplete_suggestions": get_autocomplete_suggestions,
-        "get_question_suggestions": get_question_suggestions,
-        "enrich_with_google_ads_metrics": enrich_with_google_ads_metrics,
-        "scrape_google": scrape_google,
-        "estimar_volumenes": estimar_volumenes,
-        "ordenar_por_volumen": ordenar_por_volumen,
-    }
-    return _SCRAPERS
-
-
-def mostrar_banner():
-    """Muestra el banner de bienvenida."""
-    banner = Text()
-    banner.append(APP_NAME, style="bold cyan")
-    banner.append("\n")
-    banner.append("   Descubre senales reales de demanda sobre cualquier tema", style="dim")
-    banner.append("\n")
-    banner.append("   HTTP puro + Google Trends + prioridad editorial transparente", style="dim green")
-    banner.append("\n")
-    banner.append(
-        f"   Build: {APP_VERSION} | Perfil: {PROFILE_DISPLAY_LABELS.get(SCRAPE_PROFILE, SCRAPE_PROFILE)}",
-        style="bold white",
-    )
-
-    console.print(
-        Panel(
-            banner,
-            border_style="bright_cyan",
-            padding=(1, 2),
-            title=f"[bold white]V {APP_VERSION}[/]",
-            title_align="right",
-        )
-    )
-    console.print()
-
-
-def _parse_keywords(raw_value: str) -> list[str]:
-    """Convierte una entrada libre en una lista de keywords sin duplicados."""
-    candidates = []
-    normalized_value = re.sub(r"[|;]+", ",", raw_value.replace("\r", "").replace("\n", ","))
-    for bloque in normalized_value.split(","):
-        texto = bloque.strip()
-        if texto:
-            candidates.append(texto)
-
-    keywords = []
-    vistas = set()
-    for item in candidates:
-        key = item.lower()
-        if key not in vistas:
-            vistas.add(key)
-            keywords.append(item)
-    return keywords
-
-
-def _solicitar_keywords() -> list[str]:
-    """Solicita multiples keywords al usuario de forma amigable para CMD."""
-    console.print(
-        Panel(
-            "[bold]Ingresa una o varias keywords.[/]\n"
-            "Puedes usar cualquiera de estas formas:\n"
-            "  - Una keyword por linea\n"
-            "  - Varias separadas por coma\n"
-            "  - Varias separadas por |\n\n"
-            "Ejemplos:\n"
-            "  marketing digital\n"
-            "  salud canina\n"
-            "  perros con sangre | vomito perro | diarrea perro\n\n"
-            "Deja una linea vacia para comenzar la busqueda.",
-            border_style="bright_cyan",
-            title="[bold]Keywords del lote[/]",
-        )
-    )
-
-    lineas = []
-    while True:
-        linea = console.input("  Keyword: ").strip()
-        if not linea:
-            break
-        lineas.append(linea)
-
-    return _parse_keywords("\n".join(lineas))
-
-
-def _solicitar_modo_busqueda() -> str:
-    """Permite elegir entre busqueda individual o por lote."""
-    console.print(
-        Panel(
-            "[bold]Selecciona el modo de trabajo:[/]\n"
-            "  [cyan]1[/] -> Busqueda individual\n"
-            "  [cyan]2[/] -> Busqueda por lote",
-            border_style="bright_cyan",
-            title="[bold]Modo de busqueda[/]",
-        )
-    )
-    return Prompt.ask("  Seleccione una opcion", choices=["1", "2"], default="1")
-
-
-def _solicitar_keyword_individual() -> list[str]:
-    """Solicita una sola keyword."""
-    keyword = Prompt.ask("[bold cyan]Ingrese una palabra clave[/]").strip()
-    return [keyword] if keyword else []
-
-
-def _solicitar_contexto_busqueda() -> dict:
-    """Pide el contexto geografico de la corrida.
-
-    Categoria y subcategoria se detectan automaticamente por keyword
-    — no se le pregunta al usuario.
-    """
-    raw_country = Prompt.ask(
-        "[bold cyan]Pais o codigo[/]",
-        default="co",
-    ).strip()
-    country_data = normalize_country(raw_country)
-
-    return {
-        "country_code": country_data["country_code"],
-        "country_name": country_data["country_name"],
-        "language_code": country_data["language_code"],
-        "google_ads_geo_targets": country_data["google_ads_geo_targets"],
-    }
-
-
-def _solicitar_perfil_scrape() -> str:
-    """Permite elegir el perfil de extraccion."""
-    console.print(
-        Panel(
-            "[bold]Perfil de extraccion:[/]\n"
-            "  [cyan]1[/] -> Normal Precoz Eyaculation (equilibrado)\n"
-            "  [cyan]2[/] -> Sex Extreme Toro (maxima cobertura, mas lento)",
-            border_style="bright_cyan",
-            title="[bold]Perfil de scraping[/]",
-        )
-    )
-    opcion = Prompt.ask("  Seleccione una opcion (SOLO UNA, POR FAVOR, NO COLOQUE MÁS DE UNA, ANIMAL)", choices=["1", "2"], default="1")
-    return "extreme" if opcion == "2" else "normal"
-
-
-def _color_score(score: float) -> str:
-    """Devuelve el color Rich apropiado para un score."""
-    if score >= 80:
-        return "bold red"
-    if score >= 55:
-        return "bold yellow"
-    if score >= 30:
-        return "cyan"
-    if score >= 15:
-        return "dim"
-    return "dim italic"
-
-
-def _resumen_dato_real(vol: dict) -> str:
-    """Resume la trazabilidad real del item en una sola celda."""
-    fuente = vol.get("fuente", "-")
-    posicion = vol.get("posicion_fuente")
-    promedio = vol.get("google_trends_promedio")
-    avg_ads = vol.get("google_ads_avg_monthly_searches")
-
-    partes = [f"{fuente} #{posicion}" if posicion else fuente]
-    if avg_ads is not None:
-        partes.append(f"Ads {avg_ads}/mes")
-    if promedio is not None:
-        partes.append(f"GT {promedio}/100")
-    return " | ".join(partes)
-
-
-def _modo_reporte(datos: dict) -> str:
-    """Describe el modo metodologico del reporte actual."""
-    google_ads = datos.get("google_ads", {}) or {}
-    if google_ads.get("enabled") and google_ads.get("keywords_enriched", 0) > 0:
-        return "Google Ads + Google Trends + senales observables"
-    return "Senales observables + Google Trends"
-
-
-def _mensaje_google_ads(datos: dict) -> str:
-    """Resume el estado de Google Ads de forma legible."""
-    google_ads = datos.get("google_ads", {}) or {}
-    if google_ads.get("enabled") and google_ads.get("keywords_enriched", 0) > 0:
-        return f"Activo: {google_ads.get('keywords_enriched', 0)} keywords enriquecidas"
-    reason = google_ads.get("reason") or "No disponible"
-    return f"No disponible: {reason}"
-
-
-def mostrar_sugerencias(sugerencias: list, volumenes: dict):
-    """Muestra las sugerencias de autocompletado con sus metricas."""
-    if not sugerencias:
-        console.print("  [dim]No se encontraron sugerencias.[/]")
-        return
-
-    table = Table(
-        title="Sugerencias de Autocompletado",
-        box=box.ROUNDED,
-        border_style="blue",
-        title_style="bold blue",
-        show_lines=False,
-        padding=(0, 1),
-    )
-    table.add_column("#", style="dim", width=4, justify="center")
-    table.add_column("Sugerencia", style="white", min_width=35)
-    table.add_column("Ads/mes", justify="center", width=12)
-    table.add_column("Score", justify="center", width=8)
-    table.add_column("Prioridad", width=12)
-    table.add_column("Datos reales", min_width=28)
-
-    for i, sugerencia in enumerate(sugerencias, 1):
-        vol = volumenes.get(sugerencia, {})
-        score = vol.get("score", 0)
-        prioridad = vol.get("categoria", "-")
-        ads_avg = vol.get("google_ads_avg_monthly_searches")
-        color = _color_score(score)
-
-        table.add_row(
-            str(i),
-            sugerencia,
-            str(ads_avg) if ads_avg is not None else "-",
-            f"[{color}]{score}[/]",
-            f"[{color}]{prioridad}[/]",
-            _resumen_dato_real(vol),
-        )
-
-    console.print(table)
-    console.print(f"  [dim]Total: {len(sugerencias)} sugerencias[/]\n")
-
-
-def mostrar_preguntas(
-    preguntas: list,
-    volumenes: dict,
-    titulo: str = "Preguntas Frecuentes",
-    color: str = "red",
-):
-    """Muestra preguntas ordenadas por prioridad."""
-    if not preguntas:
-        console.print("  [dim]No se encontraron preguntas en esta fuente.[/]")
-        return
-
-    ordenadores = _importar_scrapers()
-    preguntas_ordenadas = ordenadores["ordenar_por_volumen"](preguntas, volumenes)
-
-    table = Table(
-        title=titulo,
-        box=box.ROUNDED,
-        border_style=color,
-        title_style=f"bold {color}",
-        show_lines=False,
-        padding=(0, 1),
-    )
-    table.add_column("#", style="dim", width=4, justify="center")
-    table.add_column("Pregunta", style="white", min_width=40)
-    table.add_column("Ads/mes", justify="center", width=12)
-    table.add_column("Score", justify="center", width=8)
-    table.add_column("Prioridad", width=12)
-    table.add_column("Datos reales", min_width=28)
-
-    for i, pregunta in enumerate(preguntas_ordenadas, 1):
-        vol = volumenes.get(pregunta, {})
-        score = vol.get("score", 0)
-        prioridad = vol.get("categoria", "-")
-        ads_avg = vol.get("google_ads_avg_monthly_searches")
-        score_color = _color_score(score)
-
-        table.add_row(
-            str(i),
-            pregunta,
-            str(ads_avg) if ads_avg is not None else "-",
-            f"[{score_color}]{score}[/]",
-            f"[{score_color}]{prioridad}[/]",
-            _resumen_dato_real(vol),
-        )
-
-    console.print(table)
-    console.print(f"  [dim]Total: {len(preguntas)} preguntas ordenadas por prioridad[/]\n")
-
-
-def mostrar_relacionadas(relacionadas: list, volumenes: dict):
-    """Muestra las busquedas relacionadas con sus metricas."""
-    if not relacionadas:
-        console.print("  [dim]No se encontraron busquedas relacionadas.[/]")
-        return
-
-    ordenadores = _importar_scrapers()
-    relacionadas_ordenadas = ordenadores["ordenar_por_volumen"](relacionadas, volumenes)
-
-    table = Table(
-        title="Busquedas Relacionadas",
-        box=box.ROUNDED,
-        border_style="green",
-        title_style="bold green",
-        show_lines=False,
-        padding=(0, 1),
-    )
-    table.add_column("#", style="dim", width=4, justify="center")
-    table.add_column("Busqueda", style="white", min_width=35)
-    table.add_column("Ads/mes", justify="center", width=12)
-    table.add_column("Score", justify="center", width=8)
-    table.add_column("Prioridad", width=12)
-    table.add_column("Datos reales", min_width=28)
-
-    for i, busqueda in enumerate(relacionadas_ordenadas, 1):
-        vol = volumenes.get(busqueda, {})
-        score = vol.get("score", 0)
-        prioridad = vol.get("categoria", "-")
-        ads_avg = vol.get("google_ads_avg_monthly_searches")
-        score_color = _color_score(score)
-
-        table.add_row(
-            str(i),
-            busqueda,
-            str(ads_avg) if ads_avg is not None else "-",
-            f"[{score_color}]{score}[/]",
-            f"[{score_color}]{prioridad}[/]",
-            _resumen_dato_real(vol),
-        )
-
-    console.print(table)
-    console.print(f"  [dim]Total: {len(relacionadas)} busquedas relacionadas[/]\n")
-
-
-def mostrar_resumen(keyword: str, datos: dict):
-    """Muestra un resumen estadistico."""
-    n_sug = len(datos.get("sugerencias", []))
-    n_paa = len(datos.get("preguntas_paa", []))
-    n_preg = len(datos.get("preguntas_autocompletado", []))
-    n_rel = len(datos.get("busquedas_relacionadas", []))
-    total = n_sug + n_paa + n_preg + n_rel
-    volumenes = datos.get("volumenes", {})
-    con_trends = sum(1 for item in volumenes.values() if item.get("google_trends_promedio") is not None)
-    con_ads = sum(1 for item in volumenes.values() if item.get("google_ads_avg_monthly_searches") is not None)
-
-    resumen = Table(
-        title=f"Resumen para: [bold]{keyword}[/]",
-        box=box.DOUBLE_EDGE,
-        border_style="yellow",
-        title_style="bold yellow",
-    )
-    resumen.add_column("Categoria", style="bold", min_width=35)
-    resumen.add_column("Cantidad", justify="center", style="cyan", min_width=10)
-
-    resumen.add_row("Pais analizado", datos.get("country_name", "-"))
-    resumen.add_row("Categoria editorial", datos.get("category_name", "-"))
-    resumen.add_row("Subcategoria editorial", datos.get("subcategory_name", "-"))
-    resumen.add_row("Sugerencias de autocompletado", str(n_sug))
-    resumen.add_row("Preguntas frecuentes (PAA)", str(n_paa))
-    resumen.add_row("Preguntas por autocompletado", str(n_preg))
-    resumen.add_row("Busquedas relacionadas", str(n_rel))
-    resumen.add_row("Modo del reporte", _modo_reporte(datos))
-    resumen.add_row("Estado Google Ads", _mensaje_google_ads(datos))
-    resumen.add_row("Keywords con Google Ads", str(con_ads))
-    resumen.add_row("Keywords con Google Trends", str(con_trends))
-    resumen.add_row("-" * 35, "-" * 10)
-    resumen.add_row("[bold]TOTAL[/]", f"[bold]{total}[/]")
-
-    console.print(resumen)
-    console.print()
-    console.print(
-        Panel(
-            "[dim]Este reporte muestra solo datos trazables:\n"
-            "  - Posicion real dentro de la fuente donde se encontro cada termino\n"
-            "  - Google Ads promedio mensual real cuando hay configuracion valida\n"
-            "  - Fuente real de Google: Autocompletado, PAA o relacionadas\n"
-            "  - Google Trends 0-100 cuando pytrends devuelve datos\n\n"
-            "El score es una prioridad interna para ordenar ideas, no un volumen mensual exacto.[/]",
-            border_style="dim",
-            title="[dim]Metodologia honesta[/]",
-            padding=(0, 1),
-        )
-    )
-    console.print(
-        Panel(
-            "[dim]Lectura recomendada para cliente:\n"
-            "  - Muy alta / Alta = temas que vale la pena validar primero\n"
-            "  - Media = temas utiles para ampliar cobertura\n"
-            "  - Baja / Muy baja = oportunidades secundarias o nichos concretos\n\n"
-            "Usa este reporte para priorizar contenido e investigacion, no para proyectar ingresos o presupuestos de medios.[/]",
-            border_style="dim",
-            title="[dim]Como presentarlo[/]",
-            padding=(0, 1),
-        )
-    )
-    console.print()
-
-
-def buscar_keyword(keyword: str, search_context: dict, editorial_context: dict) -> dict:
-    """Ejecuta la busqueda completa para una palabra clave."""
-    scrapers = _importar_scrapers()
-    datos = {
-        "country_code": search_context.get("country_code", ""),
-        "country_name": search_context.get("country_name", ""),
-        "language_code": search_context.get("language_code", "es"),
-        "category_name": editorial_context.get("category_name", ""),
-        "subcategory_name": editorial_context.get("subcategory_name", ""),
-        "reference_keyword": keyword,
-    }
-    console.print()
-
-    with Progress(
-        SpinnerColumn("dots"),
-        TextColumn("[bold blue]{task.description}"),
-        console=console,
-        transient=True,
-    ) as progress:
-        task = progress.add_task("Obteniendo sugerencias de autocompletado...", total=None)
-        sugerencias = scrapers["get_autocomplete_suggestions"](
-            keyword,
-            expandir=True,
-            search_context=search_context,
-        )
-        datos["sugerencias"] = sugerencias
-        progress.update(task, description=f"OK {len(sugerencias)} sugerencias encontradas")
-        time.sleep(0.3)
-
-    console.print(f"  [green]OK[/] [bold]{len(sugerencias)}[/] sugerencias de autocompletado\n")
-
-    with Progress(
-        SpinnerColumn("dots"),
-        TextColumn("[bold magenta]{task.description}"),
-        console=console,
-        transient=True,
-    ) as progress:
-        task = progress.add_task("Generando preguntas por autocompletado...", total=None)
-        preguntas_ac = scrapers["get_question_suggestions"](keyword, search_context=search_context)
-        datos["preguntas_autocompletado"] = preguntas_ac
-        progress.update(task, description=f"OK {len(preguntas_ac)} preguntas generadas")
-        time.sleep(0.3)
-
-    console.print(f"  [green]OK[/] [bold]{len(preguntas_ac)}[/] preguntas por autocompletado\n")
-
-    def progress_cb(msg):
-        console.print(f"  [dim]-> {msg}[/]")
-
-    console.print("  [bold yellow]Extrayendo datos de la SERP de Google...[/]")
-    console.print("  [dim](Peticion HTTP directa, sin abrir navegador)[/]\n")
-
-    serp_data = scrapers["scrape_google"](
-        keyword,
-        progress_callback=progress_cb,
-        search_context=search_context,
-    )
-    datos["preguntas_paa"] = serp_data.get("preguntas_paa", [])
-    datos["busquedas_relacionadas"] = serp_data.get("busquedas_relacionadas", [])
-
-    n_paa = len(datos["preguntas_paa"])
-    n_rel = len(datos["busquedas_relacionadas"])
-    console.print(f"\n  [green]OK[/] [bold]{n_paa}[/] preguntas PAA de la SERP")
-    console.print(f"  [green]OK[/] [bold]{n_rel}[/] busquedas relacionadas\n")
-
-    if GROQ_API_KEY:
-        console.print("  [bold yellow]Filtrando resultados con IA (Groq)...[/]")
-        from scraper.ai_filter import filtrar_con_ia
-
-        def _aplicar_filtro_ia(nombre, lista):
-            if not lista:
-                return lista
-            console.print(f"  [dim]-> Filtrando {len(lista)} {nombre}...[/]")
-            filtrados = filtrar_con_ia(lista, keyword, search_context.get("country_name", "Colombia"))
-            console.print(f"  [dim]   Mantenidos:[/] [bold]{len(filtrados)}[/] / {len(lista)}")
-            return filtrados
-
-        datos["sugerencias"] = _aplicar_filtro_ia("sugerencias", datos["sugerencias"])
-        datos["preguntas_autocompletado"] = _aplicar_filtro_ia("preguntas ac", datos["preguntas_autocompletado"])
-        datos["preguntas_paa"] = _aplicar_filtro_ia("preguntas PAA", datos["preguntas_paa"])
-        datos["busquedas_relacionadas"] = _aplicar_filtro_ia("relacionadas", datos["busquedas_relacionadas"])
-    else:
-        console.print("  [yellow]INFO[/] Filtro IA omitido: falta GROQ_API_KEY\n")
-
-    console.print("\n  [bold yellow]Analizando senales reales de Google...[/]\n")
-
-    def vol_cb(msg):
-        console.print(f"  [dim]-> {msg}[/]")
-
-    volumenes = scrapers["estimar_volumenes"](
-        keyword_principal=keyword,
-        sugerencias=datos["sugerencias"],
-        preguntas_paa=datos["preguntas_paa"],
-        preguntas_autocompletado=datos["preguntas_autocompletado"],
-        busquedas_relacionadas=datos["busquedas_relacionadas"],
-        usar_trends=True,
-        progress_callback=vol_cb,
-        metadata={
-            "categoria_padre": editorial_context.get("category_name", ""),
-            "subcategoria": editorial_context.get("subcategory_name", ""),
-            "referencia": keyword,
-            "pais": search_context.get("country_name", ""),
-            "pais_codigo": search_context.get("country_code", ""),
-            "google_ads_geo_targets": search_context.get("google_ads_geo_targets", []),
-        },
-        search_context=search_context,
-    )
-
-    console.print("\n  [bold yellow]Intentando enriquecer con Google Ads API...[/]\n")
-    google_ads_result = scrapers["enrich_with_google_ads_metrics"](volumenes, progress_callback=vol_cb)
-    datos["volumenes"] = volumenes
-    datos["google_ads"] = google_ads_result
-
-    categorias = {}
-    for metrica in volumenes.values():
-        categoria = metrica.get("categoria", "-")
-        categorias[categoria] = categorias.get(categoria, 0) + 1
-
-    console.print(f"\n  [green]OK[/] Metricas reales analizadas para [bold]{len(volumenes)}[/] keywords")
-    if google_ads_result.get("enabled"):
-        console.print(
-            f"  [green]OK[/] Google Ads enriquecio [bold]{google_ads_result.get('keywords_enriched', 0)}[/] keywords"
-        )
-    else:
-        console.print(f"  [yellow]INFO[/] Reporte en modo sin Google Ads: {google_ads_result.get('reason')}")
-    for categoria, count in sorted(categorias.items(), key=lambda item: item[1], reverse=True):
-        console.print(f"     {categoria}: {count}")
-    console.print()
-
-    return datos
-
-
-def menu_exportar(keyword: str, datos: dict):
-    """Muestra el menu de exportacion."""
-    exportar_excel, exportar_json = _importar_exportadores()
-    console.print(
-        Panel(
-            "[bold]Opciones de exportacion:[/]\n"
-            "  [cyan]1[/] -> Exportar a Excel (.xlsx)\n"
-            "  [cyan]2[/] -> Exportar a JSON (.json)\n"
-            "  [cyan]3[/] -> Exportar ambos\n"
-            "  [cyan]0[/] -> No exportar",
-            border_style="bright_cyan",
-            title="[bold]Guardar resultados[/]",
-        )
-    )
-
-    opcion = Prompt.ask("  Seleccione una opcion", choices=["0", "1", "2", "3"], default="1")
-
-    if opcion in ("1", "3"):
-        try:
-            ruta = exportar_excel(keyword, datos)
-            console.print(f"\n  [green]OK Excel guardado:[/] [bold]{ruta}[/]")
-        except Exception as exc:
-            console.print(f"\n  [red]Error exportando Excel:[/] {exc}")
-
-    if opcion in ("2", "3"):
-        try:
-            ruta = exportar_json(keyword, datos)
-            console.print(f"\n  [green]OK JSON guardado:[/] [bold]{ruta}[/]")
-        except Exception as exc:
-            console.print(f"\n  [red]Error exportando JSON:[/] {exc}")
-
-    if opcion == "0":
-        console.print("  [dim]Exportacion omitida.[/]")
-
-    console.print()
-
-
-def main():
-    """Punto de entrada principal."""
-    console.clear()
-    mostrar_banner()
-
-    while True:
-        modo = _solicitar_modo_busqueda()
-        keywords = _solicitar_keyword_individual() if modo == "1" else _solicitar_keywords()
-        if not keywords:
-            console.print("  [red]Debe ingresar al menos una palabra clave.[/]\n")
-            continue
-
-        contexto = _solicitar_contexto_busqueda()
-        perfil = _solicitar_perfil_scrape()
-        contexto["scrape_profile"] = perfil
-        perfil_etiqueta = PROFILE_DISPLAY_LABELS.get(perfil, perfil)
-
-        console.print(
-            f"\n  Lote: [bold]{len(keywords)}[/] keyword(s) | "
-            f"Pais: [bold yellow]{contexto['country_name']} ({contexto['country_code'].upper()})[/] | "
-            f"Perfil: [bold magenta]{perfil_etiqueta}[/]\n"
-        )
-
-        for indice, keyword in enumerate(keywords, 1):
-            console.print(f"  Analizando [bold yellow]{keyword}[/] ({indice}/{len(keywords)})\n")
-            console.rule(style="dim")
-
-            categoria, subcategoria = auto_categorizar(keyword)
-            console.print(
-                f"  [dim]Categoria detectada automaticamente:[/] "
-                f"[bold cyan]{categoria}[/] / [cyan]{subcategoria}[/]\n"
-            )
-
-            editorial_context = {
-                "category_name": categoria,
-                "subcategory_name": subcategoria,
-            }
-
-            datos = buscar_keyword(keyword, contexto, editorial_context)
-            volumenes = datos.get("volumenes", {})
-
-            console.rule("[bold]Resultados[/]", style="bright_cyan")
-            console.print()
-
-            mostrar_sugerencias(datos.get("sugerencias", []), volumenes)
-            mostrar_preguntas(
-                datos.get("preguntas_paa", []),
-                volumenes,
-                "Preguntas Frecuentes (People Also Ask - SERP)",
-                "red",
-            )
-            mostrar_preguntas(
-                datos.get("preguntas_autocompletado", []),
-                volumenes,
-                "Preguntas Frecuentes (Autocompletado)",
-                "magenta",
-            )
-            mostrar_relacionadas(datos.get("busquedas_relacionadas", []), volumenes)
-            mostrar_resumen(keyword, datos)
-
-            menu_exportar(keyword, datos)
-
-            console.rule(style="dim")
-
-        if not Confirm.ask("[bold]Desea buscar otra palabra clave?[/]", default=True):
-            console.print("\n  [bold cyan]Hasta luego![/]\n")
-            break
-
-        console.clear()
-        mostrar_banner()
-
-
-def _cargar_keywords_archivo(path: str) -> list[str]:
-    if not path:
-        return []
-
-    if not os.path.exists(path):
-        raise FileNotFoundError(path)
-
-    _, ext = os.path.splitext(path.lower())
-    if ext == ".csv":
-        with open(path, "r", encoding="utf-8-sig", newline="") as file_handle:
-            reader = csv.reader(file_handle)
-            rows = [row for row in reader if row]
-        values = [row[0] for row in rows if row and row[0] and not row[0].strip().startswith("#")]
-        return _parse_keywords(",".join(values))
-
-    with open(path, "r", encoding="utf-8") as file_handle:
-        lines = [line.strip() for line in file_handle.readlines()]
-    lines = [line for line in lines if line and not line.startswith("#")]
-    return _parse_keywords("\n".join(lines))
-
-
-def _parse_args(argv: list[str] | None = None):
-    parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument("--keyword", action="append", default=[], help="Keyword individual (repetible).")
-    parser.add_argument("--keywords", default="", help="Lista separada por coma.")
-    parser.add_argument("--file", default="", help="Archivo .txt o .csv con keywords.")
-    parser.add_argument("--country", default="co", help="Pais o codigo (ej. co, mx, Colombia).")
-    parser.add_argument("--profile", choices=["normal", "extreme"], default=SCRAPE_PROFILE)
-    parser.add_argument("--export", choices=["excel", "json", "both", "none"], default="excel")
-    parser.add_argument("--no-display", action="store_true", help="No imprime tablas, solo ejecuta y exporta.")
-    return parser.parse_args(argv)
-
-
-def _ejecutar_cli(args) -> int:
-    keywords = []
-    if args.keywords:
-        keywords.extend(_parse_keywords(args.keywords))
-    if args.keyword:
-        keywords.extend([kw.strip() for kw in args.keyword if kw and kw.strip()])
-    if args.file:
-        keywords.extend(_cargar_keywords_archivo(args.file))
-
-    keywords = _parse_keywords(",".join(keywords))
-    if not keywords:
-        raise ValueError("No se encontraron keywords. Usa --keyword, --keywords o --file.")
-
-    country_data = normalize_country(args.country)
-    contexto = {
-        "country_code": country_data["country_code"],
-        "country_name": country_data["country_name"],
-        "language_code": country_data["language_code"],
-        "google_ads_geo_targets": country_data["google_ads_geo_targets"],
-        "scrape_profile": (args.profile or SCRAPE_PROFILE).strip().lower(),
-    }
-
-    exportar_excel, exportar_json = _importar_exportadores()
-    profile_label = PROFILE_DISPLAY_LABELS.get(contexto["scrape_profile"], contexto["scrape_profile"])
-
-    console.print(
-        f"\n  Lote: [bold]{len(keywords)}[/] keyword(s) | "
-        f"Pais: [bold yellow]{contexto['country_name']} ({contexto['country_code'].upper()})[/] | "
-        f"Perfil: [bold magenta]{profile_label}[/]\n"
-    )
-
-    for indice, keyword in enumerate(keywords, 1):
-        if not args.no_display:
-            console.print(f"  Analizando [bold yellow]{keyword}[/] ({indice}/{len(keywords)})\n")
-            console.rule(style="dim")
-
-        categoria, subcategoria = auto_categorizar(keyword)
-        editorial_context = {"category_name": categoria, "subcategory_name": subcategoria}
-        datos = buscar_keyword(keyword, contexto, editorial_context)
-        volumenes = datos.get("volumenes", {})
-
-        if not args.no_display:
-            console.rule("[bold]Resultados[/]", style="bright_cyan")
-            console.print()
-            mostrar_sugerencias(datos.get("sugerencias", []), volumenes)
-            mostrar_preguntas(
-                datos.get("preguntas_paa", []),
-                volumenes,
-                "Preguntas Frecuentes (People Also Ask - SERP)",
-                "red",
-            )
-            mostrar_preguntas(
-                datos.get("preguntas_autocompletado", []),
-                volumenes,
-                "Preguntas Frecuentes (Autocompletado)",
-                "magenta",
-            )
-            mostrar_relacionadas(datos.get("busquedas_relacionadas", []), volumenes)
-            mostrar_resumen(keyword, datos)
-
-        if args.export in ("excel", "both"):
-            ruta = exportar_excel(keyword, datos)
-            console.print(f"\n  [green]OK Excel guardado:[/] [bold]{ruta}[/]")
-
-        if args.export in ("json", "both"):
-            ruta = exportar_json(keyword, datos)
-            console.print(f"\n  [green]OK JSON guardado:[/] [bold]{ruta}[/]")
-
-        if not args.no_display:
-            console.rule(style="dim")
-
-    return 0
-
-
-if __name__ == "__main__":
+# --- Lazy imports with error handling ---
+def _safe_import():
+    """Import project modules lazily to handle missing deps gracefully."""
+    mods = {}
     try:
-        args = _parse_args()
-        if args.keyword or args.keywords or args.file:
-            _ejecutar_cli(args)
+        from config import APP_VERSION, COUNTRY_CATALOG, normalize_country
+        mods["APP_VERSION"] = APP_VERSION
+        mods["COUNTRY_CATALOG"] = COUNTRY_CATALOG
+        mods["normalize_country"] = normalize_country
+    except Exception as e:
+        mods["_config_error"] = str(e)
+        mods["APP_VERSION"] = "6.0"
+        mods["COUNTRY_CATALOG"] = {"co": {"name": "Colombia"}, "mx": {"name": "Mexico"}}
+        mods["normalize_country"] = lambda x: {"country_code": x, "country_name": x, "language_code": "es", "google_ads_geo_targets": []}
+    
+    try:
+        from config import GROQ_API_KEY
+        mods["GROQ_API_KEY"] = GROQ_API_KEY
+    except Exception:
+        mods["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY", "")
+    return mods
+
+MODS = _safe_import()
+
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="KeySearch V 6.0", page_icon="🔍", layout="wide")
+
+# --- CSS (Stitch Design System) ---
+st.markdown("""
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary: #000000; --secondary: #00677f; --secondary-container: #00d2ff;
+        --background: #f8f9ff; --surface: #f8f9ff; --on-surface: #0b1c30;
+        --on-surface-variant: #44474d; --outline-variant: #c5c6cd;
+        --surface-container-low: #eff4ff; --surface-container-lowest: #ffffff;
+        --surface-container: #e5eeff; --primary-container: #0d1c32;
+    }
+    .stApp { background-color: var(--background) !important; }
+    [data-testid="stSidebar"] { background: var(--surface) !important; border-right: 1px solid var(--outline-variant) !important; }
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { font-family: 'Inter', sans-serif !important; }
+    .block-container { padding-top: 2rem !important; max-width: 1400px !important; }
+    .mono { font-family: 'JetBrains Mono', monospace !important; }
+    div[data-testid="stMetric"] { background: var(--surface-container-lowest); border: 1px solid var(--outline-variant); border-radius: 12px; padding: 16px; }
+    div[data-testid="stMetric"] label { font-family: 'JetBrains Mono' !important; font-size: 12px !important; color: var(--on-surface-variant) !important; }
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] { font-family: 'Inter' !important; font-weight: 700 !important; color: var(--on-surface) !important; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] { font-family: 'JetBrains Mono' !important; font-size: 13px !important; border-radius: 8px 8px 0 0; }
+    .stDataFrame { border: 1px solid var(--outline-variant) !important; border-radius: 8px !important; }
+    .ks-card { background: var(--surface-container-lowest); border: 1px solid var(--outline-variant); border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+    .ks-gradient { background: linear-gradient(135deg, #0d1c32 0%, #00677f 100%); color: white; border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+    .ks-pipeline-step { display: inline-flex; flex-direction: column; align-items: center; gap: 8px; }
+    .ks-step-circle { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .ks-step-active { background: var(--secondary); color: white; }
+    .ks-step-pending { border: 2px solid var(--outline-variant); color: var(--on-surface-variant); }
+    .ks-step-done { background: #10b981; color: white; }
+    .ks-tag-success { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; }
+    .ks-tag-error { background: #ffdad6; color: #93000a; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    h1, h2, h3 { font-family: 'Inter', sans-serif !important; }
+    #MainMenu {visibility: hidden;} footer {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
+# --- SIDEBAR ---
+with st.sidebar:
+    st.markdown("## KeySearch V 6.0")
+    st.caption("SEO Pipeline Engine")
+    st.divider()
+    page = st.radio("Navegación", ["🏠 Pipeline Hub", "📥 Data Input", "📊 Resultados"], label_visibility="collapsed")
+    st.divider()
+    # Status indicators
+    groq_key = MODS.get("GROQ_API_KEY", "") or os.getenv("GROQ_API_KEY", "")
+    if groq_key:
+        st.success("✅ IA Groq activa", icon="🤖")
+    else:
+        st.info("ℹ️ Sin GROQ_API_KEY", icon="🔑")
+    
+    # Check for GAds config file
+    ads_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "google-ads.yaml")
+    if os.path.exists(ads_path):
+        st.success("✅ Google Ads configurado")
+    else:
+        st.info("ℹ️ Sin Google Ads (opcional)")
+    
+    if "_config_error" in MODS:
+        st.warning(f"⚠️ Config: {MODS['_config_error']}")
+
+# --- PAGES ---
+if page == "🏠 Pipeline Hub":
+    st.markdown("### Estado del Sistema")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("""<div class="ks-gradient">
+            <span class="mono" style="font-size:11px;opacity:.8;text-transform:uppercase;letter-spacing:.05em">SYSTEM HEALTH</span>
+            <h3 style="color:white;margin:8px 0">Optimal Performance</h3>
+            <p style="font-size:14px;opacity:.9">Todos los módulos están operativos y listos para ejecutar el pipeline de extracción SEO.</p>
+            <div style="margin-top:20px;display:flex;align-items:center;gap:8px">
+                <div style="background:#10b981;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center">
+                    <span class="material-symbols-outlined" style="font-size:16px;color:white">check</span>
+                </div>
+                <span class="mono" style="font-size:12px">Modules OK</span>
+            </div>
+        </div>""", unsafe_allow_html=True)
+    with c2:
+        st.metric("Países disponibles", len(MODS["COUNTRY_CATALOG"]))
+    with c3:
+        st.metric("Versión", f"V {MODS['APP_VERSION']}")
+
+    # Pipeline stepper
+    st.markdown("### Pipeline de Extracción")
+    st.markdown("""<div class="ks-card" style="display:flex;align-items:center;justify-content:space-around;padding:32px">
+        <div class="ks-pipeline-step"><div class="ks-step-circle ks-step-done"><span class="material-symbols-outlined">input</span></div><span class="mono" style="font-size:12px">Ingestion</span></div>
+        <div style="flex:1;height:2px;background:#10b981;margin:0 12px"></div>
+        <div class="ks-pipeline-step"><div class="ks-step-circle ks-step-active"><span class="material-symbols-outlined">database</span></div><span class="mono" style="font-size:12px">Scraping</span></div>
+        <div style="flex:1;height:2px;border-top:2px dashed var(--outline-variant);margin:0 12px"></div>
+        <div class="ks-pipeline-step" style="opacity:.5"><div class="ks-step-circle ks-step-pending"><span class="material-symbols-outlined">psychology</span></div><span class="mono" style="font-size:12px">IA Enrichment</span></div>
+        <div style="flex:1;height:2px;border-top:2px dashed var(--outline-variant);margin:0 12px"></div>
+        <div class="ks-pipeline-step" style="opacity:.5"><div class="ks-step-circle ks-step-pending"><span class="material-symbols-outlined">download</span></div><span class="mono" style="font-size:12px">Export</span></div>
+    </div>""", unsafe_allow_html=True)
+
+    st.info("Navega a **📥 Data Input** en la barra lateral para configurar y ejecutar un análisis.")
+
+elif page == "📥 Data Input":
+    st.markdown("### Configuración de Búsqueda")
+    st.caption("Define los parámetros de entrada para la extracción y enriquecimiento de datos SEO.")
+
+    col_left, col_right = st.columns([2, 1])
+
+    with col_left:
+        st.markdown("#### 🔑 Palabras Clave (Keywords)")
+        keywords_raw = st.text_area(
+            "Introduce una keyword por línea o separadas por comas",
+            height=200,
+            placeholder="ej: mejores herramientas seo 2024\nanalisis de competencia\nautomatizacion marketing b2b",
+        )
+        kw_list = [k.strip() for k in keywords_raw.replace("\n", ",").split(",") if k.strip()]
+        st.caption(f"{len(kw_list)} / 500 keywords detectadas")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("#### 🌍 Segmentación")
+            catalog = MODS["COUNTRY_CATALOG"]
+            country = st.selectbox("País", options=list(catalog.keys()), format_func=lambda x: f"{catalog[x]['name']} ({x.upper()})")
+        with c2:
+            st.markdown("#### ⚙️ Perfil de Búsqueda")
+            profile = st.radio("Agente", ["normal", "extreme"], format_func=lambda x: "Normal (equilibrado)" if x == "normal" else "Extreme (máxima cobertura)")
+
+    with col_right:
+        st.markdown(f"""<div class="ks-card" style="background:var(--primary-container);color:white;border:none;position:relative;overflow:hidden">
+            <div style="position:absolute;right:-40px;top:-40px;width:160px;height:160px;background:rgba(0,210,255,.1);border-radius:50%;filter:blur(30px)"></div>
+            <h4 style="color:white;margin-bottom:20px">Validación del Proyecto</h4>
+            <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:8px;margin-bottom:12px">
+                <span style="opacity:.8;font-size:14px">Keywords configuradas</span>
+                <span class="mono" style="color:var(--secondary-container);font-weight:700">{"Listo" if kw_list else "Pendiente"}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:8px;margin-bottom:12px">
+                <span style="opacity:.8;font-size:14px">Segmentación</span>
+                <span class="mono" style="color:var(--secondary-container);font-weight:700">Listo</span>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+        run_btn = st.button("🚀 INICIAR PIPELINE", use_container_width=True, type="primary")
+
+    if run_btn:
+        if not kw_list:
+            st.error("Ingresa al menos una keyword.")
         else:
-            main()
-    except KeyboardInterrupt:
-        console.print("\n\n  [bold cyan]Hasta luego![/]\n")
-        sys.exit(0)
+            try:
+                from config import normalize_country as _nc
+                from scraper.categorizer import auto_categorizar
+                from scraper.autocomplete import get_autocomplete_suggestions, get_question_suggestions
+                from scraper.google_serp import scrape_google
+                from scraper.volume_estimator import estimar_volumenes
+                from scraper.google_ads_metrics import enrich_with_google_ads_metrics
+            except Exception as e:
+                st.error(f"Error importando módulos: {e}")
+                st.code(traceback.format_exc())
+                st.stop()
+
+            all_results = []
+            for idx, keyword in enumerate(kw_list):
+                country_data = _nc(country)
+                search_ctx = {
+                    "country_code": country_data["country_code"],
+                    "country_name": country_data["country_name"],
+                    "language_code": country_data["language_code"],
+                    "google_ads_geo_targets": country_data["google_ads_geo_targets"],
+                    "scrape_profile": profile,
+                }
+                categoria, subcategoria = auto_categorizar(keyword)
+                
+                status = st.status(f"[{idx+1}/{len(kw_list)}] Analizando: **{keyword}**", expanded=True)
+                status.write(f"📂 Categoría: {categoria} / {subcategoria}")
+
+                status.write("🔍 Sugerencias de autocompletado...")
+                sugerencias = get_autocomplete_suggestions(keyword, expandir=True, search_context=search_ctx)
+                
+                status.write("❓ Preguntas por autocompletado...")
+                preguntas_ac = get_question_suggestions(keyword, search_context=search_ctx)
+                
+                status.write("🌐 Extrayendo SERP (PAA + Relacionadas)...")
+                serp = scrape_google(keyword, search_context=search_ctx)
+                paa = serp.get("preguntas_paa", [])
+                rel = serp.get("busquedas_relacionadas", [])
+                
+                # IA filter
+                groq = MODS.get("GROQ_API_KEY", "") or os.getenv("GROQ_API_KEY", "")
+                if groq:
+                    status.write("🤖 Filtrando con IA (Groq)...")
+                    try:
+                        from scraper.ai_filter import filtrar_con_ia
+                        sugerencias = filtrar_con_ia(sugerencias, keyword, search_ctx["country_name"])
+                        preguntas_ac = filtrar_con_ia(preguntas_ac, keyword, search_ctx["country_name"])
+                        paa = filtrar_con_ia(paa, keyword, search_ctx["country_name"])
+                        rel = filtrar_con_ia(rel, keyword, search_ctx["country_name"])
+                    except Exception:
+                        pass
+
+                status.write("📊 Estimando volúmenes y señales...")
+                volumenes = estimar_volumenes(
+                    keyword_principal=keyword, sugerencias=sugerencias, preguntas_paa=paa,
+                    preguntas_autocompletado=preguntas_ac, busquedas_relacionadas=rel,
+                    usar_trends=True, search_context=search_ctx,
+                    metadata={"categoria_padre": categoria, "subcategoria": subcategoria, "referencia": keyword,
+                              "pais": search_ctx["country_name"], "pais_codigo": search_ctx["country_code"],
+                              "google_ads_geo_targets": search_ctx["google_ads_geo_targets"]},
+                )
+
+                status.write("💰 Google Ads...")
+                gads = enrich_with_google_ads_metrics(volumenes)
+
+                datos = {
+                    "keyword": keyword, "sugerencias": sugerencias, "preguntas_paa": paa,
+                    "preguntas_autocompletado": preguntas_ac, "busquedas_relacionadas": rel,
+                    "volumenes": volumenes, "google_ads": gads,
+                    "country_code": search_ctx["country_code"], "country_name": search_ctx["country_name"],
+                    "language_code": search_ctx["language_code"],
+                    "category_name": categoria, "subcategory_name": subcategoria,
+                }
+                all_results.append(datos)
+                status.update(label=f"✅ {keyword} completado", state="complete", expanded=False)
+
+            st.session_state["results"] = all_results
+            st.success(f"Pipeline completado: {len(all_results)} keyword(s) analizadas")
+            st.balloons()
+
+elif page == "📊 Resultados":
+    if "results" not in st.session_state or not st.session_state["results"]:
+        st.info("No hay resultados aún. Ve a **📥 Data Input** para ejecutar un análisis.")
+        st.stop()
+
+    results = st.session_state["results"]
+    kw_names = [r["keyword"] for r in results]
+    sel = st.selectbox("Keyword analizada", kw_names)
+    res = next(r for r in results if r["keyword"] == sel)
+    vol = res["volumenes"]
+
+    # Metrics row
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Total Keywords", len(vol))
+    m2.metric("Categoría", res.get("category_name", "-"))
+    m3.metric("País", res.get("country_name", "-"))
+    m4.metric("Ads Enriquecidas", res.get("google_ads", {}).get("keywords_enriched", 0))
+
+    # Tabs
+    tabs = st.tabs(["💎 Sugerencias", "❓ PAA", "📝 Preguntas AC", "🔗 Relacionadas", "📥 Exportar"])
+
+    def _render(items, tab):
+        if not items:
+            tab.info("Sin resultados en esta sección.")
+            return
+        rows = []
+        for kw in items:
+            v = vol.get(kw, {})
+            rows.append({
+                "Keyword": kw, 
+                "Ads/mes": v.get("google_ads_avg_monthly_searches", "-"),
+                "Trend": v.get("google_trends_promedio", "-"), 
+                "Score": v.get("score", 0),
+                "Prioridad": v.get("categoria", "-")
+            })
+        df = pd.DataFrame(rows)
+        tab.dataframe(df, use_container_width=True, column_config={
+            "Score": st.column_config.ProgressColumn("Score", min_value=0, max_value=100, format="%d"),
+            "Keyword": st.column_config.TextColumn("Keyword", width="large"),
+        })
+
+    _render(res["sugerencias"], tabs[0])
+    _render(res["preguntas_paa"], tabs[1])
+    _render(res["preguntas_autocompletado"], tabs[2])
+    _render(res["busquedas_relacionadas"], tabs[3])
+
+    with tabs[4]:
+        st.markdown("### Descargar Reportes")
+        try:
+            from exporters.excel_export import exportar_excel
+            from exporters.json_export import exportar_json
+            c1, c2 = st.columns(2)
+            excel_path = exportar_excel(res["keyword"], res)
+            with open(excel_path, "rb") as f:
+                c1.download_button("📊 Descargar Excel", f, file_name=os.path.basename(excel_path), mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            json_path = exportar_json(res["keyword"], res)
+            with open(json_path, "rb") as f:
+                c2.download_button("{ } Descargar JSON", f, file_name=os.path.basename(json_path), mime="application/json")
+        except Exception as e:
+            st.error(f"Error al exportar: {e}")
