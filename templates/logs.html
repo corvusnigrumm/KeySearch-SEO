@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeySearch V 6.0 - Logs</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include "_tailwind_config.html" %}
+<style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}</style>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+{% include "_sidebar.html" %}
+{% include "_topbar.html" %}
+<main class="ml-[240px] mt-16 p-lg">
+<div class="max-w-container-max mx-auto space-y-lg">
+  <header class="flex items-center justify-between mb-lg">
+    <div>
+      <h2 class="font-h1 text-h1 text-primary">Logs del Sistema</h2>
+      <p class="text-on-surface-variant mt-sm">Registro detallado de todas las ejecuciones del pipeline.</p>
+    </div>
+    <button onclick="location.reload()" class="flex items-center gap-sm bg-surface-container border border-outline-variant px-md py-sm rounded-lg hover:bg-surface-container-high transition-colors">
+      <span class="material-symbols-outlined">refresh</span> Actualizar
+    </button>
+  </header>
+
+  <div class="bg-inverse-surface rounded-xl p-lg font-label-md shadow-lg overflow-hidden">
+    <div class="flex items-center justify-between mb-md border-b border-white/10 pb-md">
+      <span class="text-inverse-on-surface font-label-sm opacity-60">KEYSEARCH V 6.0 — PIPELINE LOGS</span>
+      <span id="logCount" class="text-inverse-on-surface font-label-sm opacity-60">{{ state.logs|length }} entradas</span>
+    </div>
+    <div id="logContainer" class="space-y-xs overflow-y-auto max-h-[60vh] pr-sm" style="scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;">
+      {% if state.logs %}
+        {% for entry in state.logs|reverse %}
+        <div class="flex items-start gap-md text-[13px]">
+          <span class="text-inverse-on-surface opacity-40 shrink-0 font-label-sm">{{ entry.time }}</span>
+          <span class="shrink-0 w-16
+            {% if entry.level == 'ERROR' %}text-red-400
+            {% elif entry.level == 'WARNING' %}text-yellow-400
+            {% elif entry.level == 'SUCCESS' %}text-emerald-400
+            {% else %}text-secondary-container{% endif %} font-bold font-label-sm">
+            {{ entry.level }}
+          </span>
+          <span class="text-inverse-on-surface opacity-80">{{ entry.msg }}</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center py-8 text-inverse-on-surface opacity-40">
+          <span class="material-symbols-outlined text-4xl block mb-sm">terminal</span>
+          <p>No hay logs disponibles. Ejecuta una búsqueda para generar logs.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</main>
+{% if state.is_running %}
+<script>
+setInterval(async () => {
+  const r = await fetch('/api/logs');
+  const d = await r.json();
+  const container = document.getElementById('logContainer');
+  if (!container) return;
+  const lines = d.logs.slice().reverse();
+  container.innerHTML = lines.map(e => `
+    <div class="flex items-start gap-md text-[13px]">
+      <span class="text-inverse-on-surface opacity-40 shrink-0 font-label-sm">${e.time}</span>
+      <span class="shrink-0 w-16 ${e.level==='ERROR'?'text-red-400':e.level==='WARNING'?'text-yellow-400':e.level==='SUCCESS'?'text-emerald-400':'text-secondary-container'} font-bold font-label-sm">${e.level}</span>
+      <span class="text-inverse-on-surface opacity-80">${e.msg}</span>
+    </div>`).join('');
+  document.getElementById('logCount').innerText = d.logs.length + ' entradas';
+}, 2000);
+</script>
+{% endif %}
+</body></html>

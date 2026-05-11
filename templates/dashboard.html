@@ -6,400 +6,242 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            "colors": {
-                    "on-surface-variant": "#44474d",
-                    "surface-variant": "#d3e4fe",
-                    "primary-fixed-dim": "#b9c7e4",
-                    "secondary-container": "#00d2ff",
-                    "surface": "#f8f9ff",
-                    "secondary": "#00677f",
-                    "background": "#f8f9ff",
-                    "on-secondary-fixed-variant": "#004e60",
-                    "on-primary-container": "#76849f",
-                    "surface-container-high": "#dce9ff",
-                    "tertiary-container": "#bfab3d",
-                    "on-tertiary-container": "#493f00",
-                    "on-tertiary": "#ffffff",
-                    "surface-bright": "#f8f9ff",
-                    "on-primary-fixed": "#0d1c32",
-                    "surface-container": "#e5eeff",
-                    "on-error": "#ffffff",
-                    "inverse-on-surface": "#eaf1ff",
-                    "surface-container-low": "#eff4ff",
-                    "outline-variant": "#c5c6cd",
-                    "error-container": "#ffdad6",
-                    "on-surface": "#0b1c30",
-                    "on-tertiary-fixed": "#211b00",
-                    "inverse-primary": "#b9c7e4",
-                    "surface-tint": "#515f78",
-                    "primary-fixed": "#d6e3ff",
-                    "tertiary": "#6c5e00",
-                    "on-primary": "#ffffff",
-                    "error": "#ba1a1a",
-                    "on-secondary": "#ffffff",
-                    "on-primary-fixed-variant": "#39475f",
-                    "outline": "#75777e",
-                    "inverse-surface": "#213145",
-                    "primary-container": "#0d1c32",
-                    "primary": "#000000",
-                    "on-background": "#0b1c30",
-                    "surface-dim": "#cbdbf5",
-                    "surface-container-highest": "#d3e4fe",
-                    "surface-container-lowest": "#ffffff",
-                    "on-error-container": "#93000a",
-                    "secondary-fixed-dim": "#47d6ff",
-                    "tertiary-fixed-dim": "#dcc756",
-                    "on-tertiary-fixed-variant": "#524700",
-                    "on-secondary-container": "#00566a",
-                    "on-secondary-fixed": "#001f28",
-                    "tertiary-fixed": "#fae36f"
-            },
-            "borderRadius": {
-                    "DEFAULT": "0.25rem",
-                    "lg": "0.5rem",
-                    "xl": "0.75rem",
-                    "full": "9999px"
-            },
-            "spacing": {
-                    "lg": "24px",
-                    "container-max": "1440px",
-                    "xs": "4px",
-                    "gutter": "24px",
-                    "xl": "32px",
-                    "2xl": "48px",
-                    "3xl": "64px",
-                    "md": "16px",
-                    "base": "4px",
-                    "sm": "8px"
-            },
-            "fontFamily": {
-                    "h2": ["Inter"],
-                    "label-sm": ["JetBrains Mono"],
-                    "label-md": ["JetBrains Mono"],
-                    "display": ["Inter"],
-                    "body-lg": ["Inter"],
-                    "body-sm": ["Inter"],
-                    "h3": ["Inter"],
-                    "h1": ["Inter"],
-                    "body-md": ["Inter"],
-                    "h1-mobile": ["Inter"]
-            },
-            "fontSize": {
-                    "h2": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
-                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
-                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
-                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
-                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
-                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
-                    "h3": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
-                    "h1": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
-                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
-                    "h1-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}]
-            }
-          },
-        },
-      }
-    </script>
+{% include "_tailwind_config.html" %}
 <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .pipeline-gradient {
-            background: linear-gradient(135deg, #0d1c32 0%, #00677f 100%);
-        }
-    </style>
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}
+</style>
 </head>
 <body class="bg-background text-on-surface font-body-md">
-<!-- SideNavBar Shell -->
-<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface border-r border-outline-variant flex flex-col py-md px-sm">
-<div class="mb-xl px-md">
-<h1 class="font-h2 text-h2 font-bold text-primary">KeySearch V 6.0</h1>
-<p class="font-label-sm text-on-surface-variant">SEO Pipeline Engine</p>
-</div>
-<nav class="flex-grow space-y-base">
-<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-secondary font-bold border-r-4 border-secondary-container bg-surface-container" href="/">
-<span class="material-symbols-outlined">hub</span>
-<span class="font-label-md text-label-md">Pipeline Hub</span>
-</a>
-<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="/config">
-<span class="material-symbols-outlined">input</span>
-<span class="font-label-md text-label-md">Data Input</span>
-</a>
-<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
-<span class="material-symbols-outlined">database</span>
-<span class="font-label-md text-label-md">Scraping</span>
-</a>
-<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
-<span class="material-symbols-outlined">psychology</span>
-<span class="font-label-md text-label-md">IA Enrichment</span>
-</a>
-<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
-<span class="material-symbols-outlined">download</span>
-<span class="font-label-md text-label-md">Export</span>
-</a>
-</nav>
-<div class="mt-auto border-t border-outline-variant pt-md space-y-base">
-<button onclick="location.href='/config'" class="w-full mb-md py-sm bg-primary text-white rounded font-label-md hover:opacity-90 transition-all">
-                New Project
-            </button>
-<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high" href="#">
-<span class="material-symbols-outlined">settings</span>
-<span class="font-label-md text-label-md">Settings</span>
-</a>
-<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high" href="#">
-<span class="material-symbols-outlined">menu_book</span>
-<span class="font-label-md text-label-md">Docs</span>
-</a>
-</div>
-</aside>
-<!-- TopAppBar Shell -->
-<header class="fixed top-0 right-0 h-16 ml-[240px] w-[calc(100%-240px)] flex justify-between items-center px-lg bg-surface-container-lowest border-b border-outline-variant shadow-sm z-10">
-<div class="flex items-center gap-xl">
-<h2 class="font-h3 text-h3 text-primary">Dashboard</h2>
-<nav class="flex gap-lg">
-<a class="font-label-md text-primary border-b-2 border-secondary pb-1" href="/">Dashboard</a>
-<a class="font-label-md text-on-surface-variant hover:text-secondary transition-transform scale-95 active:scale-90" href="#">API Status</a>
-<a class="font-label-md text-on-surface-variant hover:text-secondary transition-transform scale-95 active:scale-90" href="#">Logs</a>
-</nav>
-</div>
-<div class="flex items-center gap-lg">
-<div class="relative group">
-<input class="bg-surface-container-low border border-outline-variant rounded-full px-md py-xs text-body-sm w-64 focus:outline-none focus:ring-2 focus:ring-secondary-container" placeholder="Search data..." type="text"/>
-<span class="material-symbols-outlined absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
-</div>
-<button onclick="location.href='/config'" class="bg-primary text-white px-md py-xs rounded font-label-md hover:bg-opacity-90 transition-transform active:scale-95">
-                Run Pipeline
-            </button>
-<div class="flex items-center gap-sm">
-<button class="material-symbols-outlined text-on-surface-variant p-xs hover:bg-surface-variant rounded-full">notifications</button>
-<img alt="User Profile" class="w-8 h-8 rounded-full border border-outline" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1YqIiqrnHjHr-wxFodqEQFPPv3zNmRX8Rh25ZaVX1WCkIIWBoIlXvmzqOYw8eeHzirLmYv2a4_4CnmXYUq4O_lqW2O-hwRwHiMGQRv04GFbFlBrZNDdBc3O7TXbCuJc5iBaB42g5AozN_UvomMO_c_UQD8Li59-krb8zl7RIBzUBn7GbiXGi3tYSlfFAxBAvLYgtt-ttbtkBteQFsYv1vb27FvcFx6K3gzcV8gaoaiKXL4lxmlo4L4A7ZB97aBGcQZpwqHt9BCDX3"/>
-</div>
-</div>
-</header>
-<!-- Main Content Canvas -->
+{% include "_sidebar.html" %}
+{% include "_topbar.html" %}
 <main class="ml-[240px] mt-16 p-lg">
 <div class="max-w-container-max mx-auto space-y-lg">
-<!-- Hero Stats Row (Bento Style) -->
-<div class="grid grid-cols-12 gap-gutter">
-<div class="col-span-12 lg:col-span-4 pipeline-gradient rounded-xl p-xl text-white shadow-lg flex flex-col justify-between">
-<div class="">
-<span class="font-label-sm uppercase tracking-wider opacity-80">Estado del Motor</span>
-<h3 class="font-h1 text-h1 mt-sm" id="mainStatus">{{ state.status_msg }}</h3>
-<p class="font-body-sm mt-md opacity-90 leading-relaxed">
-    {% if state.is_running %}
-    El motor está ejecutando extracciones profundas en los clusters asignados.
-    {% else %}
-    Sistema en espera. Listo para el próximo lote de Keywords.
-    {% endif %}
-</p>
-</div>
-{% if state.is_running %}
-<div class="mt-xl">
-    <div class="w-full bg-white/20 h-2 rounded-full overflow-hidden">
-        <div class="bg-secondary-container h-full transition-all duration-500" style="width: {{ state.progress }}%"></div>
+
+  <!-- Hero Stats Row -->
+  <div class="grid grid-cols-12 gap-gutter">
+    <div class="col-span-12 lg:col-span-4 pipeline-gradient rounded-xl p-xl text-white shadow-lg flex flex-col justify-between">
+      <div>
+        <span class="font-label-sm uppercase tracking-wider opacity-80">Estado del Motor</span>
+        <h3 class="font-h1 text-h1 mt-sm" id="mainStatus">{{ state.status_msg }}</h3>
+        <p class="font-body-sm mt-md opacity-90 leading-relaxed">
+          {% if state.is_running %}El motor está ejecutando extracciones profundas.
+          {% else %}Sistema en espera. Listo para el próximo lote.{% endif %}
+        </p>
+      </div>
+      {% if state.is_running %}
+      <div class="mt-xl">
+        <div class="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+          <div class="bg-secondary-container h-full transition-all duration-500" id="progressBar" style="width:{{ state.progress }}%"></div>
+        </div>
+        <span class="font-label-sm mt-2 block" id="progressPct">{{ state.progress }}% Completado</span>
+      </div>
+      {% endif %}
+      {% if state.error_msg %}
+      <div class="mt-md bg-white/10 rounded-lg p-sm">
+        <p class="text-label-sm text-red-300">⚠️ {{ state.error_msg }}</p>
+      </div>
+      {% endif %}
     </div>
-    <span class="font-label-sm mt-2 block">{{ state.progress }}% Completado</span>
-</div>
-{% endif %}
-</div>
-<div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between">
-<div class="flex justify-between items-start">
-<div>
-<p class="font-label-md text-on-surface-variant">Keywords en Lote</p>
-<h2 class="font-display text-display text-primary mt-xs">{{ state.keywords|length }}</h2>
-</div>
-<div class="bg-secondary-container/20 text-on-secondary-container p-sm rounded-lg">
-<span class="material-symbols-outlined">key</span>
-</div>
-</div>
-<div class="mt-lg">
-<div class="w-full bg-surface-container h-1 rounded-full overflow-hidden">
-<div class="bg-secondary-container h-full w-[100%]"></div>
-</div>
-<div class="flex justify-between mt-xs">
-<span class="font-label-sm text-on-surface-variant">Memoria Activa</span>
-<span class="font-label-sm text-secondary font-bold">READY</span>
-</div>
-</div>
-</div>
-<div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between">
-<div class="flex justify-between items-start">
-<div>
-<p class="font-label-md text-on-surface-variant">Efectividad de Extracción</p>
-<h2 class="font-display text-display text-primary mt-xs">99.8%</h2>
-</div>
-<div class="bg-tertiary-container/20 text-tertiary p-sm rounded-lg">
-<span class="material-symbols-outlined">data_exploration</span>
-</div>
-</div>
-<div class="mt-lg">
-<div class="flex gap-xs h-8 items-end">
-<div class="flex-1 bg-secondary rounded-t-sm h-1/2"></div>
-<div class="flex-1 bg-secondary rounded-t-sm h-3/4"></div>
-<div class="flex-1 bg-secondary rounded-t-sm h-2/3"></div>
-<div class="flex-1 bg-secondary rounded-t-sm h-full"></div>
-<div class="flex-1 bg-secondary rounded-t-sm h-5/6"></div>
-<div class="flex-1 bg-secondary-container rounded-t-sm h-full"></div>
-<div class="flex-1 bg-secondary-container rounded-t-sm h-3/4"></div>
-</div>
-<p class="font-label-sm text-on-surface-variant mt-xs">Estadísticas de sesión actual</p>
-</div>
-</div>
-</div>
-<!-- Pipeline Status Control Section -->
-<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
-<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center">
-<h3 class="font-h3 text-h3">Pipeline Actual: KS-AUTO-V6</h3>
-<div class="flex gap-sm">
-{% if state.is_running %}
-<span class="bg-emerald-100 text-emerald-800 px-md py-xs rounded-full font-label-sm flex items-center gap-xs">
-<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Running
-</span>
-{% else %}
-<span class="bg-surface-variant text-on-surface-variant px-md py-xs rounded-full font-label-sm flex items-center gap-xs">
-<span class="w-2 h-2 rounded-full bg-outline"></span> Idle
-</span>
-{% endif %}
-<button class="material-symbols-outlined text-on-surface-variant">more_vert</button>
-</div>
-</div>
-<div class="p-lg">
-<div class="flex items-center gap-gutter">
-<!-- Step 1: Input -->
-<div class="flex flex-col items-center gap-sm flex-1">
-<div class="w-12 h-12 rounded-full bg-secondary text-white flex items-center justify-center shadow-md">
-<span class="material-symbols-outlined">input</span>
-</div>
-<div class="text-center">
-<p class="font-label-md">Ingestion</p>
-<p class="text-[10px] text-on-surface-variant font-label-sm">COMPLETE</p>
-</div>
-</div>
-<div class="flex-1 h-0.5 bg-secondary"></div>
-<!-- Step 2: Scraping -->
-<div class="flex flex-col items-center gap-sm flex-1">
-<div class="w-12 h-12 rounded-full {% if state.progress >= 20 %}bg-secondary text-white{% else %}border-2 border-outline{% endif %} flex items-center justify-center shadow-md {% if state.progress < 60 and state.is_running %}animate-pulse{% endif %}">
-<span class="material-symbols-outlined">database</span>
-</div>
-<div class="text-center">
-<p class="font-label-md">Scraping</p>
-<p class="text-[10px] {% if state.progress >= 60 %}text-on-surface-variant{% else %}text-secondary font-bold{% endif %} font-label-sm">{% if state.progress >= 60 %}COMPLETE{% elif state.is_running %}ACTIVE{% else %}PENDING{% endif %}</p>
-</div>
-</div>
-<div class="flex-1 h-0.5 {% if state.progress >= 60 %}bg-secondary{% else %}border-t-2 border-dashed border-outline{% endif %}"></div>
-<!-- Step 3: IA -->
-<div class="flex flex-col items-center gap-sm flex-1 {% if state.progress < 60 %}opacity-50{% endif %}">
-<div class="w-12 h-12 rounded-full {% if state.progress >= 80 %}bg-secondary text-white{% else %}border-2 border-outline{% endif %} flex items-center justify-center {% if state.progress >= 60 and state.progress < 100 and state.is_running %}animate-pulse{% endif %}">
-<span class="material-symbols-outlined">psychology</span>
-</div>
-<div class="text-center">
-<p class="font-label-md">IA Enrichment</p>
-<p class="text-[10px] font-label-sm">{% if state.progress >= 100 %}COMPLETE{% elif state.progress >= 60 %}ACTIVE{% else %}PENDING{% endif %}</p>
-</div>
-</div>
-<div class="flex-1 h-0.5 {% if state.progress >= 100 %}bg-secondary{% else %}border-t-2 border-dashed border-outline{% endif %}"></div>
-<!-- Step 4: Export -->
-<div class="flex flex-col items-center gap-sm flex-1 {% if state.progress < 100 %}opacity-50{% endif %}">
-<div class="w-12 h-12 rounded-full {% if state.progress >= 100 %}bg-secondary text-white{% else %}border-2 border-outline{% endif %} flex items-center justify-center">
-<span class="material-symbols-outlined">download</span>
-</div>
-<div class="text-center">
-<p class="font-label-md">Export</p>
-<p class="text-[10px] font-label-sm">{% if state.progress >= 100 %}READY{% else %}WAITING{% endif %}</p>
-</div>
-</div>
-</div>
-</div>
-</div>
-<!-- Main Workspace Grid -->
-<div class="grid grid-cols-12 gap-gutter">
-<!-- Recent Executions Table -->
-<div class="col-span-12 xl:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
-<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low/30">
-<h3 class="font-h3 text-h3">Historial de Resultados</h3>
-</div>
-<div class="overflow-x-auto">
-<table class="w-full text-left">
-<thead class="bg-surface-container-low">
-<tr>
-<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Keyword</th>
-<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Categoría</th>
-<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Volumen/Items</th>
-<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
-<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-right">Action</th>
-</tr>
-</thead>
-<tbody class="divide-y divide-outline-variant">
-{% if state.last_run_data %}
-    {% for item in state.last_run_data %}
-    <tr class="hover:bg-secondary-container/5 transition-colors group">
-    <td class="px-lg py-md">
-    <span class="font-label-md text-primary font-bold">{{ item.keyword }}</span>
-    </td>
-    <td class="px-lg py-md text-body-sm">{{ item.category }} / {{ item.subcategory }}</td>
-    <td class="px-lg py-md text-label-md font-label-md">{{ item.metrics|length }} sugerencias</td>
-    <td class="px-lg py-md">
-    <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded text-[12px] font-bold">READY</span>
-    </td>
-    <td class="px-lg py-md text-right">
-    <button class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary">visibility</button>
-    </td>
-    </tr>
-    {% endfor %}
-{% else %}
-    <tr>
-        <td colspan="5" class="px-lg py-12 text-center text-on-surface-variant italic">No hay datos procesados. Inicia un nuevo proyecto.</td>
-    </tr>
-{% endif %}
-</tbody>
-</table>
-</div>
-</div>
-<!-- Insights & Recommendations Side -->
-<div class="col-span-12 xl:col-span-4 space-y-gutter">
-<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
-<div class="flex items-center gap-sm mb-md">
-<span class="material-symbols-outlined text-tertiary">tips_and_updates</span>
-<h3 class="font-h3 text-h3">IA Insight</h3>
-</div>
-<p class="font-body-sm text-on-surface-variant italic mb-lg">"El motor V6.0 está configurado para máxima profundidad. Se recomienda descargar los resultados en CSV para análisis avanzado."</p>
-<button class="w-full py-sm border border-secondary text-secondary rounded font-label-md hover:bg-secondary/5 transition-colors">
-                            Generar Reporte IA
-                        </button>
-</div>
-<div class="bg-inverse-surface text-inverse-on-surface rounded-xl p-lg overflow-hidden relative group">
-<div class="relative z-10">
-<h4 class="font-h3 text-h3 mb-xs">¿Listo para Exportar?</h4>
-<p class="font-body-sm opacity-80 mb-md">Los datasets están siendo compilados en tiempo real.</p>
-<div class="flex gap-sm">
-<button class="flex-1 bg-secondary-container text-on-secondary-container py-xs rounded font-label-sm hover:brightness-110">Download</button>
-<button class="flex-1 bg-white/10 hover:bg-white/20 py-xs rounded font-label-sm">API Sync</button>
-</div>
-</div>
-<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-9xl opacity-10 rotate-12">bolt</span>
-</div>
-</div>
-</div>
+
+    <div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="font-label-md text-on-surface-variant">Keywords en Lote</p>
+          <h2 class="font-display text-display text-primary mt-xs">{{ state.keywords|length }}</h2>
+        </div>
+        <div class="bg-secondary-container/20 text-on-secondary-container p-sm rounded-lg">
+          <span class="material-symbols-outlined">key</span>
+        </div>
+      </div>
+      <div class="mt-lg">
+        <div class="w-full bg-surface-container h-1 rounded-full overflow-hidden">
+          <div class="bg-secondary-container h-full" style="width:{% if state.keywords %}100{% else %}0{% endif %}%"></div>
+        </div>
+        <div class="flex justify-between mt-xs">
+          <span class="font-label-sm text-on-surface-variant">Memoria Activa</span>
+          <span class="font-label-sm text-secondary font-bold">READY</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="font-label-md text-on-surface-variant">Efectividad de Extracción</p>
+          <h2 class="font-display text-display text-primary mt-xs">99.8%</h2>
+        </div>
+        <div class="bg-tertiary-container/20 text-tertiary p-sm rounded-lg">
+          <span class="material-symbols-outlined">data_exploration</span>
+        </div>
+      </div>
+      <div class="mt-lg">
+        <div class="flex gap-xs h-8 items-end">
+          <div class="flex-1 bg-secondary rounded-t-sm h-1/2"></div>
+          <div class="flex-1 bg-secondary rounded-t-sm h-3/4"></div>
+          <div class="flex-1 bg-secondary rounded-t-sm h-2/3"></div>
+          <div class="flex-1 bg-secondary rounded-t-sm h-full"></div>
+          <div class="flex-1 bg-secondary rounded-t-sm h-5/6"></div>
+          <div class="flex-1 bg-secondary-container rounded-t-sm h-full"></div>
+          <div class="flex-1 bg-secondary-container rounded-t-sm h-3/4"></div>
+        </div>
+        <p class="font-label-sm text-on-surface-variant mt-xs">Estadísticas de sesión actual</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline Stepper -->
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+    <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center">
+      <h3 class="font-h3 text-h3">Pipeline Actual: KS-AUTO-V6</h3>
+      <div class="flex gap-sm items-center">
+        {% if state.is_running %}
+        <span class="bg-emerald-100 text-emerald-800 px-md py-xs rounded-full font-label-sm flex items-center gap-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Running
+        </span>
+        {% else %}
+        <span class="bg-surface-variant text-on-surface-variant px-md py-xs rounded-full font-label-sm flex items-center gap-xs">
+          <span class="w-2 h-2 rounded-full bg-outline"></span> Idle
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="p-lg">
+      <div class="flex items-center gap-gutter">
+        <div class="flex flex-col items-center gap-sm flex-1">
+          <div class="w-12 h-12 rounded-full bg-secondary text-white flex items-center justify-center shadow-md">
+            <span class="material-symbols-outlined">input</span>
+          </div>
+          <div class="text-center"><p class="font-label-md">Ingestion</p><p class="text-[10px] text-on-surface-variant font-label-sm">COMPLETE</p></div>
+        </div>
+        <div class="flex-1 h-0.5 bg-secondary"></div>
+        <a href="/scraping" class="flex flex-col items-center gap-sm flex-1 hover:opacity-80 transition-opacity">
+          <div class="w-12 h-12 rounded-full {% if state.progress >= 20 %}bg-secondary text-white{% else %}border-2 border-outline text-outline{% endif %} flex items-center justify-center shadow-md {% if state.is_running and state.progress < 60 %}animate-pulse{% endif %}">
+            <span class="material-symbols-outlined">database</span>
+          </div>
+          <div class="text-center"><p class="font-label-md">Scraping</p><p class="text-[10px] font-label-sm {% if state.progress >= 60 %}text-on-surface-variant{% else %}text-secondary font-bold{% endif %}">{% if state.progress >= 60 %}COMPLETE{% elif state.is_running %}ACTIVE{% else %}PENDING{% endif %}</p></div>
+        </a>
+        <div class="flex-1 h-0.5 {% if state.progress >= 60 %}bg-secondary{% else %}border-t-2 border-dashed border-outline{% endif %}"></div>
+        <a href="/ia" class="flex flex-col items-center gap-sm flex-1 {% if state.progress < 60 %}opacity-50{% endif %} hover:opacity-80 transition-opacity">
+          <div class="w-12 h-12 rounded-full {% if state.progress >= 80 %}bg-secondary text-white{% else %}border-2 border-outline text-outline{% endif %} flex items-center justify-center {% if state.is_running and state.progress >= 60 and state.progress < 100 %}animate-pulse{% endif %}">
+            <span class="material-symbols-outlined">psychology</span>
+          </div>
+          <div class="text-center"><p class="font-label-md">IA Enrichment</p><p class="text-[10px] font-label-sm">{% if state.progress >= 100 %}COMPLETE{% elif state.progress >= 60 %}ACTIVE{% else %}PENDING{% endif %}</p></div>
+        </a>
+        <div class="flex-1 h-0.5 {% if state.progress >= 100 %}bg-secondary{% else %}border-t-2 border-dashed border-outline{% endif %}"></div>
+        <a href="/export" class="flex flex-col items-center gap-sm flex-1 {% if state.progress < 100 %}opacity-50{% endif %} hover:opacity-80 transition-opacity">
+          <div class="w-12 h-12 rounded-full {% if state.progress >= 100 %}bg-secondary text-white{% else %}border-2 border-outline text-outline{% endif %} flex items-center justify-center">
+            <span class="material-symbols-outlined">download</span>
+          </div>
+          <div class="text-center"><p class="font-label-md">Export</p><p class="text-[10px] font-label-sm">{% if state.progress >= 100 %}READY{% else %}WAITING{% endif %}</p></div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="grid grid-cols-12 gap-gutter">
+    <!-- Results Table -->
+    <div class="col-span-12 xl:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low/30">
+        <h3 class="font-h3 text-h3">Historial de Resultados</h3>
+        {% if state.last_run_data %}
+        <a href="/export" class="text-secondary font-label-md hover:underline flex items-center gap-xs">
+          <span class="material-symbols-outlined text-[16px]">download</span> Exportar
+        </a>
+        {% endif %}
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead class="bg-surface-container-low">
+            <tr>
+              <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Keyword</th>
+              <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Categoría</th>
+              <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Sugerencias</th>
+              <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
+              <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant">
+            {% if state.last_run_data %}
+              {% for item in state.last_run_data %}
+              <tr class="hover:bg-secondary-container/5 transition-colors group">
+                <td class="px-lg py-md"><span class="font-label-md text-primary font-bold">{{ item.keyword }}</span></td>
+                <td class="px-lg py-md text-body-sm">{{ item.category }} / {{ item.subcategory }}</td>
+                <td class="px-lg py-md font-label-md">{{ item.suggestions_count }} sugerencias</td>
+                <td class="px-lg py-md">
+                  {% if item.error is defined and item.error %}
+                  <span class="bg-error-container text-on-error-container px-sm py-xs rounded text-[12px] font-bold">ERROR</span>
+                  {% else %}
+                  <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded text-[12px] font-bold">READY</span>
+                  {% endif %}
+                </td>
+                <td class="px-lg py-md text-right">
+                  <a href="/scraping" class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary transition-colors">visibility</a>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="px-lg py-12 text-center text-on-surface-variant italic">
+                  No hay datos procesados. 
+                  <a href="/config" class="text-secondary font-bold hover:underline">Inicia un nuevo proyecto →</a>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sidebar Cards -->
+    <div class="col-span-12 xl:col-span-4 space-y-gutter">
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+        <div class="flex items-center gap-sm mb-md">
+          <span class="material-symbols-outlined text-tertiary">tips_and_updates</span>
+          <h3 class="font-h3 text-h3">IA Insight</h3>
+        </div>
+        <p class="font-body-sm text-on-surface-variant italic mb-lg">
+          {% if groq_active %}"Motor Groq activo. El enriquecimiento semántico está habilitado para máxima precisión."
+          {% else %}"Configura GROQ_API_KEY para activar el enriquecimiento IA avanzado."{% endif %}
+        </p>
+        <a href="/ia" class="block w-full py-sm border border-secondary text-secondary rounded font-label-md hover:bg-secondary/5 transition-colors text-center">
+          Ver IA Enrichment
+        </a>
+      </div>
+
+      <div class="bg-inverse-surface text-inverse-on-surface rounded-xl p-lg overflow-hidden relative">
+        <div class="relative z-10">
+          <h4 class="font-h3 text-h3 mb-xs">¿Listo para Exportar?</h4>
+          <p class="font-body-sm opacity-80 mb-md">Los datasets están siendo compilados en tiempo real.</p>
+          <div class="flex gap-sm">
+            <a href="/download/csv" class="flex-1 bg-secondary-container text-on-secondary-container py-xs rounded font-label-sm hover:brightness-110 transition-all text-center {% if not state.last_run_data %}opacity-50 pointer-events-none{% endif %}">
+              CSV
+            </a>
+            <a href="/download/json" class="flex-1 bg-white/10 hover:bg-white/20 py-xs rounded font-label-sm transition-all text-center {% if not state.last_run_data %}opacity-50 pointer-events-none{% endif %}">
+              JSON
+            </a>
+          </div>
+        </div>
+        <span class="material-symbols-outlined absolute -bottom-4 -right-4 text-9xl opacity-10 rotate-12">bolt</span>
+      </div>
+    </div>
+  </div>
 </div>
 </main>
 
+{% if state.is_running %}
 <script>
-    {% if state.is_running %}
-    setInterval(async () => {
-        const resp = await fetch('/status');
-        const data = await resp.json();
-        if (!data.is_running) {
-            location.reload();
-        } else {
-            // Update UI elements dynamically if needed
-            document.getElementById('mainStatus').innerText = data.status_msg;
-        }
-    }, 2000);
-    {% endif %}
+setInterval(async () => {
+  const r = await fetch('/status');
+  const d = await r.json();
+  document.getElementById('mainStatus').innerText = d.status_msg;
+  if (document.getElementById('progressBar')) {
+    document.getElementById('progressBar').style.width = d.progress + '%';
+    document.getElementById('progressPct').innerText = d.progress + '% Completado';
+  }
+  if (!d.is_running) location.reload();
+}, 2000);
 </script>
+{% endif %}
 </body></html>

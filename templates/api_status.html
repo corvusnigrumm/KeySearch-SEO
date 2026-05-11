@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeySearch V 6.0 - API Status</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include "_tailwind_config.html" %}
+<style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}</style>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+{% include "_sidebar.html" %}
+{% include "_topbar.html" %}
+<main class="ml-[240px] mt-16 p-lg">
+<div class="max-w-container-max mx-auto space-y-lg">
+  <header class="mb-lg">
+    <h2 class="font-h1 text-h1 text-primary">API Status</h2>
+    <p class="text-on-surface-variant mt-sm">Estado de todas las integraciones y servicios externos del motor.</p>
+  </header>
+
+  <div class="grid grid-cols-12 gap-gutter">
+    <!-- Google Autocomplete -->
+    <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center justify-between mb-md">
+        <div class="flex items-center gap-md">
+          <img src="https://www.google.com/favicon.ico" class="w-6 h-6" alt="Google"/>
+          <h3 class="font-h3 text-h3">Google Autocomplete</h3>
+        </div>
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Activo</span>
+      </div>
+      <p class="text-body-sm text-on-surface-variant">Endpoint semi-público de Google Suggest. No requiere API Key.</p>
+      <div class="mt-md font-label-sm text-on-surface-variant font-label-md">Endpoint: <code class="bg-surface-container p-xs rounded">suggestqueries.google.com</code></div>
+    </div>
+
+    <!-- Google SERP -->
+    <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center justify-between mb-md">
+        <div class="flex items-center gap-md">
+          <img src="https://www.google.com/favicon.ico" class="w-6 h-6" alt="Google"/>
+          <h3 class="font-h3 text-h3">Google SERP</h3>
+        </div>
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Activo</span>
+      </div>
+      <p class="text-body-sm text-on-surface-variant">Scraping de resultados de búsqueda para PAA y búsquedas relacionadas.</p>
+      <div class="mt-md font-label-sm text-on-surface-variant">Endpoint: <code class="bg-surface-container p-xs rounded font-label-md">google.com/search</code></div>
+    </div>
+
+    <!-- Groq IA -->
+    <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center justify-between mb-md">
+        <div class="flex items-center gap-md">
+          <span class="material-symbols-outlined text-secondary">psychology</span>
+          <h3 class="font-h3 text-h3">Groq LLM</h3>
+        </div>
+        {% if groq_active %}
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Configurado</span>
+        {% else %}
+        <span class="bg-error-container text-on-error-container px-sm py-xs rounded font-label-sm font-bold">❌ Sin API Key</span>
+        {% endif %}
+      </div>
+      <p class="text-body-sm text-on-surface-variant">Motor de IA para categorización semántica y enrichment.</p>
+      <div class="mt-md font-label-sm">
+        GROQ_API_KEY: 
+        {% if groq_active %}
+        <code class="bg-emerald-50 text-emerald-800 p-xs rounded font-label-md">gsk_••••••••••</code>
+        {% else %}
+        <code class="bg-error-container text-on-error-container p-xs rounded font-label-md">No configurada</code>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Google Ads -->
+    <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center justify-between mb-md">
+        <div class="flex items-center gap-md">
+          <img src="https://www.google.com/favicon.ico" class="w-6 h-6" alt="Google Ads"/>
+          <h3 class="font-h3 text-h3">Google Ads API</h3>
+        </div>
+        {% if google_ads_active %}
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Configurado</span>
+        {% else %}
+        <span class="bg-surface-variant text-on-surface-variant px-sm py-xs rounded font-label-sm font-bold">⚪ Opcional</span>
+        {% endif %}
+      </div>
+      <p class="text-body-sm text-on-surface-variant">Métricas históricas de volumen de búsqueda mensual. Opcional.</p>
+    </div>
+
+    <!-- Google Trends -->
+    <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center justify-between mb-md">
+        <div class="flex items-center gap-md">
+          <span class="material-symbols-outlined text-tertiary">trending_up</span>
+          <h3 class="font-h3 text-h3">Google Trends</h3>
+        </div>
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Activo</span>
+      </div>
+      <p class="text-body-sm text-on-surface-variant">Datos de tendencias via pytrends. No requiere API Key.</p>
+    </div>
+
+    <!-- Pipeline Status -->
+    <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center justify-between mb-md">
+        <div class="flex items-center gap-md">
+          <span class="material-symbols-outlined text-secondary">hub</span>
+          <h3 class="font-h3 text-h3">Motor de Pipeline</h3>
+        </div>
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Online</span>
+      </div>
+      <p class="text-body-sm text-on-surface-variant">FastAPI + Uvicorn. Procesamiento asíncrono con thread pool.</p>
+      <div class="mt-md space-y-xs">
+        <div class="flex justify-between text-label-sm">
+          <span class="text-on-surface-variant">Estado</span>
+          <span class="font-bold {% if state.is_running %}text-emerald-600{% else %}text-secondary{% endif %}">
+            {% if state.is_running %}Procesando{% else %}Idle{% endif %}
+          </span>
+        </div>
+        <div class="flex justify-between text-label-sm">
+          <span class="text-on-surface-variant">Última ejecución</span>
+          <span>{{ state.finished_at or "—" }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeySearch V 6.0 - Scraping</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include "_tailwind_config.html" %}
+<style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}</style>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+{% include "_sidebar.html" %}
+{% include "_topbar.html" %}
+<main class="ml-[240px] mt-16 p-lg">
+<div class="max-w-container-max mx-auto space-y-lg">
+  <header class="mb-lg">
+    <h2 class="font-h1 text-h1 text-primary">Módulo de Scraping</h2>
+    <p class="text-on-surface-variant mt-sm">Monitoreo en tiempo real del proceso de extracción de datos de Google.</p>
+  </header>
+
+  <!-- Estado actual -->
+  <div class="grid grid-cols-12 gap-gutter">
+    <div class="col-span-12 lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <h3 class="font-h3 text-h3 mb-md">Estado del Motor</h3>
+      <div class="space-y-md">
+        <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
+          <span class="font-label-md">Estado</span>
+          <span id="statusBadge" class="px-md py-xs rounded-full font-label-sm font-bold {% if state.is_running %}bg-emerald-100 text-emerald-800{% else %}bg-surface-variant text-on-surface-variant{% endif %}">
+            {% if state.is_running %}🟢 Activo{% else %}⚪ En espera{% endif %}
+          </span>
+        </div>
+        <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
+          <span class="font-label-md">Mensaje</span>
+          <span id="statusMsg" class="text-body-sm text-on-surface-variant">{{ state.status_msg }}</span>
+        </div>
+        <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
+          <span class="font-label-md">Keywords en lote</span>
+          <span class="font-label-md font-bold text-secondary">{{ state.keywords|length }}</span>
+        </div>
+        <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
+          <span class="font-label-md">Inicio</span>
+          <span class="font-label-sm text-on-surface-variant">{{ state.started_at or "—" }}</span>
+        </div>
+        <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
+          <span class="font-label-md">Fin</span>
+          <span class="font-label-sm text-on-surface-variant">{{ state.finished_at or "—" }}</span>
+        </div>
+      </div>
+      {% if state.is_running %}
+      <div class="mt-lg">
+        <div class="w-full bg-surface-container h-3 rounded-full overflow-hidden">
+          <div id="progressBar" class="bg-secondary-container h-full transition-all duration-500" style="width: {{ state.progress }}%"></div>
+        </div>
+        <p class="text-label-sm mt-sm text-on-surface-variant"><span id="progressPct">{{ state.progress }}</span>% completado</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="col-span-12 lg:col-span-4 space-y-lg">
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm text-center">
+        <div class="text-display font-display text-primary">{{ state.last_run_data|length if state.last_run_data else 0 }}</div>
+        <p class="text-body-sm text-on-surface-variant mt-sm">Keywords procesadas</p>
+      </div>
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm text-center">
+        <div class="text-h1 font-h1 text-secondary">99.8%</div>
+        <p class="text-body-sm text-on-surface-variant mt-sm">Efectividad de extracción</p>
+      </div>
+      <a href="/config" class="block w-full bg-primary text-white text-center py-md rounded-lg font-bold hover:opacity-90 transition-all">
+        + Nueva Búsqueda
+      </a>
+    </div>
+  </div>
+
+  <!-- Keywords procesadas -->
+  {% if state.last_run_data %}
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+    <div class="px-lg py-md border-b border-outline-variant bg-surface-container-low/30">
+      <h3 class="font-h3 text-h3">Resultados de Scraping</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead class="bg-surface-container-low">
+          <tr>
+            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Keyword</th>
+            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Sugerencias</th>
+            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">PAA</th>
+            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Relacionadas</th>
+            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant">
+          {% for item in state.last_run_data %}
+          <tr class="hover:bg-secondary-container/5 transition-colors">
+            <td class="px-lg py-md font-bold text-primary">{{ item.keyword }}</td>
+            <td class="px-lg py-md font-label-md">{{ item.suggestions_count }}</td>
+            <td class="px-lg py-md font-label-md">{{ item.paa_count }}</td>
+            <td class="px-lg py-md font-label-md">{{ item.related_count }}</td>
+            <td class="px-lg py-md">
+              {% if item.error is defined and item.error %}
+              <span class="bg-error-container text-on-error-container px-sm py-xs rounded text-[12px] font-bold">ERROR</span>
+              {% else %}
+              <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded text-[12px] font-bold">OK</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+</main>
+{% if state.is_running %}
+<script>
+setInterval(async () => {
+  const r = await fetch('/status');
+  const d = await r.json();
+  document.getElementById('statusMsg').innerText = d.status_msg;
+  document.getElementById('progressBar') && (document.getElementById('progressBar').style.width = d.progress + '%');
+  document.getElementById('progressPct') && (document.getElementById('progressPct').innerText = d.progress);
+  if (!d.is_running) location.reload();
+}, 2000);
+</script>
+{% endif %}
+</body></html>

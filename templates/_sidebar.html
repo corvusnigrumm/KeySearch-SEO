@@ -1,0 +1,37 @@
+{% set current_path = request.url.path %}
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface border-r border-outline-variant flex flex-col py-md px-sm z-20">
+  <div class="mb-xl px-md">
+    <h1 class="font-h2 text-h2 font-bold text-primary">KeySearch V 6.0</h1>
+    <p class="font-label-sm text-on-surface-variant">SEO Pipeline Engine</p>
+  </div>
+  <nav class="flex-grow space-y-xs">
+    {% set links = [
+      ("/", "hub", "Pipeline Hub"),
+      ("/config", "input", "Data Input"),
+      ("/scraping", "database", "Scraping"),
+      ("/ia", "psychology", "IA Enrichment"),
+      ("/export", "download", "Export")
+    ] %}
+    {% for href, icon, label in links %}
+    <a href="{{ href }}" class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out
+      {% if current_path == href %}text-secondary font-bold border-r-4 border-secondary-container bg-surface-container-high
+      {% else %}text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+      <span class="material-symbols-outlined">{{ icon }}</span>
+      <span class="font-label-md text-label-md">{{ label }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+  <div class="mt-auto border-t border-outline-variant pt-md space-y-xs">
+    <a href="/config" class="block w-full mb-md text-center py-sm bg-primary text-white rounded font-label-md hover:opacity-90 transition-all">
+      New Project
+    </a>
+    <a href="/api-status" class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors">
+      <span class="material-symbols-outlined">settings</span>
+      <span class="font-label-md text-label-md">Settings / API</span>
+    </a>
+    <a href="/logs-view" class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors">
+      <span class="material-symbols-outlined">menu_book</span>
+      <span class="font-label-md text-label-md">Logs</span>
+    </a>
+  </div>
+</aside>

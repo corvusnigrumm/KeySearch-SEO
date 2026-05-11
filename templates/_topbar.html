@@ -1,0 +1,24 @@
+{% set current_path = request.url.path %}
+<header class="fixed top-0 right-0 h-16 ml-[240px] w-[calc(100%-240px)] flex justify-between items-center px-lg bg-surface-container-lowest border-b border-outline-variant shadow-sm z-10">
+  <div class="flex items-center gap-xl">
+    <h2 class="font-h3 text-h3 text-primary">KeySearch</h2>
+    <nav class="flex gap-lg">
+      <a href="/" class="font-label-md {% if current_path == '/' %}text-primary border-b-2 border-secondary pb-1{% else %}text-on-surface-variant hover:text-secondary{% endif %} transition-colors">Dashboard</a>
+      <a href="/api-status" class="font-label-md {% if current_path == '/api-status' %}text-primary border-b-2 border-secondary pb-1{% else %}text-on-surface-variant hover:text-secondary{% endif %} transition-colors">API Status</a>
+      <a href="/logs-view" class="font-label-md {% if current_path == '/logs-view' %}text-primary border-b-2 border-secondary pb-1{% else %}text-on-surface-variant hover:text-secondary{% endif %} transition-colors">Logs</a>
+    </nav>
+  </div>
+  <div class="flex items-center gap-lg">
+    <div class="relative">
+      <input class="bg-surface-container-low border border-outline-variant rounded-full px-md py-xs text-body-sm w-64 focus:outline-none focus:ring-2 focus:ring-secondary-container" placeholder="Search data..." type="text"/>
+      <span class="material-symbols-outlined absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+    </div>
+    <a href="/config" class="bg-primary text-white px-md py-xs rounded font-label-md hover:opacity-90 transition-all active:scale-95">
+      Run Pipeline
+    </a>
+    <div class="flex items-center gap-sm">
+      <a href="/logs-view" class="material-symbols-outlined text-on-surface-variant p-xs hover:bg-surface-variant rounded-full transition-colors">notifications</a>
+      <div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white font-bold text-body-sm">K</div>
+    </div>
+  </div>
+</header>

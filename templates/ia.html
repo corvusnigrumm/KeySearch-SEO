@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeySearch V 6.0 - IA Enrichment</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include "_tailwind_config.html" %}
+<style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}</style>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+{% include "_sidebar.html" %}
+{% include "_topbar.html" %}
+<main class="ml-[240px] mt-16 p-lg">
+<div class="max-w-container-max mx-auto space-y-lg">
+  <header class="mb-lg">
+    <h2 class="font-h1 text-h1 text-primary">IA Enrichment</h2>
+    <p class="text-on-surface-variant mt-sm">Enriquecimiento semántico de keywords con modelos de IA Groq.</p>
+  </header>
+
+  <div class="grid grid-cols-12 gap-gutter">
+    <!-- Estado Groq -->
+    <div class="col-span-12 lg:col-span-4">
+      <div class="pipeline-gradient rounded-xl p-xl text-white shadow-lg">
+        <span class="font-label-sm uppercase tracking-wider opacity-80">Motor IA</span>
+        <h3 class="font-h1 text-h1 mt-sm">Groq LLM</h3>
+        <div class="mt-lg space-y-md">
+          <div class="flex items-center justify-between border-t border-white/20 pt-md">
+            <span class="text-body-sm opacity-80">GROQ_API_KEY</span>
+            {% if groq_active %}
+            <span class="bg-emerald-500 text-white text-label-sm px-sm py-xs rounded font-bold">✅ ACTIVO</span>
+            {% else %}
+            <span class="bg-error text-white text-label-sm px-sm py-xs rounded font-bold">❌ NO CONFIGURADO</span>
+            {% endif %}
+          </div>
+          <div class="flex items-center justify-between border-t border-white/20 pt-md">
+            <span class="text-body-sm opacity-80">Modelo</span>
+            <span class="font-label-md">llama3-70b</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-span-12 lg:col-span-8 space-y-lg">
+      {% if not groq_active %}
+      <div class="bg-error-container text-on-error-container rounded-xl p-lg">
+        <h4 class="font-h3 font-bold mb-sm">⚠️ GROQ_API_KEY no configurada</h4>
+        <p class="text-body-sm">El enriquecimiento IA está desactivado. Configura la variable de entorno GROQ_API_KEY en Render.com para activarlo.</p>
+      </div>
+      {% endif %}
+
+      {% if state.last_run_data %}
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+        <div class="px-lg py-md border-b border-outline-variant bg-surface-container-low/30">
+          <h3 class="font-h3 text-h3">Keywords con Enriquecimiento IA</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead class="bg-surface-container-low">
+              <tr>
+                <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Keyword</th>
+                <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Categoría IA</th>
+                <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Subcategoría</th>
+                <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">PAA Generadas</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-outline-variant">
+              {% for item in state.last_run_data %}
+              <tr class="hover:bg-secondary-container/5 transition-colors">
+                <td class="px-lg py-md font-bold text-primary">{{ item.keyword }}</td>
+                <td class="px-lg py-md text-body-sm">{{ item.category }}</td>
+                <td class="px-lg py-md text-body-sm text-on-surface-variant">{{ item.subcategory }}</td>
+                <td class="px-lg py-md font-label-md">{{ item.paa_count }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="bg-surface-container-lowest border border-dashed border-outline rounded-xl p-xl text-center">
+        <span class="material-symbols-outlined text-4xl text-outline mb-md block">psychology</span>
+        <p class="text-on-surface-variant">Ejecuta primero una búsqueda para ver el enriquecimiento IA.</p>
+        <a href="/config" class="mt-md inline-block bg-primary text-white px-lg py-sm rounded-lg font-bold hover:opacity-90">Nueva Búsqueda</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</main>
+</body></html>
