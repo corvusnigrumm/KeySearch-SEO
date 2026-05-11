@@ -275,12 +275,20 @@ if st.session_state.running:
             }
             
             # 3. Scraping
-            with st.spinner("Extrayendo señales de Google..."):
-                sug = get_autocomplete_suggestions(kw, expandir=(st.session_state.current_profile == "extreme"), search_context=ctx)
+            with st.spinner(f"Extrayendo sugerencias para '{kw}'..."):
+                # Siempre expandir (igual que en el CLI)
+                sug = get_autocomplete_suggestions(kw, expandir=True, search_context=ctx)
+                progress_bar.progress(percent + 5)
+                
+            with st.spinner(f"Generando preguntas para '{kw}'..."):
                 preg_ac = get_question_suggestions(kw, search_context=ctx)
+                progress_bar.progress(percent + 10)
+
+            with st.spinner(f"Extrayendo SERP para '{kw}'..."):
                 serp = scrape_google(kw, search_context=ctx)
                 paa = serp.get("preguntas_paa", [])
                 rel = serp.get("busquedas_relacionadas", [])
+                progress_bar.progress(percent + 15)
                 
             # 4. Estimación y Score
             with st.spinner("Analizando volúmenes y prioridad..."):
@@ -290,6 +298,7 @@ if st.session_state.running:
                     usar_trends=True, search_context=ctx,
                     metadata={"categoria_padre": cat, "subcategoria": sub, "referencia": kw}
                 )
+                progress_bar.progress(percent + 20)
                 
             # 5. Enriquecimiento Ads
             with st.spinner("Consultando Google Ads..."):

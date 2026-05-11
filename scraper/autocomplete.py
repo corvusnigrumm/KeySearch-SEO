@@ -65,48 +65,83 @@ def _fetch_suggestions(
     lang = contexto["language_code"]
     country = contexto["country_code"].upper()
 
-    url = AUTOCOMPLETE_URL.format(
-        lang=lang,
-        country=contexto["country_code"],
-        query=requests.utils.quote(query),
-    )
+    # Probamos varios 'clients' porque algunos son más permisivos que otros
+    endpoints = [
+        "https://suggestqueries.google.com/complete/search?client=chrome&hl={lang}&gl={country}&q={query}",
+        "https://suggestqueries.google.com/complete/search?client=firefox&hl={lang}&gl={country}&q={query}",
+        "https://www.google.com/complete/search?client=psy-ab&hl={lang}&gl={country}&q={query}",
+        "https://suggestqueries.google.com/complete/search?client=psy&hl={lang}&gl={country}&q={query}",
+        "https://www.google.com/complete/search?client=chrome&hl={lang}&q={query}"
+    ]
 
-    # Usar un perfil completo para el autocompletado también
-    perfil = random.choice(USER_AGENT_PROFILES)
-    headers = {
-        "User-Agent": perfil["ua"],
-        "Accept": "*/*",
-        "Accept-Language": f"{lang}-{country},{lang};q=0.9,en-US;q=0.8,en;q=0.7",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Referer": "https://www.google.com/",
-        "sec-ch-ua": perfil.get("sec-ch-ua", ""),
-        "sec-ch-ua-mobile": perfil.get("sec-ch-ua-mobile", "?0"),
-        "sec-ch-ua-platform": perfil.get("sec-ch-ua-platform", '"Windows"'),
-    }
-    # Limpiar keys vacias (ej. Firefox no tiene sec-ch-ua)
-    headers = {k: v for k, v in headers.items() if v}
+    session = session or requests.Session()
+    
+    for url_template in endpoints:
+        url = url_template.format(
+            lang=lang,
+            country=contexto["country_code"],
+            query=requests.utils.quote(query),
+        )
 
-    try:
-        session = session or requests.Session()
-        cache_key = make_key(url)
-        cached = get_text(CACHE_DIR, cache_key, HTTP_CACHE_TTL_SECONDS)
-        if cached:
-            data = json.loads(cached)
-            if isinstance(data, list) and len(data) >= 2:
-                return [limpiar_texto(s) for s in data[1] if s]
+        perfil = random.choice(USER_AGENT_PROFILES)
+        headers = {
+            "User-Agent": perfil["ua"],
+            "Accept": "*/*",
+            "Accept-Language": f"{lang}-{country},{lang};q=0.9,en-US;q=0.8,en;q=0.7",
+            "Referer": "https://www.google.com/",
+            "X-Requested-With": "XMLHttpRequest"
+        }
+        headers = {k: v for k, v in headers.items() if v}
 
-        resp = session.get(url, headers=headers, timeout=10)
-        resp.raise_for_status()
-        set_text(CACHE_DIR, cache_key, resp.text, status=resp.status_code)
-        data = resp.json()
-        # El formato es: [query, [sugerencia1, sugerencia2, ...]]
-        if isinstance(data, list) and len(data) >= 2:
-            return [limpiar_texto(s) for s in data[1] if s]
-        return []
-    except Exception as exc:
-        logger.debug("Autocomplete fallo para %s: %s", query, exc)
-        return []
+        try:
+            cache_key = make_key(url)
+            cached = get_text(CACHE_DIR, cache_key, HTTP_CACHE_TTL_SECONDS)
+            if cached:
+                try:
+                    data = json.loads(cached)
+                    if isinstance(data, list) and len(data) >= 2:
+                        return [limpiar_texto(s) for s in data[1] if isinstance(s, str)]
+                except: pass
+
+            resp = session.get(url, headers=headers, timeout=8)
+            if resp.status_code == 200:
+                # Algunos endpoints devuelven JSON con basura al inicio o formatos raros
+                content = resp.text
+                if content.startswith("window.google.ac.h("):
+                    content = content[content.find("(")+1 : content.rfind(")")]
+                
+                try:
+                    data = json.loads(content)
+                except:
+                    # Fallback si no es JSON puro
+                    continue
+
+                set_text(CACHE_DIR, cache_key, json.dumps(data), status=200)
+                
+                # Detectar formato
+                if isinstance(data, list) and len(data) >= 2:
+                    suggestions = data[1]
+                    if not suggestions: return []
+                    
+                    extracted = []
+                    for s in suggestions:
+                        if isinstance(s, str):
+                            extracted.append(limpiar_texto(s))
+                        elif isinstance(s, list) and s and isinstance(s[0], str):
+                            extracted.append(limpiar_texto(s[0]))
+                        elif isinstance(s, dict):
+                            phrase = s.get("phrase") or s.get("q") or s.get("suggestion")
+                            if phrase: extracted.append(limpiar_texto(phrase))
+                    
+                    if extracted: return extracted
+                
+                continue
+            elif resp.status_code == 429:
+                continue
+        except Exception:
+            continue
+            
+    return []
 
 
 
