@@ -179,50 +179,56 @@ async def run_pipeline(
 
 
 # ── Descarga de resultados ────────────────────────────────────────────────────
-@app.get("/download/csv")
-async def download_csv():
+from fastapi.responses import FileResponse
+
+@app.get("/download/excel")
+async def download_excel():
     if not state.last_run_data:
         return JSONResponse({"error": "No hay datos para exportar. Ejecuta primero el pipeline."}, status_code=404)
 
-    output = io.StringIO()
-    writer = csv.writer(output)
+    from exporters.excel_export import exportar_excel
 
-    # Cabecera
-    writer.writerow(["Keyword", "Categoría", "Subcategoría", "Sugerencias", "PAA", "País", "Perfil"])
-
+    volumenes = {}
+    sugerencias = []
+    preguntas_paa = []
+    preguntas_ac = []
+    relacionadas = []
+    
     for item in state.last_run_data:
-        writer.writerow([
-            item.get("keyword", ""),
-            item.get("category", ""),
-            item.get("subcategory", ""),
-            item.get("suggestions_count", 0),
-            item.get("paa_count", 0),
-            state.country,
-            state.profile,
-        ])
+        volumenes.update(item.get("metrics", {}))
+        sugerencias.extend(item.get("suggestions", []))
+        preguntas_paa.extend(item.get("paa", []))
+        preguntas_ac.extend(item.get("preguntas_autocompletado", []))
+        relacionadas.extend(item.get("related", []))
+        
+    sugerencias = list(dict.fromkeys(sugerencias))
+    preguntas_paa = list(dict.fromkeys(preguntas_paa))
+    preguntas_ac = list(dict.fromkeys(preguntas_ac))
+    relacionadas = list(dict.fromkeys(relacionadas))
 
-        # Sugerencias individuales
-        metrics = item.get("metrics", {})
-        if isinstance(metrics, dict):
-            for kw_item, vol in metrics.items():
-                if isinstance(vol, dict):
-                    writer.writerow([
-                        f"  → {kw_item}",
-                        vol.get("categoria_padre", ""),
-                        vol.get("subcategoria", ""),
-                        "",
-                        "",
-                        vol.get("pais", ""),
-                        "",
-                    ])
+    datos = {
+        "volumenes": volumenes,
+        "language_code": state.country.split("-")[0] if "-" in state.country else state.country,
+        "sugerencias": sugerencias,
+        "preguntas_paa": preguntas_paa,
+        "preguntas_autocompletado": preguntas_ac,
+        "busquedas_relacionadas": relacionadas,
+    }
 
-    output.seek(0)
-    filename = f"keysearch_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
-    )
+    keyword_principal = state.last_run_data[0]["keyword"] if len(state.last_run_data) == 1 else "Batch_Lote"
+    
+    try:
+        ruta_archivo = exportar_excel(keyword_principal, datos)
+        filename = os.path.basename(ruta_archivo)
+        return FileResponse(
+            ruta_archivo, 
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename=filename
+        )
+    except Exception as e:
+        logger.exception("Error generando Excel")
+        return JSONResponse({"error": f"Error generando Excel: {e}"}, status_code=500)
+
 
 
 @app.get("/download/json")
@@ -331,9 +337,10 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
                 "suggestions_count": len(sug),
                 "paa_count": len(paa),
                 "related_count": len(rel),
-                "suggestions": sug[:20],
-                "paa": paa[:15],
-                "related": rel[:10],
+                "suggestions": sug,
+                "paa": paa,
+                "related": rel,
+                "preguntas_autocompletado": preg_ac,
             })
 
         except Exception as e:
@@ -349,6 +356,7 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
                 "suggestions": [],
                 "paa": [],
                 "related": [],
+                "preguntas_autocompletado": [],
                 "error": str(e),
             })
 
