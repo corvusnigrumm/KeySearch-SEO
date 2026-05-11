@@ -8,18 +8,14 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# Importar lógica del motor
+# Importar configuración básica
 from config import normalize_country
-from scraper.autocomplete import get_autocomplete_suggestions, get_question_suggestions
-from scraper.google_serp import scrape_google
-from scraper.volume_estimator import estimar_volumenes
-from scraper.google_ads_metrics import enrich_with_google_ads_metrics
-from scraper.categorizer import auto_categorizar
 
 app = FastAPI(title="KeySearch V 6.0 - FastAPI Engine")
 
 # Configurar templates
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 # Estado global simple (para demo)
 # En una app real usaríamos Redis o una DB
@@ -77,6 +73,13 @@ async def get_status():
     }
 
 async def execute_pipeline(keywords: List[str], country_code: str, profile: str):
+    # Importar lógica pesada solo cuando se necesita
+    from scraper.autocomplete import get_autocomplete_suggestions, get_question_suggestions
+    from scraper.google_serp import scrape_google
+    from scraper.volume_estimator import estimar_volumenes
+    from scraper.google_ads_metrics import enrich_with_google_ads_metrics
+    from scraper.categorizer import auto_categorizar
+
     try:
         ctx = normalize_country(country_code)
         ctx["scrape_profile"] = profile
