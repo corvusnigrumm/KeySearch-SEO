@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: keysearch-v6
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn fastapi_app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_ADS_CUSTOMER_ID
+        sync: false
+    autoDeploy: true

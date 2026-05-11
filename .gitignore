@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 google-ads.yaml
 archivo google-ads.yaml.txt
 google-ads.customer-id.txt
@@ -10,3 +12,9 @@ build/
 downloaded_files/
 *.exe
 scratch/
+*.xlsx
+*.pdf
+*.log
+.env
+.env.*
+*.txt.key
