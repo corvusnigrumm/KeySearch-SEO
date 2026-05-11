@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-surface-variant": "#44474d",
+                "surface-variant": "#d3e4fe",
+                "primary-fixed-dim": "#b9c7e4",
+                "secondary-container": "#00d2ff",
+                "surface": "#f8f9ff",
+                "secondary-fixed": "#b6ebff",
+                "background": "#f8f9ff",
+                "on-secondary-fixed-variant": "#004e60",
+                "on-primary-container": "#76849f",
+                "surface-container-high": "#dce9ff",
+                "tertiary-container": "#bfab3d",
+                "on-tertiary-container": "#493f00",
+                "secondary": "#00677f",
+                "on-tertiary": "#ffffff",
+                "surface-bright": "#f8f9ff",
+                "on-primary-fixed": "#0d1c32",
+                "surface-container": "#e5eeff",
+                "on-error": "#ffffff",
+                "inverse-on-surface": "#eaf1ff",
+                "surface-container-low": "#eff4ff",
+                "outline-variant": "#c5c6cd",
+                "error-container": "#ffdad6",
+                "on-surface": "#0b1c30",
+                "on-tertiary-fixed": "#211b00",
+                "inverse-primary": "#b9c7e4",
+                "surface-tint": "#515f78",
+                "primary-fixed": "#d6e3ff",
+                "tertiary": "#6c5e00",
+                "on-primary": "#ffffff",
+                "error": "#ba1a1a",
+                "on-secondary": "#ffffff",
+                "on-primary-fixed-variant": "#39475f",
+                "outline": "#75777e",
+                "inverse-surface": "#213145",
+                "primary-container": "#0d1c32",
+                "primary": "#000000",
+                "on-background": "#0b1c30",
+                "surface-dim": "#cbdbf5",
+                "surface-container-highest": "#d3e4fe",
+                "surface-container-lowest": "#ffffff",
+                "on-error-container": "#93000a",
+                "secondary-fixed-dim": "#47d6ff",
+                "tertiary-fixed-dim": "#dcc756",
+                "on-tertiary-fixed-variant": "#524700",
+                "on-secondary-container": "#00566a",
+                "on-secondary-fixed": "#001f28",
+                "tertiary-fixed": "#fae36f"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "lg": "24px",
+                "container-max": "1440px",
+                "xs": "4px",
+                "gutter": "24px",
+                "xl": "32px",
+                "2xl": "48px",
+                "3xl": "64px",
+                "md": "16px",
+                "base": "4px",
+                "sm": "8px"
+            },
+            "fontFamily": {
+                "h2": ["Inter"],
+                "label-sm": ["JetBrains Mono"],
+                "label-md": ["JetBrains Mono"],
+                "display": ["Inter"],
+                "body-lg": ["Inter"],
+                "body-sm": ["Inter"],
+                "h3": ["Inter"],
+                "h1": ["Inter"],
+                "body-md": ["Inter"],
+                "h1-mobile": ["Inter"]
+            },
+            "fontSize": {
+                "h2": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "h3": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "h1": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "h1-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .pipeline-gradient {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e5eeff 100%);
+        }
+        .zebra-row:nth-child(even) {
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+<!-- SideNavBar Shell -->
+<nav class="fixed left-0 top-0 h-full w-[240px] bg-surface border-r border-outline-variant flex flex-col h-screen py-md px-sm">
+<div class="mb-xl px-sm">
+<h1 class="font-h1 text-h2 font-bold text-primary">KeySearch V 6.0</h1>
+<p class="font-label-sm text-on-surface-variant">SEO Pipeline Engine</p>
+</div>
+<div class="flex-1 space-y-xs">
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-label-md">Pipeline Hub</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined">input</span>
+<span class="font-label-md">Data Input</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="font-label-md">Scraping</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-label-md">IA Enrichment</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg transition-all duration-200 ease-in-out text-secondary font-bold border-r-4 border-secondary-container bg-surface-container-high" href="#">
+<span class="material-symbols-outlined">download</span>
+<span class="font-label-md">Export</span>
+</a>
+</div>
+<div class="mt-auto space-y-xs border-t border-outline-variant pt-md">
+<button class="w-full bg-primary text-on-primary py-sm rounded-lg font-h3 text-label-md mb-md transition-transform scale-95 active:scale-90">
+                New Project
+            </button>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-label-md">Docs</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-[240px] flex flex-col min-h-screen">
+<!-- TopAppBar Shell -->
+<header class="flex justify-between items-center h-16 px-lg bg-surface-container-lowest shadow-sm sticky top-0 z-10">
+<h2 class="font-h2 text-h2 font-semibold text-primary">Gestor de Resultados</h2>
+<div class="flex items-center gap-md">
+<div class="relative">
+<input class="bg-surface-container-low border border-outline-variant rounded-full px-md py-xs text-body-sm w-64 focus:ring-2 focus:ring-secondary-container outline-none" placeholder="Search pipeline data..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1.5 text-on-surface-variant">search</span>
+</div>
+<div class="flex items-center gap-sm border-l border-outline-variant pl-md">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary">account_circle</span>
+</div>
+</div>
+</header>
+<!-- Canvas -->
+<div class="p-lg space-y-lg">
+<!-- Export Actions & Summary Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Main CTA Card -->
+<div class="md:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+<div>
+<h3 class="font-h3 text-h3 text-primary mb-sm">Exportación Final del Proyecto</h3>
+<p class="text-on-surface-variant font-body-md mb-lg">El pipeline de enriquecimiento ha completado 1,240 registros. Selecciona el formato de salida preferido para tus reportes corporativos.</p>
+</div>
+<div class="flex flex-wrap gap-md">
+<button class="flex items-center gap-sm bg-secondary text-on-secondary px-xl py-md rounded-lg font-h2 text-body-md shadow-md transition-transform hover:scale-105 active:scale-95">
+<span class="material-symbols-outlined">table_view</span>
+                            Exportar a Excel Corporativo
+                        </button>
+<button class="flex items-center gap-sm border-2 border-secondary text-secondary px-xl py-md rounded-lg font-h2 text-body-md transition-all hover:bg-secondary-fixed">
+<span class="material-symbols-outlined">code</span>
+                            Descargar JSON
+                        </button>
+</div>
+</div>
+<!-- Stats/Status Card -->
+<div class="md:col-span-4 bg-primary text-on-primary rounded-xl p-lg flex flex-col justify-center relative overflow-hidden">
+<div class="relative z-10">
+<p class="font-label-sm uppercase tracking-widest text-primary-fixed-dim">Estado de Procesamiento</p>
+<h4 class="font-display text-display leading-none mt-sm">100%</h4>
+<div class="flex items-center gap-xs mt-md">
+<span class="material-symbols-outlined text-secondary-fixed-dim" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label-md">Ready for deployment</span>
+</div>
+</div>
+<!-- Decorative background pulse -->
+<div class="absolute -right-10 -bottom-10 w-40 h-40 bg-secondary-container opacity-20 rounded-full blur-3xl"></div>
+</div>
+</div>
+<!-- Filters Section -->
+<div class="bg-surface-container rounded-xl p-md border border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-lg">
+<div class="flex items-center gap-sm">
+<span class="font-label-md text-on-surface-variant">Status:</span>
+<select class="bg-surface-container-lowest border border-outline-variant rounded px-sm py-xs font-label-md outline-none">
+<option>All Successful</option>
+<option>Pending Enrichment</option>
+<option>Schema Mismatch</option>
+</select>
+</div>
+<div class="flex items-center gap-sm">
+<span class="font-label-md text-on-surface-variant">Min. Confidence:</span>
+<input class="accent-secondary h-2 bg-outline-variant rounded-lg" type="range"/>
+<span class="font-label-md">85%</span>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-md py-xs bg-surface-container-lowest border border-outline-variant rounded hover:bg-surface-container-high transition-colors font-label-md">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                        Advanced Filters
+                    </button>
+</div>
+</div>
+<!-- Data Table Container -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-md py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">ID</th>
+<th class="px-md py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">URL / Segment</th>
+<th class="px-md py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">IA Sentiment</th>
+<th class="px-md py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Entity Match</th>
+<th class="px-md py-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-right">Confidence</th>
+<th class="px-md py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
+</tr>
+</thead>
+<tbody class="font-body-sm">
+<tr class="zebra-row hover:bg-secondary-container/10 transition-colors">
+<td class="px-md py-sm font-label-md">KS-9021</td>
+<td class="px-md py-sm">/solutions/enterprise-analytics</td>
+<td class="px-md py-sm"><span class="bg-surface-container px-sm py-xs rounded text-secondary font-semibold">Positive</span></td>
+<td class="px-md py-sm">Google Cloud, AWS</td>
+<td class="px-md py-sm text-right font-label-md text-secondary">0.982</td>
+<td class="px-md py-sm">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+<span>Completed</span>
+</div>
+</td>
+</tr>
+<tr class="zebra-row hover:bg-secondary-container/10 transition-colors">
+<td class="px-md py-sm font-label-md">KS-9022</td>
+<td class="px-md py-sm">/blog/future-of-data-scraping</td>
+<td class="px-md py-sm"><span class="bg-surface-container px-sm py-xs rounded text-secondary font-semibold">Informational</span></td>
+<td class="px-md py-sm">AI, Ethics</td>
+<td class="px-md py-sm text-right font-label-md text-secondary">0.945</td>
+<td class="px-md py-sm">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+<span>Completed</span>
+</div>
+</td>
+</tr>
+<tr class="zebra-row hover:bg-secondary-container/10 transition-colors">
+<td class="px-md py-sm font-label-md">KS-9023</td>
+<td class="px-md py-sm">/contact-us</td>
+<td class="px-md py-sm"><span class="bg-surface-container-high px-sm py-xs rounded text-on-surface-variant font-semibold">Neutral</span></td>
+<td class="px-md py-sm">Lead Generation</td>
+<td class="px-md py-sm text-right font-label-md text-secondary">0.891</td>
+<td class="px-md py-sm">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+<span>Completed</span>
+</div>
+</td>
+</tr>
+<tr class="zebra-row hover:bg-secondary-container/10 transition-colors">
+<td class="px-md py-sm font-label-md">KS-9024</td>
+<td class="px-md py-sm">/products/vector-db</td>
+<td class="px-md py-sm"><span class="bg-surface-container px-sm py-xs rounded text-secondary font-semibold">High-Intent</span></td>
+<td class="px-md py-sm">Database, LLM</td>
+<td class="px-md py-sm text-right font-label-md text-secondary">0.998</td>
+<td class="px-md py-sm">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+<span>Completed</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-md bg-surface-container-low border-t border-outline-variant flex justify-between items-center">
+<p class="font-label-sm text-on-surface-variant">Showing 1-4 of 1,240 records</p>
+<div class="flex gap-xs">
+<button class="px-sm py-xs border border-outline-variant rounded hover:bg-surface-container-high material-symbols-outlined">chevron_left</button>
+<button class="px-sm py-xs border border-outline-variant rounded bg-primary text-on-primary font-label-sm">1</button>
+<button class="px-sm py-xs border border-outline-variant rounded hover:bg-surface-container-high font-label-sm">2</button>
+<button class="px-sm py-xs border border-outline-variant rounded hover:bg-surface-container-high font-label-sm">3</button>
+<button class="px-sm py-xs border border-outline-variant rounded hover:bg-surface-container-high material-symbols-outlined">chevron_right</button>
+</div>
+</div>
+</div>
+<!-- Visual Insight Placeholder -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex items-center gap-lg shadow-sm">
+<div class="w-24 h-24 rounded-full border-8 border-secondary-container border-t-secondary animate-pulse"></div>
+<div>
+<h4 class="font-h3 text-h3">Data Distribution</h4>
+<p class="text-body-sm text-on-surface-variant">The enrichment process identified 84 unique entities across 12 taxonomies.</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+<img class="w-full h-24 object-cover rounded-lg border border-outline-variant" data-alt="A sophisticated business data visualization dashboard showing a pipeline flow with glowing cyan connections. The image is minimalist and high-tech with a clean white background, thin slate blue lines, and vibrant electric accents. The lighting is even and professional, suggesting clarity and precision in enterprise data processing." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvC2hNuBr_zLOkV3cniGwHfSXvS5vlaOwfhwoaDUa6ZfDYO0X_rL3uxrXJcjGTn0M7ANHG4kCS8iJlnwNtxU2TdoXiJXgyUPYiDvQftxY-7PBeuP70TvfzeouveQs1RO1YaFGp1VuY5zWYY8HPifFH-izJ2AVEhNXj_7qPRoi_vJScuwjB40GnNgc246AQEDOpUptPVJo6xQ7w2sfV7gbV5lJzyFzGYe9Wppb21iZM5DtyUaGcbSx04ah951m2NxJbKZPACuHYyGF8"/>
+</div>
+</div>
+</div>
+</main>
+</body></html>

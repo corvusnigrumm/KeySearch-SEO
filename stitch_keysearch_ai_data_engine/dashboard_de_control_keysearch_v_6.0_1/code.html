@@ -1,0 +1,418 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#44474d",
+                    "surface-variant": "#d3e4fe",
+                    "primary-fixed-dim": "#b9c7e4",
+                    "secondary-container": "#00d2ff",
+                    "surface": "#f8f9ff",
+                    "secondary": "#00677f",
+                    "background": "#f8f9ff",
+                    "on-secondary-fixed-variant": "#004e60",
+                    "on-primary-container": "#76849f",
+                    "surface-container-high": "#dce9ff",
+                    "tertiary-container": "#bfab3d",
+                    "on-tertiary-container": "#493f00",
+                    "secondary": "#00677f",
+                    "on-tertiary": "#ffffff",
+                    "surface-bright": "#f8f9ff",
+                    "on-primary-fixed": "#0d1c32",
+                    "surface-container": "#e5eeff",
+                    "on-error": "#ffffff",
+                    "inverse-on-surface": "#eaf1ff",
+                    "surface-container-low": "#eff4ff",
+                    "outline-variant": "#c5c6cd",
+                    "error-container": "#ffdad6",
+                    "on-surface": "#0b1c30",
+                    "on-tertiary-fixed": "#211b00",
+                    "inverse-primary": "#b9c7e4",
+                    "surface-tint": "#515f78",
+                    "primary-fixed": "#d6e3ff",
+                    "tertiary": "#6c5e00",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#39475f",
+                    "outline": "#75777e",
+                    "inverse-surface": "#213145",
+                    "primary-container": "#0d1c32",
+                    "primary": "#000000",
+                    "on-background": "#0b1c30",
+                    "surface-dim": "#cbdbf5",
+                    "surface-container-highest": "#d3e4fe",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed-dim": "#47d6ff",
+                    "tertiary-fixed-dim": "#dcc756",
+                    "on-tertiary-fixed-variant": "#524700",
+                    "on-secondary-container": "#00566a",
+                    "on-secondary-fixed": "#001f28",
+                    "tertiary-fixed": "#fae36f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "lg": "24px",
+                    "container-max": "1440px",
+                    "xs": "4px",
+                    "gutter": "24px",
+                    "xl": "32px",
+                    "2xl": "48px",
+                    "3xl": "64px",
+                    "md": "16px",
+                    "base": "4px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "h2": ["Inter"],
+                    "label-sm": ["JetBrains Mono"],
+                    "label-md": ["JetBrains Mono"],
+                    "display": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "h3": ["Inter"],
+                    "h1": ["Inter"],
+                    "body-md": ["Inter"],
+                    "h1-mobile": ["Inter"]
+            },
+            "fontSize": {
+                    "h2": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "h3": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "h1": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "h1-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pipeline-gradient {
+            background: linear-gradient(135deg, #0d1c32 0%, #00677f 100%);
+        }
+    </style>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}[type='text'],input:where(:not([type])),[type='email'],[type='url'],[type='password'],[type='number'],[type='date'],[type='datetime-local'],[type='month'],[type='search'],[type='tel'],[type='time'],[type='week'],[multiple],textarea,select{-webkit-appearance:none;appearance:none;background-color:#fff;border-color:#6b7280;border-width:1px;border-radius:0px;padding-top:0.5rem;padding-right:0.75rem;padding-bottom:0.5rem;padding-left:0.75rem;font-size:1rem;line-height:1.5rem;--tw-shadow:0 0 #0000;}[type='text']:focus, input:where(:not([type])):focus, [type='email']:focus, [type='url']:focus, [type='password']:focus, [type='number']:focus, [type='date']:focus, [type='datetime-local']:focus, [type='month']:focus, [type='search']:focus, [type='tel']:focus, [type='time']:focus, [type='week']:focus, [multiple]:focus, textarea:focus, select:focus{outline:2px solid transparent;outline-offset:2px;--tw-ring-inset:var(--tw-empty,/*!*/ /*!*/);--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:#2563eb;--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);border-color:#2563eb}input::placeholder,textarea::placeholder{color:#6b7280;opacity:1}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-date-and-time-value{min-height:1.5em;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit,::-webkit-datetime-edit-year-field,::-webkit-datetime-edit-month-field,::-webkit-datetime-edit-day-field,::-webkit-datetime-edit-hour-field,::-webkit-datetime-edit-minute-field,::-webkit-datetime-edit-second-field,::-webkit-datetime-edit-millisecond-field,::-webkit-datetime-edit-meridiem-field{padding-top:0;padding-bottom:0}select{background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");background-position:right 0.5rem center;background-repeat:no-repeat;background-size:1.5em 1.5em;padding-right:2.5rem;print-color-adjust:exact}[multiple],[size]:where(select:not([size="1"])){background-image:initial;background-position:initial;background-repeat:unset;background-size:initial;padding-right:0.75rem;print-color-adjust:unset}[type='checkbox'],[type='radio']{-webkit-appearance:none;appearance:none;padding:0;print-color-adjust:exact;display:inline-block;vertical-align:middle;background-origin:border-box;-webkit-user-select:none;user-select:none;flex-shrink:0;height:1rem;width:1rem;color:#2563eb;background-color:#fff;border-color:#6b7280;border-width:1px;--tw-shadow:0 0 #0000}[type='checkbox']{border-radius:0px}[type='radio']{border-radius:100%}[type='checkbox']:focus,[type='radio']:focus{outline:2px solid transparent;outline-offset:2px;--tw-ring-inset:var(--tw-empty,/*!*/ /*!*/);--tw-ring-offset-width:2px;--tw-ring-offset-color:#fff;--tw-ring-color:#2563eb;--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}[type='checkbox']:checked,[type='radio']:checked{border-color:transparent;background-color:currentColor;background-size:100% 100%;background-position:center;background-repeat:no-repeat}[type='checkbox']:checked{background-image:url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");}@media (forced-colors: active) {[type='checkbox']:checked{-webkit-appearance:auto;appearance:auto}}[type='radio']:checked{background-image:url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e");}@media (forced-colors: active) {[type='radio']:checked{-webkit-appearance:auto;appearance:auto}}[type='checkbox']:checked:hover,[type='checkbox']:checked:focus,[type='radio']:checked:hover,[type='radio']:checked:focus{border-color:transparent;background-color:currentColor}[type='checkbox']:indeterminate{background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 16 16'%3e%3cpath stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 8h8'/%3e%3c/svg%3e");border-color:transparent;background-color:currentColor;background-size:100% 100%;background-position:center;background-repeat:no-repeat;}@media (forced-colors: active) {[type='checkbox']:indeterminate{-webkit-appearance:auto;appearance:auto}}[type='checkbox']:indeterminate:hover,[type='checkbox']:indeterminate:focus{border-color:transparent;background-color:currentColor}[type='file']{background:unset;border-color:inherit;border-width:0;border-radius:0;padding:0;font-size:unset;line-height:inherit}[type='file']:focus{outline:1px solid ButtonText;outline:1px auto -webkit-focus-ring-color}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.-bottom-4{bottom:-1rem}.-right-4{right:-1rem}.left-0{left:0px}.right-0{right:0px}.right-md{right:16px}.top-0{top:0px}.top-1\/2{top:50%}.z-10{z-index:10}.col-span-12{grid-column:span 12 / span 12}.mx-auto{margin-left:auto;margin-right:auto}.mb-lg{margin-bottom:24px}.mb-md{margin-bottom:16px}.mb-xl{margin-bottom:32px}.mb-xs{margin-bottom:4px}.ml-\[240px\]{margin-left:240px}.mt-16{margin-top:4rem}.mt-auto{margin-top:auto}.mt-lg{margin-top:24px}.mt-md{margin-top:16px}.mt-sm{margin-top:8px}.mt-xl{margin-top:32px}.mt-xs{margin-top:4px}.flex{display:flex}.grid{display:grid}.h-0\.5{height:0.125rem}.h-1{height:0.25rem}.h-1\/2{height:50%}.h-12{height:3rem}.h-16{height:4rem}.h-2{height:0.5rem}.h-2\/3{height:66.666667%}.h-3\/4{height:75%}.h-5\/6{height:83.333333%}.h-8{height:2rem}.h-\[1024px\]{height:1024px}.h-full{height:100%}.w-12{width:3rem}.w-2{width:0.5rem}.w-64{width:16rem}.w-8{width:2rem}.w-\[240px\]{width:240px}.w-\[78\%\]{width:78%}.w-\[calc\(100\%-240px\)\]{width:calc(100% - 240px)}.w-full{width:100%}.max-w-container-max{max-width:1440px}.flex-1{flex:1 1 0%}.flex-grow{flex-grow:1}.-translate-y-1\/2{--tw-translate-y:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.rotate-12{--tw-rotate:12deg;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.scale-95{--tw-scale-x:.95;--tw-scale-y:.95;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite}.grid-cols-12{grid-template-columns:repeat(12, minmax(0, 1fr))}.flex-col{flex-direction:column}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-gutter{gap:24px}.gap-lg{gap:24px}.gap-md{gap:16px}.gap-sm{gap:8px}.gap-xl{gap:32px}.gap-xs{gap:4px}.-space-x-sm > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(-8px * var(--tw-space-x-reverse));margin-left:calc(-8px * calc(1 - var(--tw-space-x-reverse)))}.space-y-base > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(4px * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(4px * var(--tw-space-y-reverse))}.space-y-gutter > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(24px * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(24px * var(--tw-space-y-reverse))}.space-y-lg > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(24px * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(24px * var(--tw-space-y-reverse))}.divide-y > :not([hidden]) ~ :not([hidden]){--tw-divide-y-reverse:0;border-top-width:calc(1px * calc(1 - var(--tw-divide-y-reverse)));border-bottom-width:calc(1px * var(--tw-divide-y-reverse))}.divide-outline-variant > :not([hidden]) ~ :not([hidden]){--tw-divide-opacity:1;border-color:rgb(197 198 205 / var(--tw-divide-opacity, 1))}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.rounded{border-radius:0.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-xl{border-radius:0.75rem}.rounded-t-sm{border-top-left-radius:0.125rem;border-top-right-radius:0.125rem}.border{border-width:1px}.border-2{border-width:2px}.border-b{border-bottom-width:1px}.border-b-2{border-bottom-width:2px}.border-r{border-right-width:1px}.border-r-4{border-right-width:4px}.border-t{border-top-width:1px}.border-t-2{border-top-width:2px}.border-dashed{border-style:dashed}.border-outline{--tw-border-opacity:1;border-color:rgb(117 119 126 / var(--tw-border-opacity, 1))}.border-outline-variant{--tw-border-opacity:1;border-color:rgb(197 198 205 / var(--tw-border-opacity, 1))}.border-primary-container{--tw-border-opacity:1;border-color:rgb(13 28 50 / var(--tw-border-opacity, 1))}.border-secondary{--tw-border-opacity:1;border-color:rgb(0 103 127 / var(--tw-border-opacity, 1))}.border-secondary-container{--tw-border-opacity:1;border-color:rgb(0 210 255 / var(--tw-border-opacity, 1))}.bg-background{--tw-bg-opacity:1;background-color:rgb(248 249 255 / var(--tw-bg-opacity, 1))}.bg-emerald-100{--tw-bg-opacity:1;background-color:rgb(209 250 229 / var(--tw-bg-opacity, 1))}.bg-emerald-500{--tw-bg-opacity:1;background-color:rgb(16 185 129 / var(--tw-bg-opacity, 1))}.bg-error-container{--tw-bg-opacity:1;background-color:rgb(255 218 214 / var(--tw-bg-opacity, 1))}.bg-inverse-surface{--tw-bg-opacity:1;background-color:rgb(33 49 69 / var(--tw-bg-opacity, 1))}.bg-primary{--tw-bg-opacity:1;background-color:rgb(0 0 0 / var(--tw-bg-opacity, 1))}.bg-secondary{--tw-bg-opacity:1;background-color:rgb(0 103 127 / var(--tw-bg-opacity, 1))}.bg-secondary-container{--tw-bg-opacity:1;background-color:rgb(0 210 255 / var(--tw-bg-opacity, 1))}.bg-secondary-container\/20{background-color:rgb(0 210 255 / 0.2)}.bg-surface{--tw-bg-opacity:1;background-color:rgb(248 249 255 / var(--tw-bg-opacity, 1))}.bg-surface-container{--tw-bg-opacity:1;background-color:rgb(229 238 255 / var(--tw-bg-opacity, 1))}.bg-surface-container-low{--tw-bg-opacity:1;background-color:rgb(239 244 255 / var(--tw-bg-opacity, 1))}.bg-surface-container-low\/30{background-color:rgb(239 244 255 / 0.3)}.bg-surface-container-lowest{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-tertiary-container\/20{background-color:rgb(191 171 61 / 0.2)}.bg-white\/10{background-color:rgb(255 255 255 / 0.1)}.p-lg{padding:24px}.p-sm{padding:8px}.p-xl{padding:32px}.p-xs{padding:4px}.px-lg{padding-left:24px;padding-right:24px}.px-md{padding-left:16px;padding-right:16px}.px-sm{padding-left:8px;padding-right:8px}.py-md{padding-top:16px;padding-bottom:16px}.py-sm{padding-top:8px;padding-bottom:8px}.py-xs{padding-top:4px;padding-bottom:4px}.pb-1{padding-bottom:0.25rem}.pt-md{padding-top:16px}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.font-body-md{font-family:Inter}.font-body-sm{font-family:Inter}.font-display{font-family:Inter}.font-h1{font-family:Inter}.font-h2{font-family:Inter}.font-h3{font-family:Inter}.font-label-md{font-family:JetBrains Mono}.font-label-sm{font-family:JetBrains Mono}.text-9xl{font-size:8rem;line-height:1}.text-\[10px\]{font-size:10px}.text-\[12px\]{font-size:12px}.text-\[16px\]{font-size:16px}.text-\[18px\]{font-size:18px}.text-body-sm{font-size:14px;line-height:20px;font-weight:400}.text-display{font-size:48px;line-height:56px;letter-spacing:-0.02em;font-weight:700}.text-h1{font-size:32px;line-height:40px;letter-spacing:-0.01em;font-weight:600}.text-h2{font-size:24px;line-height:32px;font-weight:600}.text-h3{font-size:20px;line-height:28px;font-weight:600}.text-label-md{font-size:14px;line-height:20px;font-weight:500}.font-bold{font-weight:700}.uppercase{text-transform:uppercase}.italic{font-style:italic}.leading-relaxed{line-height:1.625}.tracking-wider{letter-spacing:0.05em}.text-emerald-800{--tw-text-opacity:1;color:rgb(6 95 70 / var(--tw-text-opacity, 1))}.text-inverse-on-surface{--tw-text-opacity:1;color:rgb(234 241 255 / var(--tw-text-opacity, 1))}.text-on-error-container{--tw-text-opacity:1;color:rgb(147 0 10 / var(--tw-text-opacity, 1))}.text-on-secondary-container{--tw-text-opacity:1;color:rgb(0 86 106 / var(--tw-text-opacity, 1))}.text-on-surface{--tw-text-opacity:1;color:rgb(11 28 48 / var(--tw-text-opacity, 1))}.text-on-surface-variant{--tw-text-opacity:1;color:rgb(68 71 77 / var(--tw-text-opacity, 1))}.text-primary{--tw-text-opacity:1;color:rgb(0 0 0 / var(--tw-text-opacity, 1))}.text-secondary{--tw-text-opacity:1;color:rgb(0 103 127 / var(--tw-text-opacity, 1))}.text-tertiary{--tw-text-opacity:1;color:rgb(108 94 0 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.opacity-10{opacity:0.1}.opacity-50{opacity:0.5}.opacity-80{opacity:0.8}.opacity-90{opacity:0.9}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-200{transition-duration:200ms}.ease-in-out{transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1)}.hover\:bg-secondary-container\/5:hover{background-color:rgb(0 210 255 / 0.05)}.hover\:bg-secondary\/5:hover{background-color:rgb(0 103 127 / 0.05)}.hover\:bg-surface-container-high:hover{--tw-bg-opacity:1;background-color:rgb(220 233 255 / var(--tw-bg-opacity, 1))}.hover\:bg-surface-variant:hover{--tw-bg-opacity:1;background-color:rgb(211 228 254 / var(--tw-bg-opacity, 1))}.hover\:bg-white\/20:hover{background-color:rgb(255 255 255 / 0.2)}.hover\:bg-opacity-90:hover{--tw-bg-opacity:0.9}.hover\:text-secondary:hover{--tw-text-opacity:1;color:rgb(0 103 127 / var(--tw-text-opacity, 1))}.hover\:underline:hover{-webkit-text-decoration-line:underline;text-decoration-line:underline}.hover\:opacity-90:hover{opacity:0.9}.hover\:brightness-110:hover{--tw-brightness:brightness(1.1);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.focus\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}.focus\:ring-2:focus{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)}.focus\:ring-secondary-container:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(0 210 255 / var(--tw-ring-opacity, 1))}.active\:scale-90:active{--tw-scale-x:.9;--tw-scale-y:.9;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.active\:scale-95:active{--tw-scale-x:.95;--tw-scale-y:.95;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:text-secondary{--tw-text-opacity:1;color:rgb(0 103 127 / var(--tw-text-opacity, 1))}@media (min-width: 768px){.md\:col-span-6{grid-column:span 6 / span 6}}@media (min-width: 1024px){.lg\:col-span-4{grid-column:span 4 / span 4}}@media (min-width: 1280px){.xl\:col-span-4{grid-column:span 4 / span 4}.xl\:col-span-8{grid-column:span 8 / span 8}}</style></head>
+<body class="bg-background text-on-surface font-body-md" data-mode="connect">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface border-r border-outline-variant flex flex-col h-[1024px] py-md px-sm" data-stitch-vh="h-[1024px]===h-screen">
+<div class="mb-xl px-md">
+<h1 class="font-h2 text-h2 font-bold text-primary">KeySearch V 6.0</h1>
+<p class="font-label-sm text-on-surface-variant">SEO Pipeline Engine</p>
+</div>
+<nav class="flex-grow space-y-base">
+<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-secondary font-bold border-r-4 border-secondary-container bg-surface-container" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-label-md text-label-md">Pipeline Hub</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="input">input</span>
+<span class="font-label-md text-label-md">Data Input</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+<span class="font-label-md text-label-md">Scraping</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="font-label-md text-label-md">IA Enrichment</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+<span class="font-label-md text-label-md">Export</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-outline-variant pt-md space-y-base">
+<button class="w-full mb-md py-sm bg-primary text-white rounded font-label-md hover:opacity-90 transition-all">
+                New Project
+            </button>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-label-md text-label-md">Docs</span>
+</a>
+</div>
+</aside>
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 right-0 h-16 ml-[240px] w-[calc(100%-240px)] flex justify-between items-center px-lg bg-surface-container-lowest border-b border-outline-variant shadow-sm z-10">
+<div class="flex items-center gap-xl">
+<h2 class="font-h3 text-h3 text-primary">Dashboard</h2>
+<nav class="flex gap-lg">
+<a class="font-label-md text-primary border-b-2 border-secondary pb-1" href="#">Dashboard</a>
+<a class="font-label-md text-on-surface-variant hover:text-secondary transition-transform scale-95 active:scale-90" href="#">API Status</a>
+<a class="font-label-md text-on-surface-variant hover:text-secondary transition-transform scale-95 active:scale-90" href="#">Logs</a>
+</nav>
+</div>
+<div class="flex items-center gap-lg">
+<div class="relative group">
+<input class="bg-surface-container-low border border-outline-variant rounded-full px-md py-xs text-body-sm w-64 focus:outline-none focus:ring-2 focus:ring-secondary-container" placeholder="Search data..." type="text">
+<span class="material-symbols-outlined absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+</div>
+<button class="bg-primary text-white px-md py-xs rounded font-label-md hover:bg-opacity-90 transition-transform active:scale-95">
+                Run Pipeline
+            </button>
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-on-surface-variant p-xs hover:bg-surface-variant rounded-full" data-icon="notifications">notifications</button>
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-outline" data-alt="Close-up professional portrait of a tech executive with a confident expression, set against a blurred modern office background with soft blue lighting. The style is clean, corporate, and high-fidelity, reflecting a leadership persona in a sophisticated data science environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1YqIiqrnHjHr-wxFodqEQFPPv3zNmRX8Rh25ZaVX1WCkIIWBoIlXvmzqOYw8eeHzirLmYv2a4_4CnmXYUq4O_lqW2O-hwRwHiMGQRv04GFbFlBrZNDdBc3O7TXbCuJc5iBaB42g5AozN_UvomMO_c_UQD8Li59-krb8zl7RIBzUBn7GbiXGi3tYSlfFAxBAvLYgtt-ttbtkBteQFsYv1vb27FvcFx6K3gzcV8gaoaiKXL4lxmlo4L4A7ZB97aBGcQZpwqHt9BCDX3">
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] mt-16 p-lg">
+<div class="max-w-container-max mx-auto space-y-lg">
+<!-- Hero Stats Row (Bento Style) -->
+<div class="grid grid-cols-12 gap-gutter">
+<div class="col-span-12 lg:col-span-4 pipeline-gradient rounded-xl p-xl text-white shadow-lg flex flex-col justify-between">
+<div class="">
+<span class="font-label-sm uppercase tracking-wider opacity-80">System Health</span>
+<h3 class="font-h1 text-h1 mt-sm">Optimal Performance</h3>
+<p class="font-body-sm mt-md opacity-90 leading-relaxed">Global SEO nodes are active across 12 clusters. All data pipes are running within nominal latency bounds.</p>
+</div>
+<div class="mt-xl flex items-center gap-md">
+<div class="flex -space-x-sm">
+<div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" data-icon="check" data-weight="fill">check</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" data-icon="check" data-weight="fill">check</span>
+</div>
+</div>
+<span class="font-label-sm">Active Nodes (42/42)</span>
+</div>
+</div>
+<div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-label-md text-on-surface-variant">Processed Keywords</p>
+<h2 class="font-display text-display text-primary mt-xs">1.2M</h2>
+</div>
+<div class="bg-secondary-container/20 text-on-secondary-container p-sm rounded-lg">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</div>
+</div>
+<div class="mt-lg">
+<div class="w-full bg-surface-container h-1 rounded-full overflow-hidden">
+<div class="bg-secondary-container h-full w-[78%]"></div>
+</div>
+<div class="flex justify-between mt-xs">
+<span class="font-label-sm text-on-surface-variant">Target: 1.5M</span>
+<span class="font-label-sm text-secondary font-bold">+12.4%</span>
+</div>
+</div>
+</div>
+<div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-label-md text-on-surface-variant">Scraping Success Rate</p>
+<h2 class="font-display text-display text-primary mt-xs">99.8%</h2>
+</div>
+<div class="bg-tertiary-container/20 text-tertiary p-sm rounded-lg">
+<span class="material-symbols-outlined" data-icon="data_exploration">data_exploration</span>
+</div>
+</div>
+<div class="mt-lg">
+<div class="flex gap-xs h-8 items-end">
+<div class="flex-1 bg-secondary rounded-t-sm h-1/2"></div>
+<div class="flex-1 bg-secondary rounded-t-sm h-3/4"></div>
+<div class="flex-1 bg-secondary rounded-t-sm h-2/3"></div>
+<div class="flex-1 bg-secondary rounded-t-sm h-full"></div>
+<div class="flex-1 bg-secondary rounded-t-sm h-5/6"></div>
+<div class="flex-1 bg-secondary-container rounded-t-sm h-full"></div>
+<div class="flex-1 bg-secondary-container rounded-t-sm h-3/4"></div>
+</div>
+<p class="font-label-sm text-on-surface-variant mt-xs">Last 7 days efficiency</p>
+</div>
+</div>
+</div>
+<!-- Pipeline Status Control Section -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-h3 text-h3">Current Pipeline: SEO_Global_Enrichment_v2</h3>
+<div class="flex gap-sm">
+<span class="bg-emerald-100 text-emerald-800 px-md py-xs rounded-full font-label-sm flex items-center gap-xs">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Running
+                        </span>
+<button class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</button>
+</div>
+</div>
+<div class="p-lg">
+<div class="flex items-center gap-gutter">
+<!-- Step 1: Input -->
+<div class="flex flex-col items-center gap-sm flex-1">
+<div class="w-12 h-12 rounded-full bg-secondary text-white flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined" data-icon="input">input</span>
+</div>
+<div class="text-center">
+<p class="font-label-md">Ingestion</p>
+<p class="text-[10px] text-on-surface-variant font-label-sm">COMPLETE</p>
+</div>
+</div>
+<div class="flex-1 h-0.5 bg-secondary"></div>
+<!-- Step 2: Scraping -->
+<div class="flex flex-col items-center gap-sm flex-1">
+<div class="w-12 h-12 rounded-full bg-secondary text-white flex items-center justify-center shadow-md animate-pulse">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+</div>
+<div class="text-center">
+<p class="font-label-md">Scraping</p>
+<p class="text-[10px] text-secondary font-bold font-label-sm">ACTIVE</p>
+</div>
+</div>
+<div class="flex-1 h-0.5 border-t-2 border-dashed border-outline"></div>
+<!-- Step 3: IA -->
+<div class="flex flex-col items-center gap-sm flex-1 opacity-50">
+<div class="w-12 h-12 rounded-full border-2 border-outline flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+</div>
+<div class="text-center">
+<p class="font-label-md">IA Enrichment</p>
+<p class="text-[10px] text-on-surface-variant font-label-sm">PENDING</p>
+</div>
+</div>
+<div class="flex-1 h-0.5 border-t-2 border-dashed border-outline"></div>
+<!-- Step 4: Export -->
+<div class="flex flex-col items-center gap-sm flex-1 opacity-50">
+<div class="w-12 h-12 rounded-full border-2 border-outline flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</div>
+<div class="text-center">
+<p class="font-label-md">Export</p>
+<p class="text-[10px] text-on-surface-variant font-label-sm">WAITING</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Workspace Grid -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Recent Executions Table -->
+<div class="col-span-12 xl:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low/30">
+<h3 class="font-h3 text-h3">Execution History</h3>
+<button class="text-secondary font-label-md flex items-center gap-xs hover:underline">
+                            View All <span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low">
+<tr>
+<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Pipeline ID</th>
+<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Start Time</th>
+<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Volume</th>
+<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-secondary-container/5 transition-colors group">
+<td class="px-lg py-md">
+<span class="font-label-md text-primary font-bold">KS-RUN-8821</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-body-sm text-primary">2023-10-24</span>
+<span class="text-[12px] text-on-surface-variant">14:32:01 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md text-label-md font-label-md">245,000 req</td>
+<td class="px-lg py-md">
+<span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded text-[12px] font-bold">SUCCESS</span>
+</td>
+<td class="px-lg py-md text-right">
+<button class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary" data-icon="visibility">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-secondary-container/5 transition-colors group">
+<td class="px-lg py-md">
+<span class="font-label-md text-primary font-bold">KS-RUN-8820</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-body-sm text-primary">2023-10-24</span>
+<span class="text-[12px] text-on-surface-variant">11:15:44 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md text-label-md font-label-md">12,400 req</td>
+<td class="px-lg py-md">
+<span class="bg-error-container text-on-error-container px-sm py-xs rounded text-[12px] font-bold">FAILED</span>
+</td>
+<td class="px-lg py-md text-right">
+<button class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary" data-icon="visibility">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-secondary-container/5 transition-colors group">
+<td class="px-lg py-md">
+<span class="font-label-md text-primary font-bold">KS-RUN-8819</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-body-sm text-primary">2023-10-23</span>
+<span class="text-[12px] text-on-surface-variant">22:01:10 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md text-label-md font-label-md">1.2M req</td>
+<td class="px-lg py-md">
+<span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded text-[12px] font-bold">SUCCESS</span>
+</td>
+<td class="px-lg py-md text-right">
+<button class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary" data-icon="visibility">visibility</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Insights & Recommendations Side -->
+<div class="col-span-12 xl:col-span-4 space-y-gutter">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+<div class="flex items-center gap-sm mb-md">
+<span class="material-symbols-outlined text-tertiary" data-icon="tips_and_updates" data-weight="fill">tips_and_updates</span>
+<h3 class="font-h3 text-h3">Key Insight</h3>
+</div>
+<p class="font-body-sm text-on-surface-variant italic mb-lg">"Current scraping latency in EU-West is 15% higher than US-East. Consider redistributing node weight for the next batch."</p>
+<button class="w-full py-sm border border-secondary text-secondary rounded font-label-md hover:bg-secondary/5 transition-colors">
+                            Apply Auto-Rebalance
+                        </button>
+</div>
+<div class="bg-inverse-surface text-inverse-on-surface rounded-xl p-lg overflow-hidden relative group">
+<div class="relative z-10">
+<h4 class="font-h3 text-h3 mb-xs">Ready for Export?</h4>
+<p class="font-body-sm opacity-80 mb-md">3 datasets are compiled and ready for CSV/JSON transmission.</p>
+<div class="flex gap-sm">
+<button class="flex-1 bg-secondary-container text-on-secondary-container py-xs rounded font-label-sm hover:brightness-110">Download</button>
+<button class="flex-1 bg-white/10 hover:bg-white/20 py-xs rounded font-label-sm">API Sync</button>
+</div>
+</div>
+<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-9xl opacity-10 rotate-12" data-icon="bolt">bolt</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB Suppression Rule: Not rendering a FAB as it's a Dashboard screen with full Top/Side navigation context -->
+</body></html>

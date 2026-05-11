@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scraping Module - KeySearch V 6.0</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline": "#75777e",
+                    "inverse-on-surface": "#eaf1ff",
+                    "secondary-fixed": "#b6ebff",
+                    "secondary": "#00677f",
+                    "primary-fixed": "#d6e3ff",
+                    "on-primary": "#ffffff",
+                    "on-surface-variant": "#44474d",
+                    "on-error-container": "#93000a",
+                    "surface-dim": "#cbdbf5",
+                    "on-secondary": "#ffffff",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-surface": "#0b1c30",
+                    "outline-variant": "#c5c6cd",
+                    "on-primary-fixed-variant": "#39475f",
+                    "surface-container-high": "#dce9ff",
+                    "tertiary-container": "#bfab3d",
+                    "on-secondary-fixed-variant": "#004e60",
+                    "background": "#f8f9ff",
+                    "error-container": "#ffdad6",
+                    "tertiary": "#6c5e00",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-fixed-dim": "#dcc756",
+                    "surface-container": "#e5eeff",
+                    "secondary-container": "#00d2ff",
+                    "surface-bright": "#f8f9ff",
+                    "primary-fixed-dim": "#b9c7e4",
+                    "on-primary-container": "#76849f",
+                    "primary": "#000000",
+                    "on-primary-fixed": "#0d1c32",
+                    "inverse-surface": "#213145",
+                    "on-tertiary-fixed": "#211b00",
+                    "on-tertiary-container": "#493f00",
+                    "on-secondary-container": "#00566a",
+                    "on-tertiary": "#ffffff",
+                    "inverse-primary": "#b9c7e4",
+                    "secondary-fixed-dim": "#47d6ff",
+                    "tertiary-fixed": "#fae36f",
+                    "surface": "#f8f9ff",
+                    "primary-container": "#0d1c32",
+                    "on-error": "#ffffff",
+                    "surface-variant": "#d3e4fe",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed-variant": "#524700",
+                    "on-background": "#0b1c30",
+                    "surface-tint": "#515f78",
+                    "on-secondary-fixed": "#001f28",
+                    "surface-container-low": "#eff4ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "lg": "24px",
+                    "md": "16px",
+                    "base": "4px",
+                    "xs": "4px",
+                    "xl": "32px",
+                    "sm": "8px",
+                    "3xl": "64px",
+                    "gutter": "24px",
+                    "container-max": "1440px",
+                    "2xl": "48px"
+            },
+            "fontFamily": {
+                    "h3": ["Inter"],
+                    "label-sm": ["JetBrains Mono"],
+                    "h2": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "h1-mobile": ["Inter"],
+                    "h1": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "display": ["Inter"],
+                    "label-md": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "h3": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "h2": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "h1-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "h1": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .terminal-glow {
+            text-shadow: 0 0 5px rgba(0, 210, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant bg-surface flex flex-col py-md px-sm z-50">
+<div class="mb-xl px-sm">
+<h1 class="font-h2 text-h2 font-bold text-primary">KeySearch V 6.0</h1>
+<p class="text-on-surface-variant text-label-sm font-label-sm mt-xs">SEO Pipeline Engine</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-sm px-sm py-md transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-label-md text-label-md">Pipeline Hub</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-md transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">input</span>
+<span class="font-label-md text-label-md">Data Input</span>
+</a>
+<!-- Active Tab: Scraping -->
+<a class="flex items-center gap-sm px-sm py-md transition-all duration-200 ease-in-out text-secondary font-bold border-r-4 border-secondary-container bg-surface-container-high" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="font-label-md text-label-md">Scraping</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-md transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-label-md text-label-md">IA Enrichment</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-md transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">download</span>
+<span class="font-label-md text-label-md">Export</span>
+</a>
+</nav>
+<button class="mx-sm mb-lg bg-primary text-on-primary py-sm rounded font-label-md text-label-md flex items-center justify-center gap-xs hover:opacity-90 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]">add</span>
+            New Project
+        </button>
+<div class="mt-auto space-y-1">
+<a class="flex items-center gap-sm px-sm py-sm text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-sm text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-label-md text-label-md">Docs</span>
+</a>
+<div class="mt-md pt-md border-t border-outline-variant flex items-center gap-sm px-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A clean, professional profile avatar for a technical software administrator. The image features a minimalist stylized character with dark hair and modern glasses, set against a solid light blue background. The aesthetic is flat, digital, and modern, fitting perfectly with a corporate tech environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXy-RMU4rMNxsNWG8h82LXXNd5Nd0E3oYeOTG77knSr4T4Vn8Vlxy8flzduxD8BTZLNxGhUTTj_Z3Oee0uFuxc5mf7VET8PYIBxIbUfKgqMHNw-TDBVVpyIUwKsw6bIWmkDOJID3Wqr7EL4-KEGsK5pTILNJ3_t1t-Siz_rBchGvmBbhEIQKTal58R_k5A9fF0minpQdqOcvU6YbRIAhmgGonmIYzi4Pctjn8m41xr1f3X89Z25jQXZbHMA_mwXyPlP9H9is6XzQCJ"/>
+</div>
+<div class="flex flex-col">
+<span class="text-label-sm font-bold text-on-surface">Admin_User</span>
+<span class="text-[10px] text-outline uppercase tracking-wider">Premium Plan</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-16 px-lg ml-[240px] w-[calc(100%-240px)] fixed top-0 bg-surface-container-lowest shadow-sm border-b border-outline-variant z-40">
+<div class="flex items-center gap-xl">
+<div class="flex items-center gap-lg">
+<a class="text-on-surface-variant hover:text-secondary transition-transform scale-95 active:scale-90 font-label-md text-label-md border-b-2 border-transparent" href="#">Dashboard</a>
+<a class="text-primary border-b-2 border-secondary pb-1 font-label-md text-label-md transition-transform scale-95 active:scale-90" href="#">API Status</a>
+<a class="text-on-surface-variant hover:text-secondary transition-transform scale-95 active:scale-90 font-label-md text-label-md border-b-2 border-transparent" href="#">Logs</a>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<div class="relative">
+<input class="bg-surface-container-low border border-outline-variant rounded px-md py-xs pl-10 text-body-sm w-64 focus:ring-2 focus:ring-secondary-container focus:outline-none transition-all" placeholder="Search resources..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary active:scale-90 transition-transform">notifications</button>
+<button class="bg-secondary text-on-secondary px-md py-sm rounded font-label-md text-label-md flex items-center gap-sm active:scale-95 transition-transform">
+                    Run Pipeline
+                    <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] mt-16 p-lg space-y-lg max-w-container-max mx-auto">
+<!-- Header Section -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-h1 text-h1 text-on-surface">Extraction Node Monitor</h2>
+<p class="text-on-surface-variant font-body-md">Live orchestration of distributed scraping infrastructure</p>
+</div>
+<div class="flex gap-sm">
+<div class="bg-surface border border-outline-variant px-md py-sm rounded-lg flex items-center gap-sm shadow-sm">
+<span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
+<span class="text-label-sm font-label-sm uppercase text-on-surface-variant">System: Optimal</span>
+</div>
+<div class="bg-surface border border-outline-variant px-md py-sm rounded-lg flex items-center gap-sm shadow-sm">
+<span class="material-symbols-outlined text-secondary text-[18px]">dns</span>
+<span class="text-label-sm font-label-sm uppercase text-on-surface-variant">Active Nodes: 128/150</span>
+</div>
+</div>
+</div>
+<!-- Real-time Metrics Grid (Asymmetric) -->
+<div class="grid grid-cols-12 gap-lg">
+<!-- RPS Gauge -->
+<div class="col-span-12 md:col-span-4 bg-surface-container-lowest border border-outline-variant p-lg rounded-lg shadow-sm">
+<div class="flex justify-between items-start mb-md">
+<h3 class="text-label-sm font-label-sm text-outline uppercase tracking-widest">Requests per Second</h3>
+<span class="material-symbols-outlined text-secondary">speed</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="text-display font-display text-primary">842</span>
+<span class="text-secondary font-label-md text-label-md font-bold">+12% vs last min</span>
+</div>
+<div class="mt-md h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary-container w-[78%]"></div>
+</div>
+</div>
+<!-- Success Rate -->
+<div class="col-span-12 md:col-span-4 bg-surface-container-lowest border border-outline-variant p-lg rounded-lg shadow-sm">
+<div class="flex justify-between items-start mb-md">
+<h3 class="text-label-sm font-label-sm text-outline uppercase tracking-widest">Success Rate</h3>
+<span class="material-symbols-outlined text-tertiary">check_circle</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="text-display font-display text-primary">99.2<span class="text-h3">%</span></span>
+<span class="text-tertiary font-label-md text-label-md font-bold">Stable</span>
+</div>
+<div class="mt-md h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary-container w-[99%]"></div>
+</div>
+</div>
+<!-- Thread Pool -->
+<div class="col-span-12 md:col-span-4 bg-surface-container-lowest border border-outline-variant p-lg rounded-lg shadow-sm">
+<div class="flex justify-between items-start mb-md">
+<h3 class="text-label-sm font-label-sm text-outline uppercase tracking-widest">Thread Utilization</h3>
+<span class="material-symbols-outlined text-error">memory</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="text-display font-display text-primary">84<span class="text-h3">%</span></span>
+<span class="text-error font-label-md text-label-md font-bold">Scaling Required</span>
+</div>
+<div class="mt-md h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-error w-[84%]"></div>
+</div>
+</div>
+</div>
+<!-- Middle Section: Terminal and Node Map -->
+<div class="grid grid-cols-12 gap-lg h-[400px]">
+<!-- Terminal Log Window -->
+<div class="col-span-12 lg:col-span-8 bg-inverse-surface rounded-lg p-md overflow-hidden flex flex-col shadow-xl">
+<div class="flex items-center justify-between pb-sm border-b border-on-surface-variant mb-md">
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-error"></div>
+<div class="w-3 h-3 rounded-full bg-tertiary-fixed"></div>
+<div class="w-3 h-3 rounded-full bg-secondary-container"></div>
+<span class="ml-sm text-label-sm font-label-sm text-outline">root@extraction-node-04:~/stream</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[18px]">terminal</span>
+</div>
+<div class="flex-1 font-label-sm text-label-sm space-y-1 overflow-y-auto pr-sm text-inverse-on-surface custom-scrollbar">
+<p><span class="text-secondary-fixed-dim">[10:42:01]</span> <span class="text-tertiary-fixed">INFO:</span> Initializing rotation on ProxyGroup_Alpha...</p>
+<p><span class="text-secondary-fixed-dim">[10:42:03]</span> <span class="text-secondary-container">GET 200:</span> https://api.commerce.io/v3/products/SKU-9901</p>
+<p><span class="text-secondary-fixed-dim">[10:42:03]</span> <span class="text-secondary-container">GET 200:</span> https://api.commerce.io/v3/products/SKU-9902</p>
+<p><span class="text-secondary-fixed-dim">[10:42:04]</span> <span class="text-error">ERR 404:</span> https://api.commerce.io/v3/products/SKU-INVALID <span class="text-outline">(Retrying in 2s)</span></p>
+<p><span class="text-secondary-fixed-dim">[10:42:05]</span> <span class="text-secondary-container">GET 200:</span> https://api.commerce.io/v3/products/SKU-9903</p>
+<p><span class="text-secondary-fixed-dim">[10:42:05]</span> <span class="text-secondary-container">GET 200:</span> https://api.commerce.io/v3/products/SKU-9904</p>
+<p><span class="text-secondary-fixed-dim">[10:42:06]</span> <span class="text-secondary-container">GET 200:</span> https://api.commerce.io/v3/products/SKU-9905</p>
+<p><span class="text-secondary-fixed-dim">[10:42:07]</span> <span class="text-secondary-container">GET 200:</span> https://api.commerce.io/v3/products/SKU-9906</p>
+<p><span class="text-secondary-fixed-dim">[10:42:08]</span> <span class="text-tertiary-fixed">WARN:</span> Node-Alpha Latency Spike: 450ms</p>
+<p><span class="text-secondary-fixed-dim">[10:42:09]</span> <span class="text-secondary-container">GET 200:</span> https://api.commerce.io/v3/products/SKU-9907</p>
+<p class="animate-pulse"><span class="text-secondary-fixed-dim">[10:42:10]</span> <span class="text-secondary-container">GET 200:</span> https://api.commerce.io/v3/products/SKU-9908 <span class="terminal-glow">_</span></p>
+</div>
+</div>
+<!-- Active Nodes Visualization -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-lg shadow-sm flex flex-col">
+<h3 class="text-label-sm font-label-sm text-outline uppercase tracking-widest mb-md">Distributed Node Status</h3>
+<div class="flex-1 grid grid-cols-6 grid-rows-4 gap-sm">
+<!-- Generating a grid of status dots -->
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-error/20 rounded border border-error flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-error"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-tertiary-container/20 rounded border border-tertiary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-tertiary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+<div class="bg-secondary-container/20 rounded border border-secondary-container flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-secondary-container"></div></div>
+</div>
+<div class="mt-md pt-md border-t border-outline-variant flex justify-between">
+<div class="flex items-center gap-xs"><div class="w-2 h-2 rounded-full bg-secondary-container"></div><span class="text-[10px] text-outline font-label-sm">Active</span></div>
+<div class="flex items-center gap-xs"><div class="w-2 h-2 rounded-full bg-tertiary-container"></div><span class="text-[10px] text-outline font-label-sm">Queued</span></div>
+<div class="flex items-center gap-xs"><div class="w-2 h-2 rounded-full bg-error"></div><span class="text-[10px] text-outline font-label-sm">Offline</span></div>
+</div>
+</div>
+</div>
+<!-- URL Processing Queue Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg shadow-sm overflow-hidden">
+<div class="p-lg border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-h3 text-h3 text-on-surface">Target Extraction Queue</h3>
+<div class="flex gap-sm">
+<button class="px-md py-sm rounded border border-outline-variant text-label-sm font-label-sm hover:bg-surface-container-low transition-all">Export Queue</button>
+<button class="px-md py-sm rounded bg-primary text-on-primary text-label-sm font-label-sm hover:opacity-90 transition-all">Pause Extraction</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low">
+<tr>
+<th class="px-lg py-md font-label-sm text-label-sm text-outline uppercase tracking-wider">Priority</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-outline uppercase tracking-wider">Target URL</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-outline uppercase tracking-wider">Data Schema</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-outline uppercase tracking-wider">Status</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-outline uppercase tracking-wider text-right">Estimated Time</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-secondary-container/5 transition-colors">
+<td class="px-lg py-md">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed px-sm py-xs rounded text-[10px] font-bold">HIGH</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-body-sm font-semibold truncate max-w-xs">https://amazon.com/dp/B08N5KWBKK</span>
+<span class="text-label-sm text-outline text-[11px]">Meta-Category: Electronics</span>
+</div>
+</td>
+<td class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant">ecom_standard_v4</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-full bg-surface-container rounded-full h-1.5 w-24 overflow-hidden">
+<div class="bg-secondary-container h-full w-[45%]"></div>
+</div>
+<span class="text-label-sm text-secondary font-bold">45%</span>
+</div>
+</td>
+<td class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant text-right">0.4s</td>
+</tr>
+<tr class="hover:bg-secondary-container/5 transition-colors">
+<td class="px-lg py-md">
+<span class="bg-surface-container-highest text-on-surface-variant px-sm py-xs rounded text-[10px] font-bold">MEDIUM</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-body-sm font-semibold truncate max-w-xs">https://ebay.com/itm/234901223</span>
+<span class="text-label-sm text-outline text-[11px]">Meta-Category: Auction</span>
+</div>
+</td>
+<td class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant">ecom_price_tracker</td>
+<td class="px-lg py-md">
+<span class="flex items-center gap-xs text-label-sm text-tertiary font-bold">
+<span class="material-symbols-outlined text-[16px]">hourglass_empty</span>
+                                    Queued
+                                </span>
+</td>
+<td class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant text-right">1.2s</td>
+</tr>
+<tr class="hover:bg-secondary-container/5 transition-colors">
+<td class="px-lg py-md">
+<span class="bg-surface-container-highest text-on-surface-variant px-sm py-xs rounded text-[10px] font-bold">MEDIUM</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-body-sm font-semibold truncate max-w-xs">https://walmart.com/ip/552132</span>
+<span class="text-label-sm text-outline text-[11px]">Meta-Category: Retail</span>
+</div>
+</td>
+<td class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant">ecom_standard_v4</td>
+<td class="px-lg py-md">
+<span class="flex items-center gap-xs text-label-sm text-tertiary font-bold">
+<span class="material-symbols-outlined text-[16px]">hourglass_empty</span>
+                                    Queued
+                                </span>
+</td>
+<td class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant text-right">1.8s</td>
+</tr>
+<tr class="bg-tertiary-container/5">
+<td class="px-lg py-md">
+<span class="bg-outline text-surface-container-lowest px-sm py-xs rounded text-[10px] font-bold">LOW</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col opacity-50">
+<span class="text-body-sm font-semibold truncate max-w-xs">https://target.com/p/88219902</span>
+<span class="text-label-sm text-outline text-[11px]">Meta-Category: Retail</span>
+</div>
+</td>
+<td class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant opacity-50">ecom_bulk_v1</td>
+<td class="px-lg py-md">
+<span class="flex items-center gap-xs text-label-sm text-outline font-bold">
+<span class="material-symbols-outlined text-[16px]">pause_circle</span>
+                                    Paused
+                                </span>
+</td>
+<td class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant text-right opacity-50">--</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-md bg-surface-container-low border-t border-outline-variant flex justify-center">
+<button class="text-secondary font-label-md text-label-md flex items-center gap-sm hover:underline">
+                    View Full Pipeline Queue (12,482 entries)
+                    <span class="material-symbols-outlined text-[18px]">keyboard_double_arrow_right</span>
+</button>
+</div>
+</div>
+</main>
+<!-- FAB Suppression: Contextually hidden per instruction for Details/Transaction screens, but this is a Dashboard/Monitor view -->
+<button class="fixed bottom-lg right-lg bg-secondary text-on-secondary w-14 h-14 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform hover:bg-secondary-container hover:text-on-secondary-container z-50">
+<span class="material-symbols-outlined text-[32px]">bolt</span>
+</button>
+</body></html>

@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeySearch V 6.0 - IA Enrichment</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9ff;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline": "#75777e",
+                      "secondary-fixed": "#b6ebff",
+                      "inverse-on-surface": "#eaf1ff",
+                      "on-surface-variant": "#44474d",
+                      "secondary": "#00677f",
+                      "primary-fixed": "#d6e3ff",
+                      "on-primary": "#ffffff",
+                      "surface-dim": "#cbdbf5",
+                      "on-error-container": "#93000a",
+                      "surface-container-highest": "#d3e4fe",
+                      "on-surface": "#0b1c30",
+                      "on-secondary": "#ffffff",
+                      "tertiary-container": "#bfab3d",
+                      "on-secondary-fixed-variant": "#004e60",
+                      "background": "#f8f9ff",
+                      "outline-variant": "#c5c6cd",
+                      "on-primary-fixed-variant": "#39475f",
+                      "surface-container-high": "#dce9ff",
+                      "tertiary": "#6c5e00",
+                      "surface-container-lowest": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "tertiary-fixed-dim": "#dcc756",
+                      "surface-container": "#e5eeff",
+                      "secondary-container": "#00d2ff",
+                      "primary": "#000000",
+                      "on-primary-fixed": "#0d1c32",
+                      "inverse-surface": "#213145",
+                      "surface-bright": "#f8f9ff",
+                      "primary-fixed-dim": "#b9c7e4",
+                      "on-primary-container": "#76849f",
+                      "on-tertiary": "#ffffff",
+                      "inverse-primary": "#b9c7e4",
+                      "on-tertiary-fixed": "#211b00",
+                      "on-tertiary-container": "#493f00",
+                      "on-secondary-container": "#00566a",
+                      "surface": "#f8f9ff",
+                      "secondary-fixed-dim": "#47d6ff",
+                      "tertiary-fixed": "#fae36f",
+                      "surface-variant": "#d3e4fe",
+                      "primary-container": "#0d1c32",
+                      "on-error": "#ffffff",
+                      "error": "#ba1a1a",
+                      "on-background": "#0b1c30",
+                      "on-tertiary-fixed-variant": "#524700",
+                      "surface-tint": "#515f78",
+                      "surface-container-low": "#eff4ff",
+                      "on-secondary-fixed": "#001f28"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "xs": "4px",
+                      "gutter": "24px",
+                      "container-max": "1440px",
+                      "2xl": "48px",
+                      "sm": "8px",
+                      "3xl": "64px",
+                      "lg": "24px",
+                      "base": "4px",
+                      "md": "16px"
+              },
+              "fontFamily": {
+                      "display": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "h1": ["Inter"],
+                      "h1-mobile": ["Inter"],
+                      "label-md": ["JetBrains Mono"],
+                      "label-sm": ["JetBrains Mono"],
+                      "h2": ["Inter"],
+                      "h3": ["Inter"],
+                      "body-sm": ["Inter"]
+              },
+              "fontSize": {
+                      "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "h1": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "h1-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "h2": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "h3": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Sidebar Navigation -->
+<nav class="fixed left-0 top-0 h-full w-[240px] flex flex-col h-screen py-md px-sm bg-surface dark:bg-inverse-surface border-r border-outline-variant dark:border-outline z-50">
+<div class="mb-xl px-sm">
+<h1 class="font-h1 text-h2 font-bold text-primary dark:text-inverse-primary leading-tight">KeySearch V 6.0</h1>
+<p class="text-on-surface-variant text-label-sm font-label-sm opacity-70">SEO Pipeline Engine</p>
+</div>
+<div class="flex-grow space-y-xs">
+<a class="flex items-center gap-sm px-sm py-md rounded-lg transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+                Pipeline Hub
+            </a>
+<a class="flex items-center gap-sm px-sm py-md rounded-lg transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="input">input</span>
+                Data Input
+            </a>
+<a class="flex items-center gap-sm px-sm py-md rounded-lg transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+                Scraping
+            </a>
+<a class="flex items-center gap-sm px-sm py-md rounded-lg transition-all duration-200 ease-in-out text-secondary font-bold border-r-4 border-secondary-container bg-surface-container-high font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="psychology" style="font-variation-settings: 'FILL' 1;">psychology</span>
+                IA Enrichment
+            </a>
+<a class="flex items-center gap-sm px-sm py-md rounded-lg transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                Export
+            </a>
+</div>
+<button class="mx-sm mb-lg py-md bg-primary text-on-primary rounded-lg font-label-md text-label-md font-bold transition-transform active:scale-95">
+            New Project
+        </button>
+<div class="border-t border-outline-variant pt-md space-y-xs">
+<a class="flex items-center gap-sm px-sm py-md rounded-lg transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-sm px-sm py-md rounded-lg transition-all duration-200 ease-in-out hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+                Docs
+            </a>
+</div>
+</nav>
+<!-- Top App Bar -->
+<header class="fixed top-0 left-[240px] w-[calc(100%-240px)] h-16 flex justify-between items-center px-lg bg-surface-container-lowest dark:bg-surface-container-low border-b border-outline-variant dark:border-outline shadow-sm z-40">
+<div class="flex items-center gap-xl">
+<span class="font-h2 text-h2 font-semibold text-primary dark:text-inverse-primary">Dashboard</span>
+<nav class="flex gap-lg">
+<a class="font-body-md text-body-md text-primary border-b-2 border-secondary pb-1" href="#">Enriquecimiento</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors" href="#">API Status</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors" href="#">Logs</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container border border-outline-variant rounded-full text-body-sm focus:outline-none focus:ring-2 focus:ring-secondary-container w-64" placeholder="Buscar pipeline..." type="text"/>
+</div>
+<button class="px-md py-2 bg-secondary text-on-primary rounded-lg font-label-md text-label-md transition-transform active:scale-95">Run Pipeline</button>
+<span class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container rounded-full cursor-pointer" data-icon="notifications">notifications</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="User Profile" data-alt="Professional headshot of a data analyst in a modern office environment. The lighting is soft and natural, emphasizing a corporate tech atmosphere with blurred data screens in the background. High-quality portrait photography with a professional and clean aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPZU_y1ObRAqNgaa8jL5hWfI61iM27xvEpusdq8Dr3JmNEADOEjRdCtGW1no7LsMv9A7DNX38uHNgq4Rwi_-G9HbYvzkI72vgZlq0L28uGNKPUtQ6c4JP69KqBy6kacQbhKc_rK87s7ACw-hsBxG2lV1JBZKqIraMl5pJJ8qS_Fch95XjmDjrgqpZSw-aU-Ugv6KuA1UyUC-a9iRLy73LV4wNa6XOjFVPCrJdhA8UFW4A3l1Ga-nQyFEl9C5nMUdyjsi51SBCD0s-b"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] pt-16 p-lg space-y-lg">
+<!-- Pipeline Progress Indicator -->
+<section class="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-h3 text-h3 text-primary flex items-center gap-sm">
+<span class="material-symbols-outlined text-secondary" data-icon="alt_route">alt_route</span>
+                    Progreso del Pipeline: Proyecto Alpha-X
+                </h3>
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-label-sm font-label-md">Etapa 3 de 5 Activa</span>
+</div>
+<div class="grid grid-cols-5 gap-sm relative">
+<!-- Progress Line -->
+<div class="absolute top-[18px] left-[10%] right-[10%] h-[2px] bg-outline-variant z-0"></div>
+<div class="absolute top-[18px] left-[10%] w-[50%] h-[2px] bg-secondary z-0"></div>
+<!-- Steps -->
+<div class="relative z-10 flex flex-col items-center gap-xs">
+<div class="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center border-4 border-white shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="check">check</span>
+</div>
+<span class="text-label-sm font-label-md text-on-surface-variant">Hub</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-xs">
+<div class="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center border-4 border-white shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="check">check</span>
+</div>
+<span class="text-label-sm font-label-md text-on-surface-variant">Input</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-xs">
+<div class="w-9 h-9 rounded-full bg-secondary text-on-primary flex items-center justify-center border-4 border-white shadow-sm animate-pulse">
+<span class="material-symbols-outlined text-sm" data-icon="psychology">psychology</span>
+</div>
+<span class="text-label-sm font-label-md text-secondary font-bold">Enriquecimiento IA</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-xs">
+<div class="w-9 h-9 rounded-full bg-surface-container border-2 border-outline-variant text-outline flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" data-icon="database">database</span>
+</div>
+<span class="text-label-sm font-label-md text-outline">Scraping</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-xs">
+<div class="w-9 h-9 rounded-full bg-surface-container border-2 border-outline-variant text-outline flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" data-icon="download">download</span>
+</div>
+<span class="text-label-sm font-label-md text-outline">Export</span>
+</div>
+</div>
+</section>
+<!-- Bento Grid Analysis Sections -->
+<div class="grid grid-cols-12 gap-lg">
+<!-- NLP Sentiment Analysis & Entities -->
+<div class="col-span-8 bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm flex flex-col gap-lg">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-h3 text-h3 text-primary">Análisis NLP Avanzado</h4>
+<p class="text-body-sm text-on-surface-variant">Extracción semántica y sentimiento del corpus de datos.</p>
+</div>
+<button class="p-2 hover:bg-surface-container rounded-lg transition-colors">
+<span class="material-symbols-outlined text-outline" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-xl">
+<!-- Sentiment Visualization -->
+<div class="space-y-md">
+<span class="text-label-md font-label-md uppercase tracking-wider text-outline">Distribución de Sentimiento</span>
+<div class="flex items-end gap-md h-32 pt-4">
+<div class="flex-1 flex flex-col items-center gap-sm">
+<div class="w-full bg-emerald-100 rounded-t-lg relative group h-[85%]">
+<div class="absolute inset-0 bg-emerald-500 rounded-t-lg transition-all duration-500" style="height: 100%;"></div>
+</div>
+<span class="text-label-sm font-label-md">Positivo</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-sm">
+<div class="w-full bg-slate-100 rounded-t-lg relative h-[45%]">
+<div class="absolute inset-0 bg-slate-400 rounded-t-lg transition-all duration-500" style="height: 100%;"></div>
+</div>
+<span class="text-label-sm font-label-md">Neutral</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-sm">
+<div class="w-full bg-red-100 rounded-t-lg relative h-[15%]">
+<div class="absolute inset-0 bg-red-400 rounded-t-lg transition-all duration-500" style="height: 100%;"></div>
+</div>
+<span class="text-label-sm font-label-md">Negativo</span>
+</div>
+</div>
+</div>
+<!-- Entity Extraction -->
+<div class="space-y-md">
+<span class="text-label-md font-label-md uppercase tracking-wider text-outline">Entidades Extraídas</span>
+<div class="flex flex-wrap gap-sm">
+<div class="px-3 py-1.5 bg-secondary-container/20 border border-secondary-container/50 rounded-lg flex items-center gap-xs">
+<span class="text-secondary font-bold text-label-sm">Marketing</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-1.5 rounded-full">42</span>
+</div>
+<div class="px-3 py-1.5 bg-secondary-container/20 border border-secondary-container/50 rounded-lg flex items-center gap-xs">
+<span class="text-secondary font-bold text-label-sm">SEO Enterprise</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-1.5 rounded-full">28</span>
+</div>
+<div class="px-3 py-1.5 bg-secondary-container/20 border border-secondary-container/50 rounded-lg flex items-center gap-xs">
+<span class="text-secondary font-bold text-label-sm">Tecnología SaaS</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-1.5 rounded-full">19</span>
+</div>
+<div class="px-3 py-1.5 bg-surface-container border border-outline-variant rounded-lg flex items-center gap-xs">
+<span class="text-on-surface-variant font-bold text-label-sm">E-commerce</span>
+<span class="bg-outline-variant text-on-surface-variant text-[10px] px-1.5 rounded-full">12</span>
+</div>
+<div class="px-3 py-1.5 bg-surface-container border border-outline-variant rounded-lg flex items-center gap-xs">
+<span class="text-on-surface-variant font-bold text-label-sm">Python Frameworks</span>
+<span class="bg-outline-variant text-on-surface-variant text-[10px] px-1.5 rounded-full">8</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Data Quality Score (Gauge Style) -->
+<div class="col-span-4 bg-primary-container text-on-primary-container p-lg rounded-xl border border-primary-container shadow-lg flex flex-col justify-between items-center text-center relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-secondary-container"></div>
+<div>
+<h4 class="font-label-md text-label-md uppercase tracking-widest text-on-primary-container/70 mb-sm">Quality Score</h4>
+<div class="relative w-32 h-32 mx-auto mb-md">
+<!-- Simple CSS Gauge -->
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-white/10" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-width="12"></circle>
+<circle class="text-secondary-container" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-dasharray="364.4" stroke-dashoffset="36.4" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center rotate-90">
+<span class="text-h1 font-bold text-white">92%</span>
+<span class="text-[10px] uppercase font-bold text-secondary-container">Confianza IA</span>
+</div>
+</div>
+<p class="text-body-sm text-on-primary-container/80 px-md">Modelos Claude 3.5 Sonnet &amp; GPT-4o sincronizados con 0.2ms de latencia.</p>
+</div>
+<div class="w-full pt-md mt-md border-t border-white/10 flex justify-around">
+<div class="flex flex-col">
+<span class="text-h3 font-bold text-white">4.8k</span>
+<span class="text-[10px] uppercase text-on-primary-container/60">Tokens/s</span>
+</div>
+<div class="flex flex-col">
+<span class="text-h3 font-bold text-white">0.9s</span>
+<span class="text-[10px] uppercase text-on-primary-container/60">Inferencia</span>
+</div>
+</div>
+</div>
+<!-- External API Sync -->
+<div class="col-span-4 bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm flex flex-col gap-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-secondary" data-icon="sync_alt">sync_alt</span>
+<h4 class="font-h3 text-h3 text-primary">Sincronización API</h4>
+</div>
+<div class="space-y-sm">
+<!-- Google Ads Item -->
+<div class="p-sm bg-surface-container-low rounded-lg border border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-white rounded-md flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-amber-500" data-icon="ads_click">ads_click</span>
+</div>
+<div>
+<p class="text-label-md font-bold">Google Ads</p>
+<p class="text-[11px] text-outline">CPC &amp; Search Volume</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-label-sm font-label-md text-emerald-600 flex items-center gap-xs">
+<span class="w-1.5 h-1.5 bg-emerald-600 rounded-full"></span>
+                                Live
+                            </span>
+</div>
+</div>
+<!-- Google Trends Item -->
+<div class="p-sm bg-surface-container-low rounded-lg border border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-white rounded-md flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-blue-500" data-icon="trending_up">trending_up</span>
+</div>
+<div>
+<p class="text-label-md font-bold">Google Trends</p>
+<p class="text-[11px] text-outline">Estacionalidad</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-label-sm font-label-md text-emerald-600 flex items-center gap-xs">
+<span class="w-1.5 h-1.5 bg-emerald-600 rounded-full"></span>
+                                Live
+                            </span>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-md border-t border-outline-variant">
+<div class="flex justify-between text-label-sm mb-xs">
+<span class="text-on-surface-variant">Cuota Diaria de API</span>
+<span class="font-bold">64%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container rounded-full">
+<div class="h-full bg-secondary-container rounded-full" style="width: 64%;"></div>
+</div>
+</div>
+</div>
+<!-- Enriched Keywords Table -->
+<div class="col-span-8 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
+<div class="p-lg border-b border-outline-variant flex justify-between items-center">
+<div>
+<h4 class="font-h3 text-h3 text-primary">Keywords Enriquecidas</h4>
+<p class="text-body-sm text-on-surface-variant">Clasificación de intención y score semántico.</p>
+</div>
+<div class="flex gap-sm">
+<button class="px-md py-2 bg-surface-container border border-outline-variant rounded-lg text-label-sm font-label-md flex items-center gap-sm hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm" data-icon="filter_list">filter_list</span>
+                            Filtrar
+                        </button>
+<button class="px-md py-2 bg-surface-container border border-outline-variant rounded-lg text-label-sm font-label-md flex items-center gap-sm hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-sm" data-icon="ios_share">ios_share</span>
+                            Exportar
+                        </button>
+</div>
+</div>
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-lg py-md text-label-sm font-label-md uppercase text-outline">Keyword</th>
+<th class="px-lg py-md text-label-sm font-label-md uppercase text-outline">Intención</th>
+<th class="px-lg py-md text-label-sm font-label-md uppercase text-outline">CPC (Est.)</th>
+<th class="px-lg py-md text-label-sm font-label-md uppercase text-outline">IA Confidence</th>
+<th class="px-lg py-md text-label-sm font-label-md uppercase text-outline text-right">Acción</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-secondary-container/5 transition-colors">
+<td class="px-lg py-md">
+<span class="font-label-md text-primary font-bold">mejores herramientas seo 2024</span>
+</td>
+<td class="px-lg py-md">
+<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-[10px] font-bold uppercase">Informacional</span>
+</td>
+<td class="px-lg py-md font-label-md text-on-surface">€2.45</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-16 h-1 bg-surface-container rounded-full">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 98%;"></div>
+</div>
+<span class="text-label-sm font-bold">0.98</span>
+</div>
+</td>
+<td class="px-lg py-md text-right">
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-secondary" data-icon="edit">edit</span>
+</td>
+</tr>
+<tr class="hover:bg-secondary-container/5 transition-colors">
+<td class="px-lg py-md">
+<span class="font-label-md text-primary font-bold">comprar suscripción ahrefs barata</span>
+</td>
+<td class="px-lg py-md">
+<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-[10px] font-bold uppercase">Transaccional</span>
+</td>
+<td class="px-lg py-md font-label-md text-on-surface">€5.12</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-16 h-1 bg-surface-container rounded-full">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 94%;"></div>
+</div>
+<span class="text-label-sm font-bold">0.94</span>
+</div>
+</td>
+<td class="px-lg py-md text-right">
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-secondary" data-icon="edit">edit</span>
+</td>
+</tr>
+<tr class="hover:bg-secondary-container/5 transition-colors">
+<td class="px-lg py-md">
+<span class="font-label-md text-primary font-bold">como hacer keyword research con python</span>
+</td>
+<td class="px-lg py-md">
+<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-[10px] font-bold uppercase">Informacional</span>
+</td>
+<td class="px-lg py-md font-label-md text-on-surface">€0.89</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-16 h-1 bg-surface-container rounded-full">
+<div class="h-full bg-amber-500 rounded-full" style="width: 76%;"></div>
+</div>
+<span class="text-label-sm font-bold">0.76</span>
+</div>
+</td>
+<td class="px-lg py-md text-right">
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-secondary" data-icon="edit">edit</span>
+</td>
+</tr>
+<tr class="hover:bg-secondary-container/5 transition-colors">
+<td class="px-lg py-md">
+<span class="font-label-md text-primary font-bold">servicios consultoria seo madrid</span>
+</td>
+<td class="px-lg py-md">
+<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-[10px] font-bold uppercase">Transaccional</span>
+</td>
+<td class="px-lg py-md font-label-md text-on-surface">€12.30</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-16 h-1 bg-surface-container rounded-full">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 91%;"></div>
+</div>
+<span class="text-label-sm font-bold">0.91</span>
+</div>
+</td>
+<td class="px-lg py-md text-right">
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-secondary" data-icon="edit">edit</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</body></html>

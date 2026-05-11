@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>KeySearch V 6.0 - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+          tailwind.config = {
+            darkMode: "class",
+            theme: {
+              extend: {
+                "colors": {
+                        "on-surface-variant": "#44474d",
+                        "surface-variant": "#d3e4fe",
+                        "primary-fixed-dim": "#b9c7e4",
+                        "secondary-container": "#00d2ff",
+                        "surface": "#f8f9ff",
+                        "secondary": "#00677f",
+                        "background": "#f8f9ff",
+                        "on-secondary-fixed-variant": "#004e60",
+                        "on-primary-container": "#76849f",
+                        "surface-container-high": "#dce9ff",
+                        "tertiary-container": "#bfab3d",
+                        "on-tertiary-container": "#493f00",
+                        "on-tertiary": "#ffffff",
+                        "surface-bright": "#f8f9ff",
+                        "on-primary-fixed": "#0d1c32",
+                        "surface-container": "#e5eeff",
+                        "on-error": "#ffffff",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-container-low": "#eff4ff",
+                        "outline-variant": "#c5c6cd",
+                        "error-container": "#ffdad6",
+                        "on-surface": "#0b1c30",
+                        "on-tertiary-fixed": "#211b00",
+                        "inverse-primary": "#b9c7e4",
+                        "surface-tint": "#515f78",
+                        "primary-fixed": "#d6e3ff",
+                        "tertiary": "#6c5e00",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed-variant": "#39475f",
+                        "outline": "#75777e",
+                        "inverse-surface": "#213145",
+                        "primary-container": "#0d1c32",
+                        "primary": "#000000",
+                        "on-background": "#0b1c30",
+                        "surface-dim": "#cbdbf5",
+                        "surface-container-highest": "#d3e4fe",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed-dim": "#47d6ff",
+                        "tertiary-fixed-dim": "#dcc756",
+                        "on-tertiary-fixed-variant": "#524700",
+                        "on-secondary-container": "#00566a",
+                        "on-secondary-fixed": "#001f28",
+                        "tertiary-fixed": "#fae36f"
+                }
+              }
+            }
+          }
+    </script>
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .pipeline-gradient { background: linear-gradient(135deg, #0d1c32 0%, #00677f 100%); }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-inter">
+    <aside class="fixed left-0 top-0 h-full w-[240px] bg-surface border-r border-outline-variant flex flex-col py-6 px-4">
+        <div class="mb-8 px-4">
+            <h1 class="text-2xl font-bold text-primary">KeySearch V 6.0</h1>
+            <p class="text-xs text-on-surface-variant">SEO Pipeline Engine</p>
+        </div>
+        <nav class="flex-grow space-y-1">
+            <a class="flex items-center gap-3 px-4 py-2 rounded transition-all text-secondary font-bold border-r-4 border-secondary-container bg-surface-container" href="/">
+                <span class="material-symbols-outlined">hub</span>
+                <span class="text-sm">Pipeline Hub</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-2 rounded transition-all text-on-surface-variant hover:bg-surface-container-high" href="/config">
+                <span class="material-symbols-outlined">input</span>
+                <span class="text-sm">Data Input</span>
+            </a>
+        </nav>
+    </aside>
+
+    <header class="fixed top-0 right-0 h-16 ml-[240px] w-[calc(100%-240px)] flex justify-between items-center px-6 bg-surface-container-lowest border-b border-outline-variant shadow-sm z-10">
+        <h2 class="text-xl font-semibold text-primary">Dashboard</h2>
+        <div class="flex items-center gap-4">
+            {% if state.is_running %}
+            <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Procesando...
+            </span>
+            {% endif %}
+            <button class="bg-primary text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:opacity-90 transition-all active:scale-95" onclick="location.href='/config'">
+                Nueva Búsqueda
+            </button>
+        </div>
+    </header>
+
+    <main class="ml-[240px] mt-16 p-6">
+        <div class="max-w-7xl mx-auto space-y-6">
+            <!-- Stats Bento -->
+            <div class="grid grid-cols-12 gap-6">
+                <div class="col-span-12 lg:col-span-4 pipeline-gradient rounded-xl p-8 text-white shadow-lg flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs uppercase tracking-wider opacity-80">Estado del Sistema</span>
+                        <h3 class="text-3xl font-bold mt-2">{{ state.status_msg }}</h3>
+                        <p class="text-sm mt-4 opacity-90 leading-relaxed">
+                            {% if state.is_running %}
+                            El motor está procesando el lote de keywords actual.
+                            {% else %}
+                            Sistema listo para iniciar nuevas extracciones.
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% if state.is_running %}
+                    <div class="mt-8">
+                        <div class="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                            <div class="bg-secondary-container h-full transition-all duration-500" style="width: {{ state.progress }}%"></div>
+                        </div>
+                        <span class="text-xs mt-2 block">{{ state.progress }}% completado</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-on-surface-variant font-medium">Keywords en Memoria</p>
+                            <h2 class="text-5xl font-bold text-primary mt-1">{{ state.keywords|length }}</h2>
+                        </div>
+                        <div class="bg-secondary-container/20 text-on-secondary-container p-2 rounded-lg">
+                            <span class="material-symbols-outlined">key</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-on-surface-variant font-medium">Última Ejecución</p>
+                            <h2 class="text-5xl font-bold text-primary mt-1">{% if state.last_run_data %}OK{% else %}--{% endif %}</h2>
+                        </div>
+                        <div class="bg-tertiary-container/20 text-tertiary p-2 rounded-lg">
+                            <span class="material-symbols-outlined">history</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pipeline Stepper -->
+            {% if state.is_running %}
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div class="flex items-center gap-6">
+                    <div class="flex flex-col items-center gap-2 flex-1">
+                        <div class="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center">
+                            <span class="material-symbols-outlined">check</span>
+                        </div>
+                        <p class="text-xs font-bold">Ingestion</p>
+                    </div>
+                    <div class="flex-1 h-0.5 bg-secondary"></div>
+                    <div class="flex flex-col items-center gap-2 flex-1">
+                        <div class="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center animate-pulse">
+                            <span class="material-symbols-outlined">database</span>
+                        </div>
+                        <p class="text-xs font-bold">Scraping</p>
+                    </div>
+                    <div class="flex-1 h-0.5 border-t-2 border-dashed border-outline"></div>
+                    <div class="flex flex-col items-center gap-2 flex-1 opacity-50">
+                        <div class="w-10 h-10 rounded-full border-2 border-outline flex items-center justify-center">
+                            <span class="material-symbols-outlined">download</span>
+                        </div>
+                        <p class="text-xs font-bold">Export</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Results Table -->
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+                <div class="px-6 py-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/30">
+                    <h3 class="text-lg font-bold">Resultados del Último Lote</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-surface-container-low">
+                            <tr>
+                                <th class="px-6 py-3 text-xs font-bold text-on-surface-variant uppercase">Keyword</th>
+                                <th class="px-6 py-3 text-xs font-bold text-on-surface-variant uppercase">Categoría</th>
+                                <th class="px-6 py-3 text-xs font-bold text-on-surface-variant uppercase">Resultados</th>
+                                <th class="px-6 py-3 text-xs font-bold text-on-surface-variant uppercase text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-outline-variant">
+                            {% if state.last_run_data %}
+                                {% for item in state.last_run_data %}
+                                <tr class="hover:bg-secondary-container/5 transition-colors">
+                                    <td class="px-6 py-4 font-bold text-primary">{{ item.keyword }}</td>
+                                    <td class="px-6 py-4 text-sm">{{ item.category }} / {{ item.subcategory }}</td>
+                                    <td class="px-6 py-4 text-sm">{{ item.metrics|length }} temas encontrados</td>
+                                    <td class="px-6 py-4 text-right">
+                                        <span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-[10px] font-bold uppercase">Ready</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="px-6 py-12 text-center text-on-surface-variant italic">No hay datos procesados en esta sesión.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Simple polling for progress
+        setInterval(async () => {
+            const resp = await fetch('/status');
+            const data = await resp.json();
+            if (data.is_running) {
+                location.reload(); // Quick and dirty for demo, in real life update DOM
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "tertiary-fixed-dim": "#dcc756",
+                "surface-variant": "#d3e4fe",
+                "surface-container-highest": "#d3e4fe",
+                "surface": "#f8f9ff",
+                "on-error-container": "#93000a",
+                "primary-fixed": "#d6e3ff",
+                "tertiary": "#6c5e00",
+                "surface-dim": "#cbdbf5",
+                "primary": "#000000",
+                "surface-bright": "#f8f9ff",
+                "on-secondary-fixed": "#001f28",
+                "secondary": "#00677f",
+                "surface-container": "#e5eeff",
+                "on-secondary-container": "#00566a",
+                "tertiary-fixed": "#fae36f",
+                "primary-fixed-dim": "#b9c7e4",
+                "outline-variant": "#c5c6cd",
+                "on-tertiary-fixed": "#211b00",
+                "surface-container-high": "#dce9ff",
+                "secondary-fixed": "#b6ebff",
+                "on-surface-variant": "#44474d",
+                "on-error": "#ffffff",
+                "on-secondary-fixed-variant": "#004e60",
+                "background": "#f8f9ff",
+                "secondary-container": "#00d2ff",
+                "error-container": "#ffdad6",
+                "surface-tint": "#515f78",
+                "primary-container": "#0d1c32",
+                "on-tertiary-fixed-variant": "#524700",
+                "on-primary-fixed-variant": "#39475f",
+                "secondary-fixed-dim": "#47d6ff",
+                "on-surface": "#0b1c30",
+                "inverse-primary": "#b9c7e4",
+                "on-primary": "#ffffff",
+                "surface-container-lowest": "#ffffff",
+                "surface-container-low": "#eff4ff",
+                "outline": "#75777e",
+                "on-primary-fixed": "#0d1c32",
+                "on-tertiary": "#ffffff",
+                "on-background": "#0b1c30",
+                "on-tertiary-container": "#493f00",
+                "on-secondary": "#ffffff",
+                "inverse-surface": "#213145",
+                "tertiary-container": "#bfab3d",
+                "on-primary-container": "#76849f",
+                "inverse-on-surface": "#eaf1ff",
+                "error": "#ba1a1a"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "sm": "8px",
+                "lg": "24px",
+                "gutter": "24px",
+                "2xl": "48px",
+                "xs": "4px",
+                "container-max": "1440px",
+                "3xl": "64px",
+                "base": "4px",
+                "md": "16px",
+                "xl": "32px"
+        },
+        "fontFamily": {
+                "body-lg": ["Inter"],
+                "body-sm": ["Inter"],
+                "h3": ["Inter"],
+                "body-md": ["Inter"],
+                "label-md": ["JetBrains Mono"],
+                "display": ["Inter"],
+                "h1": ["Inter"],
+                "h1-mobile": ["Inter"],
+                "label-sm": ["JetBrains Mono"],
+                "h2": ["Inter"]
+        },
+        "fontSize": {
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "h3": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "h1": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "h1-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                "h2": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+        }
+      },
+    },
+  }
+</script>
+<style>
+    .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .pipeline-gradient {
+        background: linear-gradient(135deg, #0d1c32 0%, #00677f 100%);
+    }
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+    .mono-label {
+        font-family: 'JetBrains Mono', monospace;
+    }
+</style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] bg-surface border-r border-outline-variant flex flex-col py-md px-sm z-20">
+<div class="mb-xl px-md">
+<h1 class="text-h2 font-bold text-primary">KeySearch V 6.0</h1>
+<p class="mono-label text-[12px] text-on-surface-variant uppercase tracking-wider">SEO Pipeline Engine</p>
+</div>
+<nav class="flex-grow space-y-base">
+<a class="flex items-center gap-md px-md py-sm rounded transition-all text-secondary font-bold border-r-4 border-secondary-container bg-surface-container" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="mono-label text-label-md">Pipeline Hub</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-all text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="input">input</span>
+<span class="mono-label text-label-md">Data Input</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-all text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+<span class="mono-label text-label-md">Scraping</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-all text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="mono-label text-label-md">IA Enrichment</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-all text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+<span class="mono-label text-label-md">Export</span>
+</a>
+</nav>
+<div class="mt-auto pt-md border-t border-outline-variant space-y-base">
+<button class="w-full mb-md py-sm bg-primary text-white rounded mono-label text-label-md hover:bg-opacity-90 transition-all uppercase tracking-wide">
+                New Project
+            </button>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="mono-label text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="mono-label text-label-md">Docs</span>
+</a>
+</div>
+</aside>
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 right-0 h-16 left-[240px] flex justify-between items-center px-lg bg-surface-container-lowest border-b border-outline-variant shadow-sm z-10">
+<div class="flex items-center gap-xl">
+<h2 class="text-h3 text-primary">Dashboard</h2>
+<nav class="flex gap-lg h-full items-center">
+<a class="mono-label text-label-md text-primary border-b-2 border-primary h-16 flex items-center" href="#">Dashboard</a>
+<a class="mono-label text-label-md text-on-surface-variant hover:text-secondary h-16 flex items-center transition-colors" href="#">API Status</a>
+<a class="mono-label text-label-md text-on-surface-variant hover:text-secondary h-16 flex items-center transition-colors" href="#">Logs</a>
+</nav>
+</div>
+<div class="flex items-center gap-lg">
+<div class="relative">
+<input class="bg-surface-container-low border border-outline-variant rounded px-md py-xs mono-label text-body-sm w-64 focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="Search data..." type="text"/>
+<span class="material-symbols-outlined absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]" data-icon="search">search</span>
+</div>
+<button class="bg-primary text-white px-md py-xs rounded mono-label text-label-md hover:bg-opacity-90 transition-all uppercase">
+                Run Pipeline
+            </button>
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-on-surface-variant p-xs hover:bg-surface-variant rounded-full" data-icon="notifications">notifications</button>
+<img alt="User" class="w-8 h-8 rounded-full border border-outline-variant object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1YqIiqrnHjHr-wxFodqEQFPPv3zNmRX8Rh25ZaVX1WCkIIWBoIlXvmzqOYw8eeHzirLmYv2a4_4CnmXYUq4O_lqW2O-hwRwHiMGQRv04GFbFlBrZNDdBc3O7TXbCuJc5iBaB42g5AozN_UvomMO_c_UQD8Li59-krb8zl7RIBzUBn7GbiXGi3tYSlfFAxBAvLYgtt-ttbtkBteQFsYv1vb27FvcFx6K3gzcV8gaoaiKXL4lxmlo4L4A7ZB97aBGcQZpwqHt9BCDX3"/>
+</div>
+</div>
+</header>
+<main class="ml-[240px] mt-16 p-lg">
+<div class="max-w-container-max mx-auto space-y-lg">
+<!-- Stats Row -->
+<div class="grid grid-cols-12 gap-gutter">
+<div class="col-span-12 lg:col-span-4 pipeline-gradient rounded-xl p-xl text-white shadow-lg flex flex-col justify-between">
+<div>
+<span class="mono-label text-[12px] uppercase tracking-wider opacity-80">System Health</span>
+<h3 class="text-display mt-sm leading-tight">Optimal Performance</h3>
+<p class="text-body-sm mt-md opacity-90 leading-relaxed">Global SEO nodes are active across 12 clusters. All data pipes are running within nominal latency bounds.</p>
+</div>
+<div class="mt-xl flex items-center gap-md">
+<div class="flex -space-x-sm">
+<div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" data-icon="check">check</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" data-icon="check">check</span>
+</div>
+</div>
+<span class="mono-label text-label-md">Active Nodes (42/42)</span>
+</div>
+</div>
+<div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<p class="mono-label text-label-md text-on-surface-variant">Processed Keywords</p>
+<h2 class="text-display text-primary mt-xs">1.2M</h2>
+</div>
+<div class="bg-secondary-container/20 text-on-secondary-container p-sm rounded">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</div>
+</div>
+<div class="mt-lg">
+<div class="w-full bg-surface-container h-1 rounded-full overflow-hidden">
+<div class="bg-secondary-container h-full w-[78%]"></div>
+</div>
+<div class="flex justify-between mt-xs">
+<span class="mono-label text-[12px] text-on-surface-variant">Target: 1.5M</span>
+<span class="mono-label text-[12px] text-secondary font-bold">+12.4%</span>
+</div>
+</div>
+</div>
+<div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<p class="mono-label text-label-md text-on-surface-variant">Scraping Success Rate</p>
+<h2 class="text-display text-primary mt-xs">99.8%</h2>
+</div>
+<div class="bg-tertiary-container/20 text-tertiary p-sm rounded">
+<span class="material-symbols-outlined" data-icon="data_exploration">data_exploration</span>
+</div>
+</div>
+<div class="mt-lg">
+<div class="flex gap-xs h-8 items-end">
+<div class="flex-1 bg-secondary rounded-t-sm h-1/2"></div>
+<div class="flex-1 bg-secondary rounded-t-sm h-3/4"></div>
+<div class="flex-1 bg-secondary rounded-t-sm h-2/3"></div>
+<div class="flex-1 bg-secondary rounded-t-sm h-full"></div>
+<div class="flex-1 bg-secondary rounded-t-sm h-5/6"></div>
+<div class="flex-1 bg-secondary-container rounded-t-sm h-full"></div>
+<div class="flex-1 bg-secondary-container rounded-t-sm h-3/4"></div>
+</div>
+<p class="mono-label text-[12px] text-on-surface-variant mt-xs">Last 7 days efficiency</p>
+</div>
+</div>
+</div>
+<!-- Pipeline Controller -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center">
+<h3 class="text-h3">Current Pipeline: SEO_Global_Enrichment_v2</h3>
+<div class="flex gap-sm items-center">
+<span class="bg-emerald-100 text-emerald-800 px-md py-xs rounded-full mono-label text-[12px] font-bold flex items-center gap-xs">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> RUNNING
+</span>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="more_vert">more_vert</button>
+</div>
+</div>
+<div class="p-xl">
+<div class="flex items-center gap-gutter">
+<!-- Ingestion -->
+<div class="flex flex-col items-center gap-sm flex-1">
+<div class="w-12 h-12 rounded bg-secondary text-white flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined" data-icon="input">input</span>
+</div>
+<div class="text-center">
+<p class="mono-label text-label-md">Ingestion</p>
+<p class="mono-label text-[10px] text-on-surface-variant uppercase">Complete</p>
+</div>
+</div>
+<div class="flex-1 h-0.5 bg-secondary"></div>
+<!-- Scraping -->
+<div class="flex flex-col items-center gap-sm flex-1">
+<div class="w-12 h-12 rounded bg-secondary text-white flex items-center justify-center shadow-md ring-4 ring-secondary/20">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+</div>
+<div class="text-center">
+<p class="mono-label text-label-md">Scraping</p>
+<p class="mono-label text-[10px] text-secondary font-bold uppercase">Active</p>
+</div>
+</div>
+<div class="flex-1 h-0.5 border-t border-dashed border-outline-variant"></div>
+<!-- IA -->
+<div class="flex flex-col items-center gap-sm flex-1 opacity-40">
+<div class="w-12 h-12 rounded border-2 border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+</div>
+<div class="text-center">
+<p class="mono-label text-label-md">IA Enrichment</p>
+<p class="mono-label text-[10px] text-on-surface-variant uppercase">Pending</p>
+</div>
+</div>
+<div class="flex-1 h-0.5 border-t border-dashed border-outline-variant"></div>
+<!-- Export -->
+<div class="flex flex-col items-center gap-sm flex-1 opacity-40">
+<div class="w-12 h-12 rounded border-2 border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</div>
+<div class="text-center">
+<p class="mono-label text-label-md">Export</p>
+<p class="mono-label text-[10px] text-on-surface-variant uppercase">Waiting</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Workspace -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- History Table -->
+<div class="col-span-12 xl:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center">
+<h3 class="text-h3">Execution History</h3>
+<button class="text-secondary mono-label text-label-md flex items-center gap-xs hover:underline uppercase tracking-wide">
+                            View All <span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low">
+<tr>
+<th class="px-lg py-sm mono-label text-[11px] text-on-surface-variant uppercase tracking-wider">Pipeline ID</th>
+<th class="px-lg py-sm mono-label text-[11px] text-on-surface-variant uppercase tracking-wider">Start Time</th>
+<th class="px-lg py-sm mono-label text-[11px] text-on-surface-variant uppercase tracking-wider text-right">Volume</th>
+<th class="px-lg py-sm mono-label text-[11px] text-on-surface-variant uppercase tracking-wider text-center">Status</th>
+<th class="px-lg py-sm mono-label text-[11px] text-on-surface-variant uppercase tracking-wider text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-lg py-md mono-label text-label-md font-bold text-primary">KS-RUN-8821</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-body-sm text-primary">2023-10-24</span>
+<span class="mono-label text-[10px] text-on-surface-variant">14:32:01 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md text-right mono-label text-label-md">245,000 req</td>
+<td class="px-lg py-md text-center">
+<span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded mono-label text-[10px] font-bold uppercase">Success</span>
+</td>
+<td class="px-lg py-md text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary" data-icon="visibility">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-lg py-md mono-label text-label-md font-bold text-primary">KS-RUN-8820</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-body-sm text-primary">2023-10-24</span>
+<span class="mono-label text-[10px] text-on-surface-variant">11:15:44 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md text-right mono-label text-label-md">12,400 req</td>
+<td class="px-lg py-md text-center">
+<span class="bg-error-container text-on-error-container px-sm py-xs rounded mono-label text-[10px] font-bold uppercase">Failed</span>
+</td>
+<td class="px-lg py-md text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary" data-icon="visibility">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-lg py-md mono-label text-label-md font-bold text-primary">KS-RUN-8819</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="text-body-sm text-primary">2023-10-23</span>
+<span class="mono-label text-[10px] text-on-surface-variant">22:01:10 UTC</span>
+</div>
+</td>
+<td class="px-lg py-md text-right mono-label text-label-md">1.2M req</td>
+<td class="px-lg py-md text-center">
+<span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded mono-label text-[10px] font-bold uppercase">Success</span>
+</td>
+<td class="px-lg py-md text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary" data-icon="visibility">visibility</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Sidebar Cards -->
+<div class="col-span-12 xl:col-span-4 space-y-gutter">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+<div class="flex items-center gap-sm mb-md text-tertiary">
+<span class="material-symbols-outlined" data-icon="tips_and_updates">tips_and_updates</span>
+<h3 class="text-h3 text-on-surface">Key Insight</h3>
+</div>
+<p class="text-body-sm text-on-surface-variant italic leading-relaxed mb-lg">"Current scraping latency in EU-West is 15% higher than US-East. Consider redistributing node weight for the next batch."</p>
+<button class="w-full py-sm border border-secondary text-secondary rounded mono-label text-label-md hover:bg-secondary/5 transition-colors uppercase tracking-wide">
+                            Apply Auto-Rebalance
+                        </button>
+</div>
+<div class="bg-inverse-surface text-inverse-on-surface rounded-xl p-lg overflow-hidden relative group">
+<div class="relative z-10">
+<h4 class="text-h3 mb-xs">Ready for Export?</h4>
+<p class="text-body-sm opacity-80 mb-md">3 datasets are compiled and ready for CSV/JSON transmission.</p>
+<div class="flex gap-sm">
+<button class="flex-1 bg-secondary-container text-on-secondary-container py-xs rounded mono-label text-label-md font-bold uppercase hover:brightness-110 transition-all">Download</button>
+<button class="flex-1 bg-white/10 hover:bg-white/20 py-xs rounded mono-label text-label-md uppercase transition-all">API Sync</button>
+</div>
+</div>
+<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-9xl opacity-5 rotate-12 pointer-events-none" data-icon="bolt">bolt</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

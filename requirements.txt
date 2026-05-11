@@ -6,3 +6,8 @@ rich>=13.7.0
 pytrends>=4.9.0
 streamlit>=1.31.0
 pandas
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+aiofiles
