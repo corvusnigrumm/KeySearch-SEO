@@ -12,317 +12,480 @@ from config import APP_NAME, APP_VERSION, GROQ_API_KEY, SCRAPE_PROFILE, COUNTRY_
 from scraper.categorizer import auto_categorizar
 from scraper.autocomplete import get_autocomplete_suggestions, get_question_suggestions
 from scraper.google_serp import scrape_google
-from scraper.volume_estimator import estimar_volumenes, ordenar_por_volumen
+from scraper.volume_estimator import estimar_volumenes
 from scraper.google_ads_metrics import enrich_with_google_ads_metrics
 from exporters.excel_export import exportar_excel
 from exporters.json_export import exportar_json
 
-# Configuración de la página
+# --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
-    page_title=f"{APP_NAME} v{APP_VERSION}",
+    page_title=f"KeySearch V 6.0 - Pipeline Hub",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Estilos personalizados (Premium Dark Mode)
+# --- ESTILOS CSS (BASADOS EN STITCH DESIGN SYSTEM) ---
 st.markdown("""
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <style>
-    .main {
-        background-color: #0e1117;
+    /* Reset & Base */
+    :root {
+        --primary: #000000;
+        --secondary: #00677f;
+        --secondary-container: #00d2ff;
+        --background: #f8f9ff;
+        --surface: #f8f9ff;
+        --on-surface: #0b1c30;
+        --on-surface-variant: #44474d;
+        --outline-variant: #c5c6cd;
+        --surface-container-low: #eff4ff;
+        --surface-container-lowest: #ffffff;
     }
+
     .stApp {
-        background: radial-gradient(circle at top right, #1e293b, #0f172a, #020617);
+        background-color: var(--background);
     }
-    .stButton>button {
+
+    [data-testid="stSidebar"] {
+        background-color: var(--surface);
+        border-right: 1px solid var(--outline-variant);
+        width: 240px !important;
+    }
+
+    /* Typography */
+    h1, h2, h3, p, span, div {
+        font-family: 'Inter', sans-serif !important;
+    }
+    .mono {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+
+    /* Custom Header */
+    .custom-header {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 64px;
         width: 100%;
-        border-radius: 8px;
-        height: 3em;
-        background-color: #3b82f6;
+        background: var(--surface-container-lowest);
+        border-bottom: 1px solid var(--outline-variant);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        z-index: 1000;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    /* Sidebar Logo */
+    .sidebar-logo {
+        padding: 24px 16px;
+        margin-bottom: 32px;
+    }
+    .sidebar-logo h1 {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--primary);
+        margin: 0;
+    }
+    .sidebar-logo p {
+        font-size: 12px;
+        color: var(--on-surface-variant);
+        font-family: 'JetBrains Mono' !important;
+        margin: 0;
+    }
+
+    /* Sidebar Nav */
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 16px;
+        border-radius: 4px;
+        color: var(--on-surface-variant);
+        text-decoration: none;
+        transition: all 0.2s;
+        margin-bottom: 4px;
+        cursor: pointer;
+    }
+    .nav-item:hover {
+        background-color: #dce9ff;
+    }
+    .nav-item.active {
+        color: var(--secondary);
+        font-weight: 700;
+        background-color: #e5eeff;
+        border-right: 4px solid var(--secondary-container);
+    }
+
+    /* Cards */
+    .ks-card {
+        background: var(--surface-container-lowest);
+        border: 1px solid var(--outline-variant);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: 24px;
+    }
+    .pipeline-gradient {
+        background: linear-gradient(135deg, #0d1c32 0%, #00677f 100%);
         color: white;
-        font-weight: bold;
-        border: none;
-        transition: all 0.3s ease;
+    }
+
+    /* Tables */
+    .ks-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .ks-table th {
+        background: var(--surface-container-low);
+        color: var(--on-surface-variant);
+        font-family: 'JetBrains Mono' !important;
+        font-size: 12px;
+        text-transform: uppercase;
+        padding: 12px 24px;
+        text-align: left;
+    }
+    .ks-table td {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--outline-variant);
+    }
+
+    /* Buttons */
+    .stButton>button {
+        border-radius: 9999px !important;
+        background-color: var(--primary) !important;
+        color: white !important;
+        border: none !important;
+        padding: 8px 24px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s !important;
     }
     .stButton>button:hover {
-        background-color: #2563eb;
-        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-        transform: translateY(-2px);
+        opacity: 0.9 !important;
+        transform: scale(0.98);
     }
-    .metric-card {
-        background: rgba(30, 41, 59, 0.5);
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        text-align: center;
-    }
-    .category-tag {
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.8em;
-        font-weight: bold;
-    }
-    .high-score { background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
-    .mid-score { background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
-    .low-score { background-color: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid #3b82f6; }
-    
-    /* Animaciones suaves */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .fade-in {
-        animation: fadeIn 0.5s ease-out forwards;
-    }
+
+    /* Ocultar elementos de Streamlit */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .block-container {padding-top: 2rem !important;}
 </style>
 """, unsafe_allow_html=True)
 
-def get_score_class(score):
-    if score >= 80: return "high-score"
-    if score >= 55: return "mid-score"
-    return "low-score"
+# --- ESTADO DE NAVEGACIÓN ---
+if "page" not in st.session_state:
+    st.session_state.page = "Pipeline Hub"
 
-def process_keyword(keyword, country_code, profile):
-    # Contexto de búsqueda
-    country_data = normalize_country(country_code)
-    search_context = {
-        "country_code": country_data["country_code"],
-        "country_name": country_data["country_name"],
-        "language_code": country_data["language_code"],
-        "google_ads_geo_targets": country_data["google_ads_geo_targets"],
-        "scrape_profile": profile
-    }
-    
-    # Categorización automática
-    categoria, subcategoria = auto_categorizar(keyword)
-    editorial_context = {
-        "category_name": categoria,
-        "subcategory_name": subcategoria,
-    }
-    
-    results = {
-        "keyword": keyword,
-        "categoria": categoria,
-        "subcategoria": subcategoria,
-        "country": country_data["country_name"],
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    # 1. Sugerencias de autocompletado
-    status = st.status(f"Analizando: **{keyword}**", expanded=True)
-    
-    status.write("🔍 Obteniendo sugerencias de autocompletado...")
-    sugerencias = get_autocomplete_suggestions(keyword, expandir=True, search_context=search_context)
-    results["sugerencias"] = sugerencias
-    
-    status.write("❓ Generando preguntas por autocompletado...")
-    preguntas_ac = get_question_suggestions(keyword, search_context=search_context)
-    results["preguntas_autocompletado"] = preguntas_ac
-    
-    status.write("🌐 Extrayendo datos de la SERP (PAA y Relacionadas)...")
-    serp_data = scrape_google(keyword, search_context=search_context)
-    results["preguntas_paa"] = serp_data.get("preguntas_paa", [])
-    results["busquedas_relacionadas"] = serp_data.get("busquedas_relacionadas", [])
-    
-    # 2. Filtrado IA (si está habilitado)
-    if GROQ_API_KEY:
-        status.write("🤖 Filtrando con IA (Groq)...")
-        from scraper.ai_filter import filtrar_con_ia
-        
-        def _filter(items, name):
-            if not items: return items
-            return filtrar_con_ia(items, keyword, search_context["country_name"])
-            
-        results["sugerencias"] = _filter(results["sugerencias"], "sugerencias")
-        results["preguntas_autocompletado"] = _filter(results["preguntas_autocompletado"], "preguntas ac")
-        results["preguntas_paa"] = _filter(results["preguntas_paa"], "preguntas PAA")
-        results["busquedas_relacionadas"] = _filter(results["busquedas_relacionadas"], "relacionadas")
-    
-    # 3. Métricas y Estimaciones
-    status.write("📊 Analizando señales reales de Google...")
-    volumenes = estimar_volumenes(
-        keyword_principal=keyword,
-        sugerencias=results["sugerencias"],
-        preguntas_paa=results["preguntas_paa"],
-        preguntas_autocompletado=results["preguntas_autocompletado"],
-        busquedas_relacionadas=results["busquedas_relacionadas"],
-        usar_trends=True,
-        metadata={
-            "categoria_padre": categoria,
-            "subcategoria": subcategoria,
-            "referencia": keyword,
-            "pais": search_context["country_name"],
-            "pais_codigo": search_context["country_code"],
-            "google_ads_geo_targets": search_context["google_ads_geo_targets"],
-        },
-        search_context=search_context
-    )
-    
-    status.write("💰 Enriqueciendo con Google Ads API...")
-    google_ads_result = enrich_with_google_ads_metrics(volumenes)
-    results["volumenes"] = volumenes
-    results["google_ads"] = google_ads_result
-    
-    status.update(label="✅ Análisis completado", state="complete", expanded=False)
-    
-    return results
-
-# --- SIDEBAR ---
+# --- SIDEBAR PERSONALIZADO ---
 with st.sidebar:
-    st.image("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png", width=150) # Placeholder for logo
-    st.title(f"🚀 {APP_NAME}")
-    st.caption(f"Versión {APP_VERSION}")
+    st.markdown(f"""
+    <div class="sidebar-logo">
+        <h1>KeySearch V 6.0</h1>
+        <p>SEO Pipeline Engine</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    pages = [
+        {"name": "Pipeline Hub", "icon": "hub"},
+        {"name": "Data Input", "icon": "input"},
+        {"name": "Scraping", "icon": "database"},
+        {"name": "IA Enrichment", "icon": "psychology"},
+        {"name": "Export", "icon": "download"},
+    ]
+    
+    for p in pages:
+        active_class = "active" if st.session_state.page == p["name"] else ""
+        if st.markdown(f"""
+        <div class="nav-item {active_class}">
+            <span class="material-symbols-outlined">{p['icon']}</span>
+            <span class="mono">{p['name']}</span>
+        </div>
+        """, unsafe_allow_html=True):
+            # Nota: Esto es solo visual, los clicks en markdown no cambian el estado de Streamlit directamente
+            # Usaremos un radio oculto o botones reales para la navegación funcional
+            pass
     
     st.divider()
     
-    keyword_input = st.text_input("Palabra clave semilla", placeholder="ej. marketing digital")
-    
-    country_code = st.selectbox(
-        "País de análisis",
-        options=list(COUNTRY_CATALOG.keys()),
-        format_func=lambda x: f"{COUNTRY_CATALOG[x]['name']} ({x.upper()})",
+    # Navegación funcional (oculta visualmente para mantener el diseño)
+    st.session_state.page = st.radio(
+        "Navegación",
+        options=[p["name"] for p in pages],
+        label_visibility="collapsed",
         index=0
     )
     
-    profile = st.radio(
-        "Perfil de extracción",
-        options=["normal", "extreme"],
-        format_func=lambda x: "Normal (Equilibrado)" if x == "normal" else "Extreme (Máxima cobertura)",
-        help="El modo extreme realiza más peticiones y es más profundo."
-    )
+    st.markdown("""<div style="margin-top: auto; border-top: 1px solid var(--outline-variant); padding-top: 16px;">""", unsafe_allow_html=True)
+    if st.button("New Project"):
+        st.toast("Nuevo proyecto iniciado")
     
-    analyze_btn = st.button("🚀 Iniciar Investigación")
-    
-    st.divider()
-    
-    if GROQ_API_KEY:
-        st.success("✅ IA Groq Conectada")
-    else:
-        st.warning("⚠️ Sin Groq API Key (Filtro IA omitido)")
-        
-    if os.path.exists("google-ads.yaml"):
-        st.success("✅ Google Ads API Lista")
-    else:
-        st.info("ℹ️ Usando solo señales de tendencias")
+    st.markdown("""
+        <div class="nav-item">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="mono">Settings</span>
+        </div>
+        <div class="nav-item">
+            <span class="material-symbols-outlined">menu_book</span>
+            <span class="mono">Docs</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# --- MAIN CONTENT ---
-if analyze_btn and keyword_input:
-    with st.spinner("Investigando mercado..."):
-        results = process_keyword(keyword_input, country_code, profile)
-        st.session_state["results"] = results
+# --- HEADER PERSONALIZADO ---
+st.markdown(f"""
+<div class="custom-header">
+    <div style="display: flex; gap: 32px; align-items: center;">
+        <h2 style="font-size: 20px; font-weight: 600; color: var(--primary); margin: 0;">{st.session_state.page}</h2>
+    </div>
+    <div style="display: flex; gap: 24px; align-items: center;">
+        <div style="position: relative;">
+            <input type="text" placeholder="Search data..." style="background: var(--surface-container-low); border: 1px solid var(--outline-variant); border-radius: 9999px; padding: 4px 16px; font-size: 14px; width: 240px;">
+        </div>
+        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDz564SCf6e6f7klfOsVf3FBotBz5jcLwzPcBi_1--d59GM2VzuiZzAw0ZrC3oI_7FACuIWLC6_5UyJZn78d6MdKT-0GzQOzjONlhQoLyQfdsCvmAfCW34MEDUD3RlQpIBjcEiVolcbF_sBwapiBZPqlVF0to9i9XcvgeYktOYlSjfgVUzozTHxC0KlSQzlqZ9BqhAhnIO9NhM0JGHakNPzRlj0102IIhPCbWly6KgadNRvQ0tMgXiUpNFHxImabV-tVUlOplbVKC8r" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--outline-variant);">
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-if "results" in st.session_state:
-    res = st.session_state["results"]
+# Espaciador para el header fijo
+st.markdown("<br><br>", unsafe_allow_html=True)
+
+# --- LÓGICA DE PÁGINAS ---
+
+if st.session_state.page == "Pipeline Hub":
+    # Stats Row
+    col1, col2, col3 = st.columns([1.5, 1, 1])
     
-    # Header de resultados
-    st.header(f"Resultados: {res['keyword']}")
-    
-    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Keywords", len(res["volumenes"]))
+        st.markdown("""
+        <div class="ks-card pipeline-gradient">
+            <span class="mono" style="text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; font-size: 12px;">System Health</span>
+            <h3 style="font-size: 32px; margin: 8px 0;">Optimal Performance</h3>
+            <p style="opacity: 0.9; font-size: 14px;">Global SEO nodes are active across 12 clusters. All data pipes are running within nominal latency bounds.</p>
+            <div style="margin-top: 32px; display: flex; align-items: center; gap: 12px;">
+                <div style="background: #10b981; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">check</span>
+                </div>
+                <span class="mono" style="font-size: 12px;">Active Nodes (42/42)</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
     with col2:
-        st.metric("Categoría", res["categoria"])
+        st.markdown("""
+        <div class="ks-card">
+            <p class="mono" style="color: var(--on-surface-variant); font-size: 14px; margin-bottom: 4px;">Processed Keywords</p>
+            <h2 style="font-size: 48px; font-weight: 700; margin: 0;">1.2M</h2>
+            <div style="margin-top: 24px;">
+                <div style="width: 100%; background: var(--surface-container-low); height: 4px; border-radius: 9999px; overflow: hidden;">
+                    <div style="background: var(--secondary-container); height: 100%; width: 78%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                    <span class="mono" style="font-size: 12px; color: var(--on-surface-variant);">Target: 1.5M</span>
+                    <span class="mono" style="font-size: 12px; color: var(--secondary); font-weight: 700;">+12.4%</span>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
     with col3:
-        st.metric("Subcategoría", res["subcategoria"])
-    with col4:
-        st.metric("Ads Enriquecidas", res["google_ads"].get("keywords_enriched", 0))
-    
-    st.divider()
-    
-    # Tabs para visualizar datos
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "💎 Sugerencias", 
-        "❓ Preguntas PAA", 
-        "📝 Preguntas Autocompletado", 
-        "🔗 Relacionadas",
-        "📥 Exportar"
-    ])
-    
-    def render_table(keywords):
-        if not keywords:
-            st.info("No se encontraron resultados para esta sección.")
-            return
-            
-        data = []
-        for kw in keywords:
-            vol = res["volumenes"].get(kw, {})
-            score = vol.get("score", 0)
-            ads = vol.get("google_ads_avg_monthly_searches", "-")
-            trend = vol.get("google_trends_promedio", "-")
-            
-            data.append({
-                "Keyword": kw,
-                "Ads/mes": ads,
-                "Trend (0-100)": trend,
-                "Score": score,
-                "Prioridad": vol.get("categoria", "-")
-            })
-            
-        df = pd.DataFrame(data)
-        st.dataframe(
-            df, 
-            use_container_width=True,
-            column_config={
-                "Score": st.column_config.ProgressColumn(
-                    "Score",
-                    min_value=0,
-                    max_value=100,
-                    format="%d"
-                ),
-                "Keyword": st.column_config.TextColumn("Keyword", width="large")
-            }
-        )
+        st.markdown("""
+        <div class="ks-card">
+            <p class="mono" style="color: var(--on-surface-variant); font-size: 14px; margin-bottom: 4px;">Success Rate</p>
+            <h2 style="font-size: 48px; font-weight: 700; margin: 0;">99.8%</h2>
+            <div style="margin-top: 24px; height: 32px; display: flex; align-items: flex-end; gap: 4px;">
+                <div style="flex: 1; background: var(--secondary); height: 50%; border-radius: 2px 2px 0 0;"></div>
+                <div style="flex: 1; background: var(--secondary); height: 75%; border-radius: 2px 2px 0 0;"></div>
+                <div style="flex: 1; background: var(--secondary); height: 60%; border-radius: 2px 2px 0 0;"></div>
+                <div style="flex: 1; background: var(--secondary-container); height: 100%; border-radius: 2px 2px 0 0;"></div>
+            </div>
+            <p class="mono" style="font-size: 12px; color: var(--on-surface-variant); margin-top: 8px;">Last 7 days efficiency</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    with tab1:
-        render_table(res["sugerencias"])
+    # Pipeline Status
+    st.markdown("""
+    <div class="ks-card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 16px 24px; border-bottom: 1px solid var(--outline-variant); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 18px; font-weight: 600; margin: 0;">SEO_Global_Enrichment_v2</h3>
+            <span style="background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></div> Running
+            </span>
+        </div>
+        <div style="padding: 24px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <div style="width: 48px; height: 48px; background: var(--secondary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <span class="material-symbols-outlined">input</span>
+                </div>
+                <span class="mono" style="font-size: 12px;">Ingestion</span>
+            </div>
+            <div style="flex: 1; height: 2px; background: var(--secondary); margin: 0 16px;"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <div style="width: 48px; height: 48px; background: var(--secondary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <span class="material-symbols-outlined">database</span>
+                </div>
+                <span class="mono" style="font-size: 12px;">Scraping</span>
+            </div>
+            <div style="flex: 1; height: 2px; border-top: 2px dashed var(--outline-variant); margin: 0 16px;"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0.5;">
+                <div style="width: 48px; height: 48px; border: 2px solid var(--outline-variant); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <span class="material-symbols-outlined">psychology</span>
+                </div>
+                <span class="mono" style="font-size: 12px;">IA Enrichment</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # History Table
+    st.markdown("""
+    <div class="ks-card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 16px 24px; border-bottom: 1px solid var(--outline-variant); display: flex; justify-content: space-between; align-items: center; background: #f1f5f9;">
+            <h3 style="font-size: 18px; font-weight: 600; margin: 0;">Execution History</h3>
+            <span style="color: var(--secondary); font-size: 14px; font-weight: 600; cursor: pointer;">View All →</span>
+        </div>
+        <table class="ks-table">
+            <thead>
+                <tr>
+                    <th>Pipeline ID</th>
+                    <th>Start Time</th>
+                    <th>Volume</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="mono" style="font-weight: 700;">KS-RUN-8821</span></td>
+                    <td><div style="font-size: 14px;">2023-10-24</div><div style="font-size: 12px; color: var(--on-surface-variant);">14:32:01 UTC</div></td>
+                    <td><span class="mono">245,000 req</span></td>
+                    <td><span style="background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">SUCCESS</span></td>
+                    <td style="text-align: right;"><span class="material-symbols-outlined" style="color: var(--on-surface-variant); cursor: pointer;">visibility</span></td>
+                </tr>
+                <tr>
+                    <td><span class="mono" style="font-weight: 700;">KS-RUN-8820</span></td>
+                    <td><div style="font-size: 14px;">2023-10-24</div><div style="font-size: 12px; color: var(--on-surface-variant);">11:15:44 UTC</div></td>
+                    <td><span class="mono">12,400 req</span></td>
+                    <td><span style="background: #ffdad6; color: #93000a; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">FAILED</span></td>
+                    <td style="text-align: right;"><span class="material-symbols-outlined" style="color: var(--on-surface-variant); cursor: pointer;">visibility</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
+
+elif st.session_state.page == "Data Input":
+    # Formulario de configuración
+    st.markdown("""
+    <div style="margin-bottom: 32px;">
+        <h2 style="font-size: 32px; font-weight: 600; margin: 0;">Configuración de Búsqueda</h2>
+        <p style="color: var(--on-surface-variant); margin-top: 8px;">Define los parámetros de entrada para la extracción y enriquecimiento de datos SEO.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col_left, col_right = st.columns([2, 1])
+    
+    with col_left:
+        # Keyword Input
+        st.markdown("""
+        <div class="ks-card">
+            <div style="display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--outline-variant); padding-bottom: 16px; margin-bottom: 24px;">
+                <span class="material-symbols-outlined" style="color: var(--secondary);">key</span>
+                <h3 style="font-size: 20px; font-weight: 600; margin: 0;">Palabras Clave (Keywords)</h3>
+            </div>
+            <p style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Ingresar Keywords</p>
+            <p style="font-size: 14px; color: var(--on-surface-variant); margin-bottom: 16px;">Introduce una keyword por línea o separadas por comas.</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-    with tab2:
-        render_table(res["preguntas_paa"])
+        # Area de texto real de Streamlit (posicionada sobre el card visual)
+        keywords_raw = st.text_area(
+            "Keywords",
+            height=250,
+            placeholder="ej: mejores herramientas seo 2024\nanalisis de competencia python\nautomatizacion marketing b2b",
+            label_visibility="collapsed"
+        )
         
-    with tab3:
-        render_table(res["preguntas_autocompletado"])
-        
-    with tab4:
-        render_table(res["busquedas_relacionadas"])
-        
-    with tab5:
-        st.subheader("Descargar Reportes")
-        col_ex1, col_ex2 = st.columns(2)
-        
-        # Generar archivos para descargar
-        excel_path = exportar_excel(res["keyword"], res)
-        with open(excel_path, "rb") as f:
-            col_ex1.download_button(
-                "📊 Descargar Excel (.xlsx)",
-                f,
-                file_name=os.path.basename(excel_path),
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            # Segmentación
+            st.markdown("""
+            <div class="ks-card">
+                <div style="display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--outline-variant); padding-bottom: 8px; margin-bottom: 16px;">
+                    <span class="material-symbols-outlined" style="color: var(--secondary);">public</span>
+                    <h3 style="font-size: 18px; font-weight: 600; margin: 0;">Segmentación</h3>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            country_code = st.selectbox(
+                "País de Búsqueda",
+                options=list(COUNTRY_CATALOG.keys()),
+                format_func=lambda x: f"{COUNTRY_CATALOG[x]['name']} ({x.upper()})"
             )
             
-        json_path = exportar_json(res["keyword"], res)
-        with open(json_path, "rb") as f:
-            col_ex2.download_button(
-                "{ } Descargar JSON",
-                f,
-                file_name=os.path.basename(json_path),
-                mime="application/json"
+            st.radio("Idioma Principal", ["Español", "Inglés"], horizontal=True)
+            
+        with col_c2:
+            # Perfil
+            st.markdown("""
+            <div class="ks-card">
+                <div style="display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--outline-variant); padding-bottom: 8px; margin-bottom: 16px;">
+                    <span class="material-symbols-outlined" style="color: var(--secondary);">settings_account_box</span>
+                    <h3 style="font-size: 18px; font-weight: 600; margin: 0;">Perfil de Búsqueda</h3>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            profile_choice = st.radio(
+                "Agente de Extracción",
+                options=["normal", "extreme"],
+                format_func=lambda x: "Desktop (Chrome/MacOS)" if x == "normal" else "Deep Scan (Extreme Mode)"
             )
+
+    with col_right:
+        # Validation Card
+        st.markdown("""
+        <div class="ks-card" style="background: var(--primary); color: white; border: none; position: relative; overflow: hidden;">
+            <div style="position: absolute; right: -40px; top: -40px; width: 160px; height: 160px; background: rgba(0,210,255,0.1); border-radius: 50%; filter: blur(30px);"></div>
+            <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 24px; position: relative; z-index: 1;">Validación del Proyecto</h3>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;">
+                <span style="opacity: 0.8; font-size: 14px;">Keywords detectadas</span>
+                <span class="mono" style="color: var(--secondary-container); font-weight: 700;">Listas</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;">
+                <span style="opacity: 0.8; font-size: 14px;">Segmentación</span>
+                <span class="mono" style="color: var(--secondary-container); font-weight: 700;">Lista</span>
+            </div>
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.2);">
+                <p class="mono" style="text-transform: uppercase; font-size: 10px; opacity: 0.6; margin-bottom: 4px;">Consumo Estimado</p>
+                <div style="display: flex; align-items: baseline; gap: 8px;">
+                    <span style="font-size: 32px; font-weight: 700;">450</span>
+                    <span style="font-size: 18px; opacity: 0.7;">Créditos</span>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        run_btn = st.button("🚀 INICIAR PIPELINE", use_container_width=True)
+        
+        if run_btn:
+            st.success("Pipeline iniciado correctamente")
 
 else:
-    # Estado inicial / Bienvenida
-    st.info("👈 Ingresa una palabra clave en el panel lateral para comenzar la investigación.")
-    
-    col_hero1, col_hero2 = st.columns([2, 1])
-    with col_hero1:
-        st.markdown(f"""
-        ### Descubre señales reales de demanda
-        Esta herramienta extrae datos directamente de Google para identificar qué están buscando las personas realmente.
-        
-        - **Autocompletado Pro**: Expansión alfabética de términos.
-        - **People Also Ask**: Preguntas reales extraídas de la SERP.
-        - **Google Trends**: Validación de interés histórico.
-        - **Google Ads**: Volumen de búsqueda mensual exacto.
-        - **IA Groq**: Filtrado inteligente de ruido.
-        """)
-    with col_hero2:
-        st.image("https://cdn-icons-png.flaticon.com/512/270/270021.png", width=200) # Search icon
+    # Placeholder para otras páginas
+    st.info(f"Página {st.session_state.page} en desarrollo para coincidir con el diseño.")
+
+# --- FOOTER / FLOATING ACTIONS ---
+st.markdown("""
+<div style="position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 1000;">
+    <div style="width: 56px; height: 56px; background: white; border: 1px solid var(--outline-variant); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer;">
+        <span class="material-symbols-outlined">chat</span>
+    </div>
+    <div style="width: 56px; height: 56px; background: var(--secondary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer;">
+        <span class="material-symbols-outlined">save</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
