@@ -1,27 +1,42 @@
 """
-KeySearch V 6.0 - High Fidelity Stitch Design
-Este archivo implementa la interfaz EXACTA del sistema de diseño Stitch.
+KeySearch V 6.0 - Functional High Fidelity Dashboard
+Implementación completa con backend vinculado y diseño Stitch.
 """
 import streamlit as st
 import pandas as pd
 import os
 import sys
 import time
+import traceback
 from datetime import datetime
 
 # Path setup
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# --- BACKEND IMPORTS ---
+try:
+    from config import APP_VERSION, COUNTRY_CATALOG, normalize_country, GROQ_API_KEY
+    from scraper.categorizer import auto_categorizar
+    from scraper.autocomplete import get_autocomplete_suggestions, get_question_suggestions
+    from scraper.google_serp import scrape_google
+    from scraper.volume_estimator import estimar_volumenes
+    from scraper.google_ads_metrics import enrich_with_google_ads_metrics
+    from exporters.excel_export import exportar_excel
+    from exporters.json_export import exportar_json
+except Exception as e:
+    st.error(f"Error cargando módulos del backend: {e}")
+    st.stop()
+
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="KeySearch V 6.0 | Dashboard",
+    page_title=f"KeySearch V {APP_VERSION}",
     page_icon="🔍",
     layout="wide",
-    initial_sidebar_state="collapsed" # We'll build our own sidebar
+    initial_sidebar_state="expanded"
 )
 
-# --- THEME & CSS ---
-def inject_stitch_styles():
+# --- THEME & CSS INJECTION ---
+def inject_stitch_theme():
     st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
     <style>
@@ -31,456 +46,310 @@ def inject_stitch_styles():
             --on-surface-variant: #44474d; --outline-variant: #c5c6cd;
             --surface-container-low: #eff4ff; --surface-container-lowest: #ffffff;
             --surface-container: #e5eeff; --primary-container: #0d1c32;
-            --on-primary-container: #76849f;
         }
 
-        /* Hide Streamlit Native UI */
-        [data-testid="stHeader"] { display: none !important; }
-        [data-testid="stSidebar"] { display: none !important; }
-        .block-container { padding: 0 !important; max-width: 100% !important; }
-        footer { visibility: hidden; }
-
-        /* Custom Shell */
-        .stitch-shell {
-            display: flex;
-            background-color: var(--background);
-            min-height: 100vh;
-        }
-
-        /* Sidebar */
-        .stitch-sidebar {
-            width: 240px;
-            height: 100vh;
-            position: fixed;
-            left: 0;
-            top: 0;
-            background: var(--surface);
-            border-right: 1px solid var(--outline-variant);
-            display: flex;
-            flex-direction: column;
-            padding: 24px 16px;
-            z-index: 100;
-        }
-        .sidebar-brand h1 { font-family: 'Inter'; font-size: 24px; font-weight: 700; color: var(--primary); margin: 0; }
-        .sidebar-brand p { font-family: 'JetBrains Mono'; font-size: 12px; color: var(--on-surface-variant); margin-top: 4px; }
+        /* Streamlit Overrides */
+        .stApp { background-color: var(--background) !important; font-family: 'Inter', sans-serif !important; }
+        [data-testid="stHeader"] { background-color: transparent !important; }
+        .block-container { padding-top: 2rem !important; }
         
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 10px 16px;
-            border-radius: 8px;
-            text-decoration: none;
-            color: var(--on-surface-variant);
-            font-family: 'JetBrains Mono';
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-            cursor: pointer;
-            margin-bottom: 4px;
+        /* Sidebar Styling */
+        [data-testid="stSidebar"] {
+            background-color: var(--surface) !important;
+            border-right: 1px solid var(--outline-variant) !important;
+            width: 260px !important;
         }
-        .nav-item:hover { background: var(--surface-container-high); }
-        .nav-item.active {
-            background: var(--surface-container);
-            color: var(--secondary);
-            font-weight: 700;
-            border-right: 4px solid var(--secondary-container);
-        }
-        .nav-item .material-symbols-outlined { font-size: 20px; }
-
-        .sidebar-footer { margin-top: auto; border-top: 1px solid var(--outline-variant); pt-24px; }
-        .btn-new-project {
-            width: 100%;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 10px;
-            font-family: 'JetBrains Mono';
-            font-weight: 700;
-            margin: 24px 0;
-            cursor: pointer;
-        }
-
-        /* Header */
-        .stitch-header {
-            position: fixed;
-            top: 0;
-            right: 0;
-            left: 240px;
-            height: 64px;
+        
+        /* Custom Components */
+        .ks-card {
             background: var(--surface-container-lowest);
-            border-bottom: 1px solid var(--outline-variant);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            z-index: 90;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .header-nav { display: flex; gap: 24px; }
-        .header-nav a { font-family: 'Inter'; font-size: 15px; font-weight: 600; color: var(--on-surface-variant); text-decoration: none; padding-bottom: 16px; }
-        .header-nav a.active { color: var(--primary); border-bottom: 2px solid var(--secondary); }
-
-        .search-box {
-            background: var(--surface-container-low);
             border: 1px solid var(--outline-variant);
-            border-radius: 99px;
-            padding: 6px 16px;
-            width: 280px;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        .btn-run-pipeline {
-            background: var(--primary);
-            color: white;
-            border-radius: 8px;
-            padding: 8px 20px;
-            font-weight: 700;
-            border: none;
-            cursor: pointer;
-            margin-left: 12px;
-        }
-
-        /* Main Content */
-        .stitch-main {
-            margin-left: 240px;
-            margin-top: 64px;
-            padding: 32px;
-            flex-grow: 1;
-        }
-
-        /* Cards and Grid */
-        .bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
-        .card { background: var(--surface-container-lowest); border: 1px solid var(--outline-variant); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
-        .gradient-card {
+        .ks-gradient {
             background: linear-gradient(135deg, #0d1c32 0%, #00677f 100%);
             color: white;
             border-radius: 12px;
             padding: 32px;
+            margin-bottom: 24px;
         }
-        .stat-value { font-size: 48px; font-weight: 700; margin: 8px 0; }
-        
-        /* Table */
-        .data-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        .data-table th { background: var(--surface-container-low); text-align: left; padding: 12px 16px; font-family: 'JetBrains Mono'; font-size: 12px; color: var(--on-surface-variant); text-transform: uppercase; }
-        .data-table td { padding: 16px; border-bottom: 1px solid var(--outline-variant); font-size: 14px; }
-        .tag-success { background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
-        
-        /* Insight Card */
-        .insight-card { border-left: 4px solid var(--secondary); }
-        .btn-outline { border: 1px solid var(--secondary); color: var(--secondary); background: transparent; width: 100%; padding: 8px; border-radius: 4px; font-weight: 600; cursor: pointer; }
-        
-        /* Dark Card */
-        .dark-card { background: var(--primary-container); color: white; position: relative; overflow: hidden; }
-        .bolt-icon { position: absolute; bottom: -20px; right: -20px; font-size: 120px; opacity: 0.1; transform: rotate(15deg); }
 
-        /* Material Symbols Helper */
-        .material-symbols-outlined { font-size: 20px; vertical-align: middle; }
+        .mono { font-family: 'JetBrains Mono', monospace !important; }
+        .text-label-sm { font-family: 'JetBrains Mono'; font-size: 12px; font-weight: 500; text-transform: uppercase; color: var(--on-surface-variant); }
+        
+        /* Metric styling */
+        div[data-testid="stMetric"] {
+            background: var(--surface-container-lowest);
+            border: 1px solid var(--outline-variant);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        /* Buttons */
+        .stButton > button {
+            border-radius: 8px !important;
+            font-weight: 700 !important;
+            transition: all 0.2s !important;
+        }
+        .stButton > button:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        }
+        
+        /* Status Tags */
+        .tag-success { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+        .tag-running { background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; animation: pulse 2s infinite; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; }
+        }
     </style>
     """, unsafe_allow_html=True)
 
-# --- APP LOGIC ---
-if "page" not in st.session_state:
-    st.session_state.page = "Pipeline Hub"
+# --- APP STATE ---
+if "results" not in st.session_state:
+    st.session_state.results = []
+if "running" not in st.session_state:
+    st.session_state.running = False
 
-inject_stitch_styles()
+# --- UI RENDER ---
+inject_stitch_theme()
 
-# 1. Custom Sidebar
-st.markdown(f"""
-<div class="stitch-sidebar">
-    <div class="sidebar-brand">
-        <h1>KeySearch V 6.0</h1>
-        <p>SEO Pipeline Engine</p>
-    </div>
-    <div style="margin-top: 32px;">
-        <div class="nav-item {"active" if st.session_state.page == "Pipeline Hub" else ""}" onclick="window.parent.postMessage({{type: 'streamlit:set_widget_value', key: 'page_nav', value: 'Pipeline Hub'}}, '*')">
-            <span class="material-symbols-outlined">hub</span>
-            <span>Pipeline Hub</span>
-        </div>
-        <div class="nav-item {"active" if st.session_state.page == "Data Input" else ""}">
-            <span class="material-symbols-outlined">input</span>
-            <span>Data Input</span>
-        </div>
-        <div class="nav-item">
-            <span class="material-symbols-outlined">database</span>
-            <span>Scraping</span>
-        </div>
-        <div class="nav-item">
-            <span class="material-symbols-outlined">psychology</span>
-            <span>IA Enrichment</span>
-        </div>
-        <div class="nav-item">
-            <span class="material-symbols-outlined">download</span>
-            <span>Export</span>
-        </div>
-    </div>
-    <div class="sidebar-footer">
-        <button class="btn-new-project">New Project</button>
-        <div class="nav-item">
-            <span class="material-symbols-outlined">settings</span>
-            <span>Settings</span>
-        </div>
-        <div class="nav-item">
-            <span class="material-symbols-outlined">menu_book</span>
-            <span>Docs</span>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Use a hidden radio to handle navigation from Python if needed
-# (Real interactivity between custom HTML and Streamlit requires some tricks, 
-# for now we'll use standard Streamlit sidebar but hidden visually to sync state)
 with st.sidebar:
-    st.session_state.page = st.radio("Nav", ["Pipeline Hub", "Data Input", "Resultados"], label_visibility="hidden", key="page_nav")
-
-# 2. Custom Header
-st.markdown(f"""
-<div class="stitch-header">
-    <div class="header-nav">
-        <a href="#" class="active">Dashboard</a>
-        <a href="#">API Status</a>
-        <a href="#">Logs</a>
+    st.markdown(f"""
+    <div style='margin-bottom: 32px;'>
+        <h1 style='font-size: 24px; font-weight: 700; color: var(--primary); margin: 0;'>KeySearch V {APP_VERSION}</h1>
+        <p class='mono' style='font-size: 11px; color: var(--on-surface-variant); margin: 0;'>SEO Pipeline Engine</p>
     </div>
-    <div style="display: flex; align-items: center;">
-        <div class="search-box">
-            <span class="material-symbols-outlined" style="opacity: 0.5; margin-right: 8px;">search</span>
-            <span>Search data...</span>
-        </div>
-        <button class="btn-run-pipeline">Run Pipeline</button>
-        <div style="margin-left: 16px; display: flex; align-items: center; gap: 12px;">
-            <span class="material-symbols-outlined" style="color: var(--on-surface-variant)">notifications</span>
-            <div style="width: 32px; height: 32px; background: #ddd; border-radius: 50%; overflow: hidden;">
-                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1YqIiqrnHjHr-wxFodqEQFPPv3zNmRX8Rh25ZaVX1WCkIIWBoIlXvmzqOYw8eeHzirLmYv2a4_4CnmXYUq4O_lqW2O-hwRwHiMGQRv04GFbFlBrZNDdBc3O7TXbCuJc5iBaB42g5AozN_UvomMO_c_UQD8Li59-krb8zl7RIBzUBn7GbiXGi3tYSlfFAxBAvLYgtt-ttbtkBteQFsYv1vb27FvcFx6K3gzcV8gaoaiKXL4lxmlo4L4A7ZB97aBGcQZpwqHt9BCDX3" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+    
+    page = st.radio(
+        "Navegación",
+        ["🏠 Pipeline Hub", "📥 Data Input", "📊 Resultados", "⚙️ Configuración"],
+        label_visibility="collapsed"
+    )
+    
+    st.markdown("<div style='height: 40vh'></div>", unsafe_allow_html=True)
+    st.divider()
+    st.button("➕ New Project", use_container_width=True)
+    st.caption("Settings")
+    st.caption("Docs")
 
-# 3. Main Content
-st.markdown("<div class='stitch-main'>", unsafe_allow_html=True)
-
-if st.session_state.page == "Pipeline Hub":
-    # Top Stats Row
-    st.markdown("""
-    <div class="bento-grid">
-        <div class="gradient-card" style="grid-column: span 4;">
-            <div class="text-label-sm" style="opacity: 0.8;">System Health</div>
-            <div class="text-h1" style="color: white; margin: 12px 0;">Optimal Performance</div>
-            <p style="font-size: 14px; opacity: 0.9; line-height: 1.6;">Global SEO nodes are active across 12 clusters. All data pipes are running within nominal latency bounds.</p>
-            <div style="margin-top: 24px; display: flex; align-items: center; gap: 12px;">
+# --- PAGES ---
+if page == "🏠 Pipeline Hub":
+    st.markdown("<h2 style='font-size: 32px; font-weight: 600; letter-spacing: -0.01em;'>Pipeline Hub</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color: var(--on-surface-variant);'>Visualiza el estado global del motor de extracción y procesamiento.</p>", unsafe_allow_html=True)
+    
+    # Hero Bento Row
+    c1, c2, c3 = st.columns([1.5, 1, 1])
+    with c1:
+        st.markdown(f"""
+        <div class="ks-gradient">
+            <div class="text-label-sm" style="color: rgba(255,255,255,0.7)">System Health</div>
+            <h3 style="font-size: 32px; color: white; margin: 12px 0;">Optimal Performance</h3>
+            <p style="font-size: 14px; opacity: 0.9; line-height: 1.6;">
+                Nodos de extracción activos en 12 regiones. Latencia nominal. 
+                Motor de IA Groq: {"ACTIVO" if GROQ_API_KEY else "INACTIVO"}.
+            </p>
+            <div style="margin-top: 24px; display: flex; align-items: center; gap: 8px;">
                 <span class="material-symbols-outlined" style="color: #10b981;">check_circle</span>
                 <span class="mono" style="font-size: 12px;">Active Nodes (42/42)</span>
             </div>
         </div>
-        <div class="card" style="grid-column: span 4;">
-            <div style="display: flex; justify-content: space-between;">
-                <span class="text-label-sm">Processed Keywords</span>
-                <span class="material-symbols-outlined" style="color: var(--secondary)">search</span>
-            </div>
-            <div class="stat-value">1.2M</div>
-            <div style="height: 4px; background: var(--surface-container); border-radius: 2px; margin-top: 16px;">
-                <div style="width: 78%; height: 100%; background: var(--secondary-container); border-radius: 2px;"></div>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 8px;">
-                <span class="mono" style="font-size: 11px; opacity: 0.6;">Target: 1.5M</span>
-                <span class="mono" style="font-size: 11px; color: var(--secondary); font-weight: 700;">+12.4%</span>
-            </div>
+        """, unsafe_allow_html=True)
+    
+    with c2:
+        st.metric("Keywords Procesadas", f"{len(st.session_state.results)}", "+100%" if st.session_state.results else "0%")
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.metric("Success Rate", "99.8%", "0.1%")
+        
+    with c3:
+        st.markdown("""
+        <div class="ks-card" style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+            <span class="material-symbols-outlined" style="font-size: 48px; color: var(--secondary); margin-bottom: 12px;">tips_and_updates</span>
+            <div class="mono" style="font-size: 14px; font-weight: 700;">INSIGHT DE IA</div>
+            <p style="font-size: 13px; color: var(--on-surface-variant); margin-top: 8px;">Considera usar el perfil 'Extreme' para temas con poca demanda orgánica.</p>
         </div>
-        <div class="card" style="grid-column: span 4;">
-            <div style="display: flex; justify-content: space-between;">
-                <span class="text-label-sm">Scraping Success Rate</span>
-                <span class="material-symbols-outlined" style="color: var(--secondary)">data_exploration</span>
-            </div>
-            <div class="stat-value">99.8%</div>
-            <div style="display: flex; gap: 4px; height: 32px; align-items: flex-end; margin-top: 16px;">
-                <div style="flex: 1; height: 40%; background: var(--secondary); border-radius: 2px 2px 0 0;"></div>
-                <div style="flex: 1; height: 70%; background: var(--secondary); border-radius: 2px 2px 0 0;"></div>
-                <div style="flex: 1; height: 60%; background: var(--secondary); border-radius: 2px 2px 0 0;"></div>
-                <div style="flex: 1; height: 100%; background: var(--secondary-container); border-radius: 2px 2px 0 0;"></div>
-                <div style="flex: 1; height: 80%; background: var(--secondary-container); border-radius: 2px 2px 0 0;"></div>
-            </div>
-            <p class="mono" style="font-size: 10px; opacity: 0.6; margin-top: 8px;">Last 7 days efficiency</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    # Current Pipeline Stepper
-    st.markdown("""
-    <div class="card" style="margin-top: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--outline-variant); padding-bottom: 16px; margin-bottom: 24px;">
-            <h3 class="text-h3" style="margin: 0;">Current Pipeline: SEO_Global_Enrichment_v2</h3>
-            <div style="background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-                <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span> Running
-            </div>
-        </div>
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 40px;">
-            <div style="text-align: center;">
-                <div style="width: 48px; height: 48px; background: var(--secondary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;"><span class="material-symbols-outlined">input</span></div>
-                <div class="mono" style="font-size: 12px;">Ingestion</div>
-                <div class="mono" style="font-size: 9px; opacity: 0.5;">COMPLETE</div>
-            </div>
-            <div style="flex-grow: 1; height: 2px; background: var(--secondary); margin: 0 16px; margin-top: -30px;"></div>
-            <div style="text-align: center;">
-                <div style="width: 48px; height: 48px; background: var(--secondary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; box-shadow: 0 0 0 4px var(--secondary-container);"><span class="material-symbols-outlined">database</span></div>
-                <div class="mono" style="font-size: 12px;">Scraping</div>
-                <div class="mono" style="font-size: 9px; color: var(--secondary); font-weight: 700;">ACTIVE</div>
-            </div>
-            <div style="flex-grow: 1; height: 2px; border-top: 2px dashed var(--outline-variant); margin: 0 16px; margin-top: -30px;"></div>
-            <div style="text-align: center; opacity: 0.5;">
-                <div style="width: 48px; height: 48px; border: 2px solid var(--outline-variant); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;"><span class="material-symbols-outlined">psychology</span></div>
-                <div class="mono" style="font-size: 12px;">IA Enrichment</div>
-                <div class="mono" style="font-size: 9px;">PENDING</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Execution History
+    st.markdown("<h3 style='font-size: 20px; font-weight: 600; margin-top: 24px;'>Historial de Ejecución</h3>", unsafe_allow_html=True)
+    if st.session_state.results:
+        df_hist = pd.DataFrame([
+            {"ID": f"KS-RUN-{i+1000}", "Keyword": res["keyword"], "Volumen": len(res["volumenes"]), "Estado": "SUCCESS"}
+            for i, res in enumerate(st.session_state.results[-5:])
+        ])
+        st.table(df_hist)
+    else:
+        st.info("No hay ejecuciones recientes.")
 
-    # Bottom Row: Table + Insights
-    st.markdown("""
-    <div class="bento-grid" style="margin-top: 24px;">
-        <div class="card" style="grid-column: span 8;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 class="text-h3" style="margin: 0;">Execution History</h3>
-                <a href="#" style="color: var(--secondary); font-family: 'JetBrains Mono'; font-size: 13px; font-weight: 700; text-decoration: none;">View All →</a>
-            </div>
-            <table class="data-table">
-                <thead>
-                    <tr><th>Pipeline ID</th><th>Start Time</th><th>Volume</th><th>Status</th><th>Action</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="mono" style="font-weight: 700;">KS-RUN-8821</td>
-                        <td>2023-10-24 <br><span style="font-size: 11px; opacity: 0.5;">14:32:01 UTC</span></td>
-                        <td class="mono">245,000 req</td>
-                        <td><span class="tag-success">SUCCESS</span></td>
-                        <td><span class="material-symbols-outlined" style="opacity: 0.5;">visibility</span></td>
-                    </tr>
-                    <tr>
-                        <td class="mono" style="font-weight: 700;">KS-RUN-8820</td>
-                        <td>2023-10-24 <br><span style="font-size: 11px; opacity: 0.5;">11:15:44 UTC</span></td>
-                        <td class="mono">12,400 req</td>
-                        <td><span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">FAILED</span></td>
-                        <td><span class="material-symbols-outlined" style="opacity: 0.5;">visibility</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div style="grid-column: span 4; display: flex; flex-direction: column; gap: 24px;">
-            <div class="card insight-card">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <span class="material-symbols-outlined" style="color: var(--secondary);">tips_and_updates</span>
-                    <h3 class="text-h3" style="margin: 0;">Key Insight</h3>
-                </div>
-                <p style="font-style: italic; font-size: 14px; color: var(--on-surface-variant);">"Current scraping latency in EU-West is 15% higher than US-East. Consider redistributing node weight for the next batch."</p>
-                <button class="btn-outline" style="margin-top: 16px;">Apply Auto-Rebalance</button>
-            </div>
-            <div class="card dark-card">
-                <h3 class="text-h3" style="color: white; margin: 0;">Ready for Export?</h3>
-                <p style="font-size: 14px; opacity: 0.8; margin-top: 8px;">3 datasets are compiled and ready for CSV/JSON transmission.</p>
-                <div style="display: flex; gap: 8px; margin-top: 20px;">
-                    <button style="flex: 1; background: var(--secondary-container); color: var(--on-surface); border: none; padding: 8px; border-radius: 4px; font-weight: 700; cursor: pointer;">Download</button>
-                    <button style="flex: 1; background: rgba(255,255,255,0.1); color: white; border: none; padding: 8px; border-radius: 4px; font-weight: 700; cursor: pointer;">API Sync</button>
-                </div>
-                <span class="material-symbols-outlined bolt-icon">bolt</span>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-elif st.session_state.page == "Data Input":
-    st.markdown("<h2 class='text-h1'>Configuración de Búsqueda</h2>", unsafe_allow_html=True)
-    st.markdown("<p class='text-body-sm'>Define los parámetros de entrada para la extracción y enriquecimiento de datos SEO.</p>", unsafe_allow_html=True)
+elif page == "📥 Data Input":
+    st.markdown("<h2 style='font-size: 32px; font-weight: 600; letter-spacing: -0.01em;'>Configuración de Búsqueda</h2>", unsafe_allow_html=True)
     
     col_l, col_r = st.columns([2, 1])
     
     with col_l:
-        # Keyword Input
-        st.markdown("""
-        <div class="card">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--outline-variant); padding-bottom: 16px;">
-                <span class="material-symbols-outlined" style="color: var(--secondary);">key</span>
-                <h3 class="text-h3" style="margin: 0;">Palabras Clave (Keywords)</h3>
-            </div>
-            <div style="margin-bottom: 8px; font-weight: 700;">Ingresar Keywords</div>
-            <p style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 16px;">Introduce una keyword por línea o separadas por comas para el análisis masivo.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Streamlit Text Area (Injected into the design)
-        # To make it look "inside" the card, we use a negative margin trick or a simple container
-        kw_input = st.text_area("Keywords", height=250, label_visibility="collapsed", placeholder="ej: mejores herramientas seo 2024...")
-        
-        st.markdown("""<div style="margin-top: -16px; padding: 0 24px 24px; background: white; border: 1px solid var(--outline-variant); border-top: none; border-radius: 0 0 12px 12px; display: flex; justify-content: space-between; align-items: center;">
-            <span class="mono" style="font-size: 11px; opacity: 0.6;">0 / 500 keywords detectadas</span>
-            <span class="mono" style="font-size: 11px; color: var(--secondary); cursor: pointer;">📄 Importar CSV</span>
-        </div>""", unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        
+        with st.container(border=True):
+            st.markdown("### 🔑 Palabras Clave")
+            raw_keywords = st.text_area(
+                "Ingresa una keyword por línea o separadas por coma",
+                height=250,
+                placeholder="ej: marketing digital\nseo 2024\n...",
+                help="Puedes copiar y pegar listas de keywords aquí."
+            )
+            keywords_list = [k.strip() for k in raw_keywords.replace("\n", ",").split(",") if k.strip()]
+            st.caption(f"{len(keywords_list)} keywords detectadas")
+            
         c1, c2 = st.columns(2)
         with c1:
-            st.markdown("""
-            <div class="card">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--outline-variant); padding-bottom: 8px;">
-                    <span class="material-symbols-outlined" style="color: var(--secondary);">public</span>
-                    <h3 class="text-h3" style="margin: 0;">Segmentación</h3>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            st.selectbox("País de Búsqueda", options=["España (es-ES)", "México (es-MX)", "Colombia (es-CO)"])
+            with st.container(border=True):
+                st.markdown("### 🌍 Segmentación")
+                country_code = st.selectbox("País", options=list(COUNTRY_CATALOG.keys()), format_func=lambda x: f"{COUNTRY_CATALOG[x]['name']} ({x.upper()})")
         with c2:
-            st.markdown("""
-            <div class="card">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--outline-variant); padding-bottom: 8px;">
-                    <span class="material-symbols-outlined" style="color: var(--secondary);">settings_account_box</span>
-                    <h3 class="text-h3" style="margin: 0;">Perfil de Búsqueda</h3>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            st.radio("Agente", ["Desktop (Chrome/MacOS)", "Mobile (Safari/iOS)", "Deep Scan"], label_visibility="collapsed")
+            with st.container(border=True):
+                st.markdown("### ⚙️ Perfil")
+                profile = st.radio("Modo de Extracción", ["Normal", "Extreme"], help="Extreme realiza una búsqueda exhaustiva (A-Z, 0-9) y profundiza en PAA.")
 
     with col_r:
-        # Project Validation
-        st.markdown("""
-        <div class="card dark-card">
-            <h3 class="text-h3" style="color: white; margin-bottom: 24px;">Validación del Proyecto</h3>
+        # Validation Card
+        st.markdown(f"""
+        <div class="ks-card" style="background: var(--primary-container); color: white;">
+            <h3 style="color: white; margin-bottom: 24px;">Validación del Proyecto</h3>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;">
                 <span style="opacity: 0.8; font-size: 14px;">Keywords configuradas</span>
-                <span class="mono" style="color: var(--secondary-container); font-weight: 700;">Listo</span>
+                <span class="mono" style="color: var(--secondary-container); font-weight: 700;">{"LISTO" if keywords_list else "PENDIENTE"}</span>
             </div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;">
-                <span style="opacity: 0.8; font-size: 14px;">Segmentación Geográfica</span>
-                <span class="mono" style="color: var(--secondary-container); font-weight: 700;">Listo</span>
+                <span style="opacity: 0.8; font-size: 14px;">País</span>
+                <span class="mono" style="color: var(--secondary-container); font-weight: 700;">{country_code.upper()}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
-                <span style="opacity: 0.8; font-size: 14px;">Proxies Disponibles</span>
-                <span class="mono" style="color: #ef4444; font-weight: 700;">Revisar</span>
+             <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
+                <span style="opacity: 0.8; font-size: 14px;">Perfil</span>
+                <span class="mono" style="color: var(--secondary-container); font-weight: 700;">{profile.upper()}</span>
             </div>
-            <div style="margin-top: 32px; border-top: 1px solid rgba(255,255,255,0.2); pt-16px;">
-                <div class="text-label-sm" style="opacity: 0.6;">Consumo Estimado</div>
-                <div style="font-size: 32px; font-weight: 700;">450 <span style="font-size: 16px; opacity: 0.6; font-weight: 400;">Créditos</span></div>
-            </div>
-            <button style="width: 100%; background: var(--secondary-container); color: var(--on-surface); border: none; border-radius: 8px; padding: 16px; font-weight: 700; margin-top: 24px; cursor: pointer; font-size: 16px;">▶ INICIAR PIPELINE</button>
         </div>
         """, unsafe_allow_html=True)
         
-        # IA Suggestion
-        st.markdown("""
-        <div class="card" style="padding: 0; overflow: hidden; margin-top: 24px;">
-            <div style="height: 120px; background: #eee; overflow: hidden;">
-                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfjqnTyQkJL3MjkSg5AXVI71Nz68sZwRAvmng_uKhtT8LBUYvW3rzyM2UY46DMYpfkiOX6huxgXgrgFa-Bt9oCMvMekyg2dzBnL7cwhjrMw_WluKSsiqwMp8_CVwC49I7vU2ReeUYV4a623HVlgUic954OKEEoogMTVqdPJm6gJAsoX0VKi_SVPuofJ7XKSWXA9vSnhnr3gKVYs0Dc3PQKcb1CqXeMJTkY_ICCj9ulDDHQXVu9qvIYyQ-2ghpJEC68AuMnIywiwo5z" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-            <div style="padding: 24px;">
-                <h3 class="text-h3">Sugerencia de IA</h3>
-                <p style="font-size: 13px; color: var(--on-surface-variant); margin-top: 8px;">Basado en tus keywords, te recomendamos activar el módulo de Análisis de Sentimiento.</p>
-                <div style="color: var(--secondary); font-weight: 700; font-size: 13px; margin-top: 16px; cursor: pointer;">Activar módulo →</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        if st.button("▶ INICIAR PIPELINE", use_container_width=True, type="primary"):
+            if not keywords_list:
+                st.error("Por favor, ingresa al menos una keyword.")
+            else:
+                st.session_state.running = True
+                st.session_state.current_keywords = keywords_list
+                st.session_state.current_country = country_code
+                st.session_state.current_profile = profile.lower()
+                st.rerun()
 
-st.markdown("</div>", unsafe_allow_html=True) # End stitch-main
+# --- EXECUTION ENGINE ---
+if st.session_state.running:
+    st.markdown("<h2 style='font-size: 32px; font-weight: 600;'>Ejecutando Pipeline...</h2>", unsafe_allow_html=True)
+    
+    placeholder = st.empty()
+    progress_bar = st.progress(0)
+    
+    all_current_results = []
+    
+    for idx, kw in enumerate(st.session_state.current_keywords):
+        percent = int((idx / len(st.session_state.current_keywords)) * 100)
+        progress_bar.progress(percent)
+        
+        with placeholder.container():
+            st.markdown(f"### 🔍 Procesando: **{kw}** ({idx+1}/{len(st.session_state.current_keywords)})")
+            
+            # 1. Categorización
+            cat, sub = auto_categorizar(kw)
+            st.write(f"📂 Categoría: {cat} / {sub}")
+            
+            # 2. Contexto
+            c_data = normalize_country(st.session_state.current_country)
+            ctx = {
+                "country_code": c_data["country_code"],
+                "country_name": c_data["country_name"],
+                "language_code": c_data["language_code"],
+                "google_ads_geo_targets": c_data["google_ads_geo_targets"],
+                "scrape_profile": st.session_state.current_profile
+            }
+            
+            # 3. Scraping
+            with st.spinner("Extrayendo señales de Google..."):
+                sug = get_autocomplete_suggestions(kw, expandir=(st.session_state.current_profile == "extreme"), search_context=ctx)
+                preg_ac = get_question_suggestions(kw, search_context=ctx)
+                serp = scrape_google(kw, search_context=ctx)
+                paa = serp.get("preguntas_paa", [])
+                rel = serp.get("busquedas_relacionadas", [])
+                
+            # 4. Estimación y Score
+            with st.spinner("Analizando volúmenes y prioridad..."):
+                vol = estimar_volumenes(
+                    keyword_principal=kw, sugerencias=sug, preguntas_paa=paa,
+                    preguntas_autocompletado=preg_ac, busquedas_relacionadas=rel,
+                    usar_trends=True, search_context=ctx,
+                    metadata={"categoria_padre": cat, "subcategoria": sub, "referencia": kw}
+                )
+                
+            # 5. Enriquecimiento Ads
+            with st.spinner("Consultando Google Ads..."):
+                gads = enrich_with_google_ads_metrics(vol)
+                
+            res = {
+                "keyword": kw, "sugerencias": sug, "preguntas_paa": paa,
+                "preguntas_autocompletado": preg_ac, "busquedas_relacionadas": rel,
+                "volumenes": vol, "google_ads": gads, "category_name": cat, "subcategory_name": sub
+            }
+            all_current_results.append(res)
+            
+    st.session_state.results.extend(all_current_results)
+    st.session_state.running = False
+    st.success("Pipeline completado satisfactoriamente.")
+    st.balloons()
+    time.sleep(2)
+    st.rerun()
+
+elif page == "📊 Resultados":
+    if not st.session_state.results:
+        st.info("No hay resultados. Inicia una búsqueda en 'Data Input'.")
+    else:
+        res_names = [r["keyword"] for r in st.session_state.results]
+        sel = st.selectbox("Selecciona reporte", res_names[::-1])
+        res = next(r for r in st.session_state.results if r["keyword"] == sel)
+        
+        vol = res["volumenes"]
+        
+        t1, t2, t3, t4, t5 = st.tabs(["Sugerencias", "Preguntas (PAA)", "Preguntas (AC)", "Relacionadas", "📥 Exportar"])
+        
+        def render_tab_data(items, tab):
+            if not items:
+                tab.warning("No se encontraron resultados en esta fuente.")
+                return
+            df = pd.DataFrame([
+                {
+                    "Término": k,
+                    "Ads/mes": vol.get(k, {}).get("google_ads_avg_monthly_searches", "-"),
+                    "Trend": vol.get(k, {}).get("google_trends_promedio", "-"),
+                    "Score": vol.get(k, {}).get("score", 0),
+                    "Prioridad": vol.get(k, {}).get("categoria", "-")
+                } for k in items
+            ])
+            tab.dataframe(df, use_container_width=True)
+
+        render_tab_data(res["sugerencias"], t1)
+        render_tab_data(res["preguntas_paa"], t2)
+        render_tab_data(res["preguntas_autocompletado"], t3)
+        render_tab_data(res["busquedas_relacionadas"], t4)
+        
+        with t5:
+            st.markdown("### Descargar Reportes")
+            c1, c2 = st.columns(2)
+            try:
+                ex_path = exportar_excel(res["keyword"], res)
+                with open(ex_path, "rb") as f:
+                    c1.download_button("📊 Excel (.xlsx)", f, file_name=os.path.basename(ex_path))
+                js_path = exportar_json(res["keyword"], res)
+                with open(js_path, "rb") as f:
+                    c2.download_button("{ } JSON", f, file_name=os.path.basename(js_path))
+            except Exception as e:
+                st.error(f"Error exportando: {e}")
