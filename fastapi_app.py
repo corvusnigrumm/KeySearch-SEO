@@ -36,11 +36,11 @@ state = AppState()
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request, "state": state})
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={"state": state})
 
 @app.get("/config", response_class=HTMLResponse)
 async def config_page(request: Request):
-    return templates.TemplateResponse("input.html", {"request": request, "state": state})
+    return templates.TemplateResponse(request=request, name="input.html", context={"state": state})
 
 @app.post("/run")
 async def run_pipeline(
@@ -143,4 +143,4 @@ async def execute_pipeline(keywords: List[str], country_code: str, profile: str)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
