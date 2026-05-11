@@ -291,24 +291,31 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
 
     for idx, kw in enumerate(keywords, start=1):
         try:
+            base_prog = int(((idx - 1) / total) * 90)
+            step_size = int(90 / total)
+            
             state.add_log("INFO", f"[{idx}/{total}] Procesando: {kw}")
 
             state.status_msg = f"[{idx}/{total}] 🔍 Autocompletado: {kw}"
-            state.progress = max(1, int(((idx - 1) / total) * 85))
-            sug = get_autocomplete_suggestions(kw, expandir=True, search_context=ctx)
+            state.progress = max(1, base_prog + int(step_size * 0.1))
+            es_extremo = (profile.lower() == "extreme")
+            sug = get_autocomplete_suggestions(kw, expandir=es_extremo, search_context=ctx)
             state.add_log("INFO", f"  → {len(sug)} sugerencias de autocompletado")
 
             state.status_msg = f"[{idx}/{total}] ❓ Preguntas: {kw}"
+            state.progress = base_prog + int(step_size * 0.4)
             preg_ac = get_question_suggestions(kw, search_context=ctx)
             state.add_log("INFO", f"  → {len(preg_ac)} preguntas generadas")
 
             state.status_msg = f"[{idx}/{total}] 🌐 SERP Google: {kw}"
+            state.progress = base_prog + int(step_size * 0.6)
             serp = scrape_google(kw, search_context=ctx)
             paa = serp.get("preguntas_paa", [])
             rel = serp.get("busquedas_relacionadas", [])
             state.add_log("INFO", f"  → {len(paa)} PAA, {len(rel)} búsquedas relacionadas")
 
             state.status_msg = f"[{idx}/{total}] 📊 Volumen: {kw}"
+            state.progress = base_prog + int(step_size * 0.8)
             cat, sub = auto_categorizar(kw)
             vol = estimar_volumenes(
                 keyword_principal=kw,
@@ -328,7 +335,7 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
             except Exception as e:
                 state.add_log("WARNING", f"  → Google Ads no disponible: {e}")
 
-            state.progress = int((idx / total) * 85)
+            state.progress = base_prog + step_size
             all_results.append({
                 "keyword": kw,
                 "category": cat,
