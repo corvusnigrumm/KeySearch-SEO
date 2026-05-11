@@ -15,6 +15,14 @@ import asyncio
 import logging
 from typing import List, Optional
 
+# Cargar .env local si existe (solo para desarrollo local, NO en producción)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # En Render.com no hace falta, las vars vienen del dashboard
+
+
 from fastapi import FastAPI, Request, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
