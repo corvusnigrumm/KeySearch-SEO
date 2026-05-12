@@ -356,6 +356,9 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
             ws.cell(row=row, column=9, value=rel_item)
             ws.cell(row=row, column=10, value=_score(rel_item))
 
+        all_items = list(volumenes.keys())
+        top_keywords_trends = ordenar_por_volumen(all_items, volumenes)[:20]
+
         bloques = generar_bloques_editoriales(
             keyword_base=keyword,
             pais=datos.get("country_name", ""),
@@ -363,23 +366,48 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
             top_paa=top_paa,
             top_preguntas_autocomplete=top_preguntas_ac,
             top_relacionadas=top_relacionadas,
+            top_keywords_trends=top_keywords_trends,
         )
 
-        ws.cell(row=48, column=1, value=bloques["ejes"][0])
-        ws.cell(row=49, column=1, value=bloques["ejes"][1])
-        ws.cell(row=50, column=1, value=bloques["ejes"][2])
-        ws.cell(row=51, column=1, value=bloques["ejes"][3])
-        ws.cell(row=55, column=1, value=bloques["propuesta"])
-        ws.cell(row=57, column=1, value=bloques["enfoque"])
-        ws.cell(row=59, column=1, value=bloques["titulos"][0])
-        ws.cell(row=60, column=1, value=bloques["titulos"][1])
-        ws.cell(row=61, column=1, value=bloques["titulos"][2])
-        ws.cell(row=62, column=1, value=bloques["titulos"][3])
-        ws.cell(row=63, column=1, value=bloques["titulos"][4])
-        ws.cell(row=65, column=1, value=bloques["subtitulos"][0])
-        ws.cell(row=66, column=1, value=bloques["subtitulos"][1])
-        ws.cell(row=67, column=1, value=bloques["subtitulos"][2])
-        ws.cell(row=68, column=1, value=bloques["subtitulos"][3])
+        row_ejes = 47
+        row_propuesta = 54
+        row_enfoque = 56
+        row_titulos = 58
+        row_subtitulos = 70
+        row_keywords = 82
+
+        for r in range(40, 120):
+            val = str(ws.cell(row=r, column=1).value or "").strip()
+            if not val:
+                continue
+            val_lower = val.lower()
+            if "ejes estrat" in val_lower:
+                row_ejes = r
+            elif "propuesta" in val_lower:
+                row_propuesta = r
+            elif val_lower == "enfoque":
+                row_enfoque = r
+            elif val_lower == "títulos" or val_lower == "titulos":
+                row_titulos = r
+            elif "subtítulos" in val_lower or "subtitulos" in val_lower:
+                row_subtitulos = r
+            elif val_lower == "keywords":
+                row_keywords = r
+
+        for i in range(9):
+            if i < len(bloques["ejes"]):
+                ws.cell(row=row_ejes + 1 + i, column=1, value=bloques["ejes"][i])
+        
+        ws.cell(row=row_propuesta + 1, column=1, value=bloques["propuesta"])
+        ws.cell(row=row_enfoque + 1, column=1, value=bloques["enfoque"])
+
+        for i in range(10):
+            if i < len(bloques["titulos"]):
+                ws.cell(row=row_titulos + 1 + i, column=1, value=bloques["titulos"][i])
+            if i < len(bloques["subtitulos"]):
+                ws.cell(row=row_subtitulos + 1 + i, column=1, value=bloques["subtitulos"][i])
+            if i < len(bloques["keywords_trends"]):
+                ws.cell(row=row_keywords + 1 + i, column=1, value=bloques["keywords_trends"][i])
 
         return ws
 
