@@ -188,46 +188,69 @@ async def download_excel():
 
     from exporters.excel_export import exportar_excel
 
-    volumenes = {}
-    sugerencias = []
-    preguntas_paa = []
-    preguntas_ac = []
-    relacionadas = []
-    
-    for item in state.last_run_data:
-        volumenes.update(item.get("metrics", {}))
-        sugerencias.extend(item.get("suggestions", []))
-        preguntas_paa.extend(item.get("paa", []))
-        preguntas_ac.extend(item.get("preguntas_autocompletado", []))
-        relacionadas.extend(item.get("related", []))
+    if len(state.last_run_data) == 1:
+        item = state.last_run_data[0]
+        datos = {
+            "volumenes": item.get("metrics", {}),
+            "language_code": state.country.split("-")[0] if "-" in state.country else state.country,
+            "sugerencias": item.get("suggestions", []),
+            "preguntas_paa": item.get("paa", []),
+            "preguntas_autocompletado": item.get("preguntas_autocompletado", []),
+            "busquedas_relacionadas": item.get("related", []),
+            "country_name": item.get("country_name", ""),
+            "country_code": item.get("country_code", ""),
+            "category_name": item.get("category", ""),
+            "subcategory_name": item.get("subcategory", ""),
+            "google_ads": item.get("google_ads", {}),
+        }
+        try:
+            ruta_archivo = exportar_excel(item["keyword"], datos)
+            filename = os.path.basename(ruta_archivo)
+            return FileResponse(
+                ruta_archivo, 
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                filename=filename
+            )
+        except Exception as e:
+            logger.exception("Error generando Excel")
+            return JSONResponse({"error": f"Error generando Excel: {e}"}, status_code=500)
+    else:
+        # Modo Batch: generar un ZIP con un Excel por cada keyword
+        import zipfile
+        import io
         
-    sugerencias = list(dict.fromkeys(sugerencias))
-    preguntas_paa = list(dict.fromkeys(preguntas_paa))
-    preguntas_ac = list(dict.fromkeys(preguntas_ac))
-    relacionadas = list(dict.fromkeys(relacionadas))
-
-    datos = {
-        "volumenes": volumenes,
-        "language_code": state.country.split("-")[0] if "-" in state.country else state.country,
-        "sugerencias": sugerencias,
-        "preguntas_paa": preguntas_paa,
-        "preguntas_autocompletado": preguntas_ac,
-        "busquedas_relacionadas": relacionadas,
-    }
-
-    keyword_principal = state.last_run_data[0]["keyword"] if len(state.last_run_data) == 1 else "Batch_Lote"
-    
-    try:
-        ruta_archivo = exportar_excel(keyword_principal, datos)
-        filename = os.path.basename(ruta_archivo)
-        return FileResponse(
-            ruta_archivo, 
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            filename=filename
-        )
-    except Exception as e:
-        logger.exception("Error generando Excel")
-        return JSONResponse({"error": f"Error generando Excel: {e}"}, status_code=500)
+        zip_buffer = io.BytesIO()
+        try:
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                for item in state.last_run_data:
+                    kw = item["keyword"]
+                    datos = {
+                        "volumenes": item.get("metrics", {}),
+                        "language_code": state.country.split("-")[0] if "-" in state.country else state.country,
+                        "sugerencias": item.get("suggestions", []),
+                        "preguntas_paa": item.get("paa", []),
+                        "preguntas_autocompletado": item.get("preguntas_autocompletado", []),
+                        "busquedas_relacionadas": item.get("related", []),
+                        "country_name": item.get("country_name", ""),
+                        "country_code": item.get("country_code", ""),
+                        "category_name": item.get("category", ""),
+                        "subcategory_name": item.get("subcategory", ""),
+                        "google_ads": item.get("google_ads", {}),
+                    }
+                    ruta_archivo = exportar_excel(kw, datos)
+                    filename = os.path.basename(ruta_archivo)
+                    zip_file.write(ruta_archivo, arcname=filename)
+            
+            zip_buffer.seek(0)
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            return StreamingResponse(
+                zip_buffer,
+                media_type="application/zip",
+                headers={"Content-Disposition": f"attachment; filename=resultados_lote_{timestamp}.zip"}
+            )
+        except Exception as e:
+            logger.exception("Error generando ZIP de Excel")
+            return JSONResponse({"error": f"Error generando ZIP: {e}"}, status_code=500)
 
 
 
@@ -330,9 +353,10 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
 
             try:
                 from scraper.google_ads_metrics import enrich_with_google_ads_metrics
-                enrich_with_google_ads_metrics(vol)
+                google_ads_res = enrich_with_google_ads_metrics(vol)
                 state.add_log("INFO", f"  → Google Ads OK")
             except Exception as e:
+                google_ads_res = {"enabled": False, "reason": str(e)}
                 state.add_log("WARNING", f"  → Google Ads no disponible: {e}")
 
             state.progress = base_prog + step_size
@@ -348,6 +372,7 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
                 "paa": paa,
                 "related": rel,
                 "preguntas_autocompletado": preg_ac,
+                "google_ads": google_ads_res,
             })
 
         except Exception as e:
@@ -365,6 +390,7 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
                 "related": [],
                 "preguntas_autocompletado": [],
                 "error": str(e),
+                "google_ads": {},
             })
 
     return all_results
