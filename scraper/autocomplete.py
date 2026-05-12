@@ -33,7 +33,7 @@ from config import (
     AUTOCOMPLETE_DEEP_EXPANSION_LIMIT,
     SCRAPE_PROFILE,
 )
-from scraper.utils import dedupe_key, limpiar_texto
+from scraper.utils import dedupe_key, limpiar_texto, es_relevante_riguroso
 from scraper.http_cache import get_text, make_key, set_text
 
 logger = logging.getLogger(__name__)
@@ -167,6 +167,8 @@ def get_autocomplete_suggestions(
 
     def _agregar(sugerencias: List[str]):
         for s in sugerencias:
+            if not es_relevante_riguroso(keyword, s):
+                continue
             key = dedupe_key(s)
             if key and key not in vistas:
                 vistas.add(key)
@@ -201,6 +203,8 @@ def get_autocomplete_suggestions(
             for semilla in semillas:
                 sugerencias_extra = _fetch_suggestions(semilla, search_context, session=session)
                 for s in sugerencias_extra:
+                    if not es_relevante_riguroso(keyword, s):
+                        continue
                     key = dedupe_key(s)
                     if key and key not in vistas:
                         vistas.add(key)
@@ -298,6 +302,8 @@ def get_question_suggestions(keyword: str, search_context: dict | None = None) -
         query = f"{prefijo}{keyword}"
         sugerencias = _fetch_suggestions(query, search_context, session=session)
         for s in sugerencias:
+            if not es_relevante_riguroso(keyword, s):
+                continue
             key = dedupe_key(s)
             if key and key not in vistas:
                 vistas.add(key)
@@ -314,6 +320,8 @@ def get_question_suggestions(keyword: str, search_context: dict | None = None) -
         for semilla in semillas:
             sugerencias = _fetch_suggestions(semilla, search_context, session=session)
             for s in sugerencias:
+                if not es_relevante_riguroso(keyword, s):
+                    continue
                 key = dedupe_key(s)
                 if key and key not in vistas:
                     vistas.add(key)

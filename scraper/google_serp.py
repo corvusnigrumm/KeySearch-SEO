@@ -53,7 +53,7 @@ from config import (
     AUTOCOMPLETE_DEEP_SEED_LIMIT,
     SCRAPE_PROFILE,
 )
-from scraper.utils import dedupe_key, limpiar_texto
+from scraper.utils import dedupe_key, limpiar_texto, es_relevante_riguroso
 from scraper.http_cache import get_text, make_key, set_text
 
 logger = logging.getLogger(__name__)
@@ -296,7 +296,7 @@ def _fetch_autocomplete(
 # Extracción de PAA via HTML SERP
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _extraer_preguntas_paa_html(soup: BeautifulSoup) -> List[str]:
+def _extraer_preguntas_paa_html(soup: BeautifulSoup, keyword: str) -> List[str]:
     """
     Extrae las preguntas PAA del HTML de la SERP parseado.
     Múltiples estrategias para adaptarse a los cambios de Google.
@@ -306,6 +306,8 @@ def _extraer_preguntas_paa_html(soup: BeautifulSoup) -> List[str]:
 
     def _agregar(texto: str):
         texto = limpiar_texto(texto)
+        if not es_relevante_riguroso(keyword, texto):
+            return
         key = dedupe_key(texto)
         if texto and key and len(texto) >= 10 and len(texto) <= 200 and key not in vistas:
             if len(texto.split()) >= 3:
@@ -528,6 +530,8 @@ def _extraer_preguntas_paa_autocomplete(
         sugerencias = _fetch_autocomplete(query, search_context, session=session)
 
         for s in sugerencias:
+            if not es_relevante_riguroso(keyword, s):
+                continue
             key = dedupe_key(s)
             if key and key not in vistas and len(s) >= 10:
                 vistas.add(key)
@@ -548,6 +552,8 @@ def _extraer_preguntas_paa_autocomplete(
             for semilla in semillas[:limit_expansion]:
                 sugerencias = _fetch_autocomplete(semilla, search_context, session=session)
                 for s in sugerencias:
+                    if not es_relevante_riguroso(keyword, s):
+                        continue
                     key = dedupe_key(s)
                     if key and key not in vistas and len(s) >= 10:
                         vistas.add(key)
@@ -567,7 +573,7 @@ def _extraer_preguntas_paa_autocomplete(
 # Extracción de búsquedas relacionadas
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _extraer_busquedas_relacionadas_html(soup: BeautifulSoup) -> List[str]:
+def _extraer_busquedas_relacionadas_html(soup: BeautifulSoup, keyword: str) -> List[str]:
     """Extrae búsquedas relacionadas del HTML de la SERP."""
     relacionadas = []
     vistas = set()
@@ -591,6 +597,8 @@ def _extraer_busquedas_relacionadas_html(soup: BeautifulSoup) -> List[str]:
         try:
             for elem in soup.select(selector):
                 texto = limpiar_texto(elem.get_text(strip=True))
+                if not es_relevante_riguroso(keyword, texto):
+                    continue
                 key = dedupe_key(texto)
                 if texto and key and len(texto) > 3 and key not in vistas and key not in filtros_norm:
                     vistas.add(key)
@@ -601,7 +609,7 @@ def _extraer_busquedas_relacionadas_html(soup: BeautifulSoup) -> List[str]:
     return relacionadas
 
 
-def _extraer_people_also_search_for_html(soup: BeautifulSoup) -> List[str]:
+def _extraer_people_also_search_for_html(soup: BeautifulSoup, keyword: str) -> List[str]:
     relacionadas = []
     vistas = set()
 
@@ -624,7 +632,7 @@ def _extraer_people_also_search_for_html(soup: BeautifulSoup) -> List[str]:
     for elem in candidatos:
         for a in elem.find_all_next("a", limit=40):
             texto = limpiar_texto(a.get_text(strip=True))
-            if not texto or len(texto) < 3:
+            if not texto or len(texto) < 3 or not es_relevante_riguroso(keyword, texto):
                 continue
             key = dedupe_key(texto)
             if not key or key in vistas:
@@ -662,6 +670,8 @@ def _extraer_busquedas_relacionadas_autocomplete(
         sugerencias = _fetch_autocomplete(query, search_context, session=session)
 
         for s in sugerencias:
+            if not es_relevante_riguroso(keyword, s):
+                continue
             key = dedupe_key(s)
             if key and key not in vistas and key != dedupe_key(keyword):
                 vistas.add(key)
@@ -682,6 +692,8 @@ def _extraer_busquedas_relacionadas_autocomplete(
             for base in semillas:
                 sugerencias = _fetch_autocomplete(base, search_context, session=session)
                 for s in sugerencias:
+                    if not es_relevante_riguroso(keyword, s):
+                        continue
                     key = dedupe_key(s)
                     if key and key not in vistas and key != dedupe_key(keyword):
                         vistas.add(key)
@@ -827,9 +839,9 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
                 if progress_callback:
                     progress_callback("Parseando HTML de la SERP...")
                 soup = BeautifulSoup(html, "lxml")
-                page_paa = _extraer_preguntas_paa_html(soup)
-                page_rel = _extraer_busquedas_relacionadas_html(soup)
-                page_rel.extend(_extraer_people_also_search_for_html(soup))
+                page_paa = _extraer_preguntas_paa_html(soup, keyword)
+                page_rel = _extraer_busquedas_relacionadas_html(soup, keyword)
+                page_rel.extend(_extraer_people_also_search_for_html(soup, keyword))
 
                 for item in page_paa:
                     key = dedupe_key(item)

@@ -49,3 +49,39 @@ def generar_nombre_archivo(keyword: str, extension: str = "xlsx") -> str:
     slug = slugify(keyword)
     ts = generar_timestamp()
     return f"{slug}_{ts}.{extension}"
+
+
+def es_relevante_riguroso(keyword_base: str, sugerencia: str) -> bool:
+    """
+    Filtro riguroso: la sugerencia debe contener la palabra clave original
+    (o sus palabras principales) para no traer basura como resultados 
+    que solo comparten las primeras letras (ej. 'madre' -> 'madrid').
+    """
+    kb = dedupe_key(keyword_base)
+    sug = dedupe_key(sugerencia)
+    
+    if not kb or not sug:
+        return False
+        
+    # Validacion exacta de la keyword completa (el caso mas seguro)
+    if kb in sug:
+        return True
+        
+    # Manejo de plurales basicos si la keyword es una sola palabra
+    palabras_kb = kb.split()
+    if len(palabras_kb) == 1:
+        if f"{kb}s" in sug or f"{kb}es" in sug:
+            return True
+        # Si termina en s, buscar singular
+        if kb.endswith('s') and kb[:-1] in sug:
+            return True
+            
+    # Para keywords compuestas, exigir que todas las palabras relevantes aparezcan
+    # Ignoramos stopwords basicas de 2 letras (de, en, el, la...)
+    palabras_relevantes = [p for p in palabras_kb if len(p) > 2]
+    if palabras_relevantes:
+        todas_presentes = all(p in sug or f"{p}s" in sug or (p.endswith('s') and p[:-1] in sug) for p in palabras_relevantes)
+        if todas_presentes:
+            return True
+
+    return False
