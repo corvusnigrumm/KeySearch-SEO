@@ -76,12 +76,27 @@ def es_relevante_riguroso(keyword_base: str, sugerencia: str) -> bool:
         if kb.endswith('s') and kb[:-1] in sug:
             return True
             
-    # Para keywords compuestas, exigir que todas las palabras relevantes aparezcan
+    # Para keywords compuestas, exigir que una alta proporcion de las palabras relevantes aparezcan
     # Ignoramos stopwords basicas de 2 letras (de, en, el, la...)
     palabras_relevantes = [p for p in palabras_kb if len(p) > 2]
-    if palabras_relevantes:
-        todas_presentes = all(p in sug or f"{p}s" in sug or (p.endswith('s') and p[:-1] in sug) for p in palabras_relevantes)
-        if todas_presentes:
-            return True
+    if not palabras_relevantes:
+        return False
+        
+    num_relevantes = len(palabras_relevantes)
+    
+    # Si son pocas palabras, exigimos que esten todas
+    if num_relevantes <= 3:
+        umbral = num_relevantes
+    else:
+        # Para frases largas (4 o mas palabras), exigimos al menos el 70% de las palabras clave
+        umbral = max(3, int(num_relevantes * 0.7))
+        
+    encontradas = 0
+    for p in palabras_relevantes:
+        if p in sug or f"{p}s" in sug or (p.endswith('s') and p[:-1] in sug):
+            encontradas += 1
+            
+    if encontradas >= umbral:
+        return True
 
     return False

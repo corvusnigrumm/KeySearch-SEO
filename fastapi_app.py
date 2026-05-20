@@ -22,6 +22,7 @@ import json
 import asyncio
 import logging
 import datetime
+import uuid
 from typing import List, Optional, Dict, Any
 
 # Cargar .env local si existe
@@ -74,14 +75,38 @@ class SessionState:
             self.logs = self.logs[-200:]
 
 
-state = SessionState()
+sessions: Dict[str, SessionState] = {}
+
+
+@app.middleware("http")
+async def session_middleware(request: Request, call_next):
+    session_id = request.cookies.get("session_id")
+    is_new = False
+    if not session_id:
+        session_id = str(uuid.uuid4())
+        is_new = True
+    
+    request.state.session_id = session_id
+    
+    if session_id not in sessions:
+        sessions[session_id] = SessionState()
+        
+    response = await call_next(request)
+    
+    if is_new:
+        response.set_cookie(key="session_id", value=session_id, max_age=86400 * 30)
+    return response
+
+
+def get_session(request: Request) -> SessionState:
+    return sessions.get(request.state.session_id)
 
 
 # ── Helpers de contexto ───────────────────────────────────────────────────────
 def _base_ctx(request: Request) -> dict:
     """Contexto base para todos los templates."""
     return {
-        "state": state,
+        "state": get_session(request),
         "groq_active": bool(os.getenv("GROQ_API_KEY", "")),
         "google_ads_active": bool(os.getenv("GOOGLE_ADS_CUSTOMER_ID", "")),
     }
@@ -125,33 +150,37 @@ async def logs_page(request: Request):
 
 # ── API: Estado del pipeline ──────────────────────────────────────────────────
 @app.get("/status")
-async def get_status():
+async def get_status(request: Request):
+    user_state = get_session(request)
     return {
-        "is_running": state.is_running,
-        "progress": state.progress,
-        "status_msg": state.status_msg,
-        "keywords_count": len(state.keywords),
-        "results_count": len(state.last_run_data) if state.last_run_data else 0,
-        "error": state.error_msg,
-        "started_at": state.started_at,
-        "finished_at": state.finished_at,
+        "is_running": user_state.is_running,
+        "progress": user_state.progress,
+        "status_msg": user_state.status_msg,
+        "keywords_count": len(user_state.keywords),
+        "results_count": len(user_state.last_run_data) if user_state.last_run_data else 0,
+        "error": user_state.error_msg,
+        "started_at": user_state.started_at,
+        "finished_at": user_state.finished_at,
     }
 
 
 @app.get("/api/logs")
-async def get_logs():
-    return {"logs": state.logs}
+async def get_logs(request: Request):
+    user_state = get_session(request)
+    return {"logs": user_state.logs}
 
 
 # ── API: Iniciar pipeline ─────────────────────────────────────────────────────
 @app.post("/run")
 async def run_pipeline(
+    request: Request,
     background_tasks: BackgroundTasks,
     keywords: str = Form(...),
     country: str = Form("co"),
     profile: str = Form("normal"),
 ):
-    if state.is_running:
+    user_state = get_session(request)
+    if user_state.is_running:
         return JSONResponse(
             {"status": "error", "message": "Pipeline en ejecución. Espera que termine."},
             status_code=400,
@@ -164,17 +193,17 @@ async def run_pipeline(
             status_code=400,
         )
 
-    state.reset()
-    state.keywords = kw_list
-    state.country = country
-    state.profile = profile
-    state.is_running = True
-    state.progress = 0
-    state.status_msg = f"Iniciando pipeline para {len(kw_list)} keyword(s)..."
-    state.started_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    state.add_log("INFO", f"Pipeline iniciado: {len(kw_list)} keywords | País: {country} | Perfil: {profile}")
+    user_state.reset()
+    user_state.keywords = kw_list
+    user_state.country = country
+    user_state.profile = profile
+    user_state.is_running = True
+    user_state.progress = 0
+    user_state.status_msg = f"Iniciando pipeline para {len(kw_list)} keyword(s)..."
+    user_state.started_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    user_state.add_log("INFO", f"Pipeline iniciado: {len(kw_list)} keywords | País: {country} | Perfil: {profile}")
 
-    background_tasks.add_task(_run_pipeline_task, kw_list, country, profile)
+    background_tasks.add_task(_run_pipeline_task, user_state, kw_list, country, profile)
     return JSONResponse({"status": "success", "message": "Pipeline iniciado."})
 
 
@@ -182,17 +211,18 @@ async def run_pipeline(
 from fastapi.responses import FileResponse
 
 @app.get("/download/excel")
-async def download_excel():
-    if not state.last_run_data:
+async def download_excel(request: Request):
+    user_state = get_session(request)
+    if not user_state.last_run_data:
         return JSONResponse({"error": "No hay datos para exportar. Ejecuta primero el pipeline."}, status_code=404)
 
     from exporters.excel_export import exportar_excel
 
-    if len(state.last_run_data) == 1:
-        item = state.last_run_data[0]
+    if len(user_state.last_run_data) == 1:
+        item = user_state.last_run_data[0]
         datos = {
             "volumenes": item.get("metrics", {}),
-            "language_code": state.country.split("-")[0] if "-" in state.country else state.country,
+            "language_code": user_state.country.split("-")[0] if "-" in user_state.country else user_state.country,
             "sugerencias": item.get("suggestions", []),
             "preguntas_paa": item.get("paa", []),
             "preguntas_autocompletado": item.get("preguntas_autocompletado", []),
@@ -222,11 +252,11 @@ async def download_excel():
         zip_buffer = io.BytesIO()
         try:
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                for item in state.last_run_data:
+                for item in user_state.last_run_data:
                     kw = item["keyword"]
                     datos = {
                         "volumenes": item.get("metrics", {}),
-                        "language_code": state.country.split("-")[0] if "-" in state.country else state.country,
+                        "language_code": user_state.country.split("-")[0] if "-" in user_state.country else user_state.country,
                         "sugerencias": item.get("suggestions", []),
                         "preguntas_paa": item.get("paa", []),
                         "preguntas_autocompletado": item.get("preguntas_autocompletado", []),
@@ -255,18 +285,19 @@ async def download_excel():
 
 
 @app.get("/download/json")
-async def download_json():
-    if not state.last_run_data:
+async def download_json(request: Request):
+    user_state = get_session(request)
+    if not user_state.last_run_data:
         return JSONResponse({"error": "No hay datos para exportar."}, status_code=404)
 
     data = {
         "meta": {
-            "generated_at": state.finished_at or datetime.datetime.now().isoformat(),
-            "country": state.country,
-            "profile": state.profile,
-            "total_keywords": len(state.last_run_data),
+            "generated_at": user_state.finished_at or datetime.datetime.now().isoformat(),
+            "country": user_state.country,
+            "profile": user_state.profile,
+            "total_keywords": len(user_state.last_run_data),
         },
-        "results": state.last_run_data,
+        "results": user_state.last_run_data,
     }
 
     filename = f"keysearch_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -278,28 +309,28 @@ async def download_json():
 
 
 # ── Tarea asíncrona del pipeline ──────────────────────────────────────────────
-async def _run_pipeline_task(keywords: List[str], country_code: str, profile: str):
+async def _run_pipeline_task(user_state: SessionState, keywords: List[str], country_code: str, profile: str):
     try:
-        state.add_log("INFO", "Cargando módulos del motor de scraping...")
+        user_state.add_log("INFO", "Cargando módulos del motor de scraping...")
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
-            None, _blocking_pipeline, keywords, country_code, profile
+            None, _blocking_pipeline, user_state, keywords, country_code, profile
         )
-        state.last_run_data = result
-        state.status_msg = f"✅ Completado. {len(result)} keyword(s) procesadas."
-        state.progress = 100
-        state.finished_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        state.add_log("SUCCESS", f"Pipeline completado exitosamente. {len(result)} resultados.")
+        user_state.last_run_data = result
+        user_state.status_msg = f"✅ Completado. {len(result)} keyword(s) procesadas."
+        user_state.progress = 100
+        user_state.finished_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        user_state.add_log("SUCCESS", f"Pipeline completado exitosamente. {len(result)} resultados.")
     except Exception as exc:
         logger.exception("Error en pipeline")
-        state.error_msg = str(exc)
-        state.status_msg = f"❌ Error: {exc}"
-        state.add_log("ERROR", f"Pipeline falló: {exc}")
+        user_state.error_msg = str(exc)
+        user_state.status_msg = f"❌ Error: {exc}"
+        user_state.add_log("ERROR", f"Pipeline falló: {exc}")
     finally:
-        state.is_running = False
+        user_state.is_running = False
 
 
-def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> List[dict]:
+def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_code: str, profile: str) -> List[dict]:
     """Motor de scraping sincrónico (se corre en thread pool)."""
     from config import normalize_country
     from scraper.autocomplete import get_autocomplete_suggestions, get_question_suggestions
@@ -317,28 +348,37 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
             base_prog = int(((idx - 1) / total) * 90)
             step_size = int(90 / total)
             
-            state.add_log("INFO", f"[{idx}/{total}] Procesando: {kw}")
+            user_state.add_log("INFO", f"[{idx}/{total}] Procesando: {kw}")
 
-            state.status_msg = f"[{idx}/{total}] 🔍 Autocompletado: {kw}"
-            state.progress = max(1, base_prog + int(step_size * 0.1))
+            user_state.status_msg = f"[{idx}/{total}] 🔍 Autocompletado: {kw}"
+            user_state.progress = max(1, base_prog + int(step_size * 0.1))
             es_extremo = (profile.lower() == "extreme")
             sug = get_autocomplete_suggestions(kw, expandir=es_extremo, search_context=ctx)
-            state.add_log("INFO", f"  → {len(sug)} sugerencias de autocompletado")
+            user_state.add_log("INFO", f"  → {len(sug)} sugerencias de autocompletado")
 
-            state.status_msg = f"[{idx}/{total}] ❓ Preguntas: {kw}"
-            state.progress = base_prog + int(step_size * 0.4)
+            user_state.status_msg = f"[{idx}/{total}] ❓ Preguntas: {kw}"
+            user_state.progress = base_prog + int(step_size * 0.4)
             preg_ac = get_question_suggestions(kw, search_context=ctx)
-            state.add_log("INFO", f"  → {len(preg_ac)} preguntas generadas")
+            user_state.add_log("INFO", f"  → {len(preg_ac)} preguntas generadas")
 
-            state.status_msg = f"[{idx}/{total}] 🌐 SERP Google: {kw}"
-            state.progress = base_prog + int(step_size * 0.6)
+            user_state.status_msg = f"[{idx}/{total}] 🌐 SERP Google: {kw}"
+            user_state.progress = base_prog + int(step_size * 0.6)
             serp = scrape_google(kw, search_context=ctx)
             paa = serp.get("preguntas_paa", [])
             rel = serp.get("busquedas_relacionadas", [])
-            state.add_log("INFO", f"  → {len(paa)} PAA, {len(rel)} búsquedas relacionadas")
+            user_state.add_log("INFO", f"  → {len(paa)} PAA, {len(rel)} búsquedas relacionadas")
 
-            state.status_msg = f"[{idx}/{total}] 📊 Volumen: {kw}"
-            state.progress = base_prog + int(step_size * 0.8)
+            from config import GROQ_API_KEY
+            if GROQ_API_KEY:
+                from scraper.ai_filter import filtrar_con_ia
+                country_name = ctx.get("country_name", "Colombia")
+                sug = filtrar_con_ia(sug, kw, country_name) if sug else sug
+                preg_ac = filtrar_con_ia(preg_ac, kw, country_name) if preg_ac else preg_ac
+                paa = filtrar_con_ia(paa, kw, country_name) if paa else paa
+                rel = filtrar_con_ia(rel, kw, country_name) if rel else rel
+
+            user_state.status_msg = f"[{idx}/{total}] 📊 Volumen: {kw}"
+            user_state.progress = base_prog + int(step_size * 0.8)
             cat, sub = auto_categorizar(kw)
             vol = estimar_volumenes(
                 keyword_principal=kw,
@@ -354,12 +394,12 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
             try:
                 from scraper.google_ads_metrics import enrich_with_google_ads_metrics
                 google_ads_res = enrich_with_google_ads_metrics(vol)
-                state.add_log("INFO", f"  → Google Ads OK")
+                user_state.add_log("INFO", f"  → Google Ads OK")
             except Exception as e:
                 google_ads_res = {"enabled": False, "reason": str(e)}
-                state.add_log("WARNING", f"  → Google Ads no disponible: {e}")
+                user_state.add_log("WARNING", f"  → Google Ads no disponible: {e}")
 
-            state.progress = base_prog + step_size
+            user_state.progress = base_prog + step_size
             all_results.append({
                 "keyword": kw,
                 "category": cat,
@@ -376,7 +416,7 @@ def _blocking_pipeline(keywords: List[str], country_code: str, profile: str) -> 
             })
 
         except Exception as e:
-            state.add_log("ERROR", f"  ✗ Error en '{kw}': {e}")
+            user_state.add_log("ERROR", f"  ✗ Error en '{kw}': {e}")
             all_results.append({
                 "keyword": kw,
                 "category": "Error",

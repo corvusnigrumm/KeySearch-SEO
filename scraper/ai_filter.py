@@ -137,13 +137,15 @@ def generar_bloques_editoriales(
         '  "subtitulos": ["10 subtitulos SEO aqui..."],\n'
         '  "keywords_trends": ["10 mejores keywords basadas en tendencias aqui..."]\n'
         "}\n"
-        "Reglas:\n"
+        "Reglas IMPORTANTES:\n"
+        "- Si las listas de evidencia estan vacias o son muy cortas (algo comun con frases muy largas), genera el contenido basandote EXCLUSIVAMENTE en la intencion y contexto de la 'Keyword base'.\n"
+        "- BAJO NINGUNA CIRCUNSTANCIA inventes o incluyas nombres de empresas locales, marcas de telecomunicaciones (como Claro, Movistar, Tigo, etc.), ni tendencias generales del pais que NO TENGAN RELACION DIRECTA con la 'Keyword base'. Mantente estrictamente en el tema solicitado.\n"
         "- ejes: EXACTAMENTE 9 lineas concretas (4 basadas en las fuentes y 5 adicionales estrategicas).\n"
         "- propuesta: 1 linea corta (tema central del articulo).\n"
         "- enfoque: 1 parrafo corto de intencion y angulo.\n"
         "- titulos: EXACTAMENTE 10 titulos, optimizados para SEO, con alto potencial.\n"
         "- subtitulos: EXACTAMENTE 10 subtitulos, alineados a los titulos y tematicas clave.\n"
-        "- keywords_trends: EXACTAMENTE 10 keywords destacadas (utiliza las Keywords con buen volumen dadas en la evidencia).\n"
+        "- keywords_trends: EXACTAMENTE 10 keywords destacadas (utiliza las Keywords con buen volumen dadas en la evidencia, o variaciones muy cercanas a la Keyword base).\n"
         "- No markdown, no explicaciones fuera del JSON."
     )
 
