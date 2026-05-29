@@ -50,22 +50,31 @@ def filtrar_con_ia(keywords: list[str], keyword_base: str, pais: str) -> list[st
 
     prompt = (
         f"Actua como un analista SEO ESTRICTO E INFLEXIBLE. Analizas una lista de palabras clave descubiertas a partir de la keyword original: '{keyword_base}' "
-        f"para el pais: '{pais}'.\n"
+        f"para el pais objetivo: '{pais}'.\n"
         f"Tu objetivo es limpiar resultados basura y filtraciones geograficas. Elimina CUALQUIER palabra clave que:\n"
-        f"1. Tenga intencion de OTRO pais, ciudad, municipio, provincia o region que NO SEA de {pais}. Si la busqueda dice 'mexico', 'venezuela', 'argentina', 'peru', 'chile', 'españa', o ciudades de esos paises (y {pais} es otro), ELIMINALA INMEDIATAMENTE sin excepcion.\n"
+        f"1. Tenga intencion de OTRO pais, ciudad, municipio, provincia o region que NO SEA de {pais}. Por ejemplo, si el pais objetivo es 'Colombia', ELIMINA todas las keywords que contengan 'argentina', 'chile', 'bolivia', 'mexico', 'peru', 'ecuador', 'españa', 'venezuela', 'usa' o cualquier otra nacion o ciudad extranjera INMEDIATAMENTE sin excepcion.\n"
         f"2. No tenga NINGUNA relacion, sentido util o coherencia con '{keyword_base}'.\n\n"
-        f"Responde UNICAMENTE con un JSON Array de strings conteniendo las keywords que SÍ pasaron el filtro. NO agregues texto markdown, ni explicaciones. Solo el array.\n\n"
+        f"Responde UNICAMENTE con un JSON Array plano de strings (ejemplo: [\"keyword 1\", \"keyword 2\"]) conteniendo las keywords que SÍ pasaron el filtro. NO agregues diccionarios ni objetos, NO agregues texto markdown, ni explicaciones. Solo el array puro.\n\n"
         f"Lista original:\n"
         f"{json.dumps(keywords, ensure_ascii=False)}"
     )
 
     try:
         filtered_list = _post_groq_json(prompt, timeout=25)
+        
+        # Fallback en caso de que el LLM devuelva un dict tipo {"keywords": [...]}
+        if isinstance(filtered_list, dict):
+            for val in filtered_list.values():
+                if isinstance(val, list):
+                    filtered_list = val
+                    break
+
         if isinstance(filtered_list, list):
             # Aseguramos que solo devuelva keywords que realmente existian en la original (evitar alucinaciones)
             original_set = set(keywords)
             return [kw for kw in filtered_list if kw in original_set]
             
+        logger.warning("AI Filter no devolvio una lista valida. Se utilizara la lista original.")
         return keywords
     except Exception as e:
         logger.warning(f"Error en AI Filter (Groq): {e}. Se utilizara la lista original.")
