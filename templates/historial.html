@@ -1,43 +1,60 @@
-{% extends "_sidebar.html" %}
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KeySearch V 6.0 - Historial</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include "_tailwind_config.html" %}
+<style>
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+body{background-color:#f8f9ff}
+</style>
+</head>
+<body class="font-body-md text-on-surface antialiased">
+{% include "_sidebar.html" %}
+{% include "_topbar.html" %}
 
-{% block content %}
-<div class="mb-8">
-    <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">Historial de Búsquedas</h1>
-    <p class="text-gray-400 mt-2">Búsquedas realizadas por el perfil <strong>{{ user.username }}</strong></p>
-</div>
+<main class="ml-[240px] mt-16 p-lg max-w-[1400px] mx-auto">
+  <header class="mb-xl">
+    <h2 class="font-h1 text-h1 text-primary">Historial de Búsquedas</h2>
+    <p class="text-on-surface-variant mt-sm">Búsquedas previas realizadas por el perfil <strong>{{ current_user.username if current_user else 'Usuario' }}</strong></p>
+  </header>
 
-<div class="glass-panel p-6 rounded-2xl border border-gray-800 shadow-2xl relative overflow-hidden">
-    <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+    <div class="px-lg py-md border-b border-outline-variant bg-surface-container-low/30">
+        <h3 class="font-h3 text-h3">Resultados Guardados</h3>
+    </div>
     
-    <div class="overflow-x-auto relative z-10">
+    <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b border-gray-700 text-sm uppercase text-gray-400 tracking-wider">
-                    <th class="py-3 px-4 font-medium">Fecha</th>
-                    <th class="py-3 px-4 font-medium">Keyword Principal</th>
-                    <th class="py-3 px-4 font-medium">País</th>
-                    <th class="py-3 px-4 font-medium">Modo/Perfil</th>
-                    <th class="py-3 px-4 text-right font-medium">Acción</th>
+            <thead class="bg-surface-container-low">
+                <tr>
+                    <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Fecha</th>
+                    <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Keyword Principal</th>
+                    <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">País</th>
+                    <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Perfil</th>
+                    <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-right">Acción</th>
                 </tr>
             </thead>
-            <tbody id="history-body" class="text-gray-300">
+            <tbody id="history-body" class="divide-y divide-outline-variant">
                 <!-- Se llenará via JS -->
             </tbody>
         </table>
         
-        <div id="loading" class="py-12 text-center text-gray-500">
-            <svg class="animate-spin h-8 w-8 mx-auto mb-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Cargando historial...
+        <div id="loading" class="py-12 text-center text-on-surface-variant">
+            <span class="material-symbols-outlined animate-spin text-secondary text-4xl mb-4">sync</span>
+            <p>Cargando historial...</p>
         </div>
         
         <div id="empty-state" class="hidden py-12 text-center">
-            <p class="text-gray-500">No tienes búsquedas en tu historial aún.</p>
+            <p class="text-on-surface-variant italic">No tienes búsquedas en tu historial aún.</p>
+            <a href="/config" class="text-secondary font-bold hover:underline mt-2 inline-block">Iniciar una búsqueda →</a>
         </div>
     </div>
-</div>
+  </div>
+</main>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -54,20 +71,20 @@ document.addEventListener("DOMContentLoaded", () => {
             
             data.history.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors";
+                tr.className = "hover:bg-secondary-container/5 transition-colors group";
                 
                 // Formatear fecha
                 const d = new Date(item.created_at);
                 const fecha = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 
                 tr.innerHTML = `
-                    <td class="py-4 px-4 text-sm text-gray-400">${fecha}</td>
-                    <td class="py-4 px-4 font-medium text-white">${item.keyword}</td>
-                    <td class="py-4 px-4"><span class="px-2 py-1 bg-gray-800 rounded text-xs">${item.country}</span></td>
-                    <td class="py-4 px-4 text-sm text-gray-400">${item.profile}</td>
-                    <td class="py-4 px-4 text-right">
-                        <a href="/download/history/${item.id}" class="inline-flex items-center px-3 py-1 bg-green-600/20 text-green-400 hover:bg-green-600/30 rounded border border-green-600/30 transition-colors text-sm">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <td class="px-lg py-md text-body-sm text-on-surface-variant">${fecha}</td>
+                    <td class="px-lg py-md"><span class="font-label-md text-primary font-bold">${item.keyword}</span></td>
+                    <td class="px-lg py-md"><span class="bg-surface-container text-on-surface-variant px-sm py-xs rounded text-[12px] font-bold">${item.country}</span></td>
+                    <td class="px-lg py-md text-body-sm text-on-surface-variant capitalize">${item.profile}</td>
+                    <td class="px-lg py-md text-right">
+                        <a href="/download/history/${item.id}" class="inline-flex items-center gap-xs px-sm py-xs bg-secondary-container/20 text-on-secondary-container hover:bg-secondary-container/30 rounded font-label-sm transition-colors">
+                            <span class="material-symbols-outlined text-[16px]">download</span>
                             Excel
                         </a>
                     </td>
@@ -77,8 +94,8 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .catch(err => {
             console.error(err);
-            document.getElementById('loading').innerHTML = '<span class="text-red-400">Error al cargar el historial</span>';
+            document.getElementById('loading').innerHTML = '<span class="text-error font-bold">Error al cargar el historial</span>';
         });
 });
 </script>
-{% endblock %}
+</body></html>
