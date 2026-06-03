@@ -254,14 +254,21 @@ function selectProfile(profile) {
   ['Normal', 'Extreme'].forEach(p => {
     const el = document.getElementById('profile' + p);
     if (el) {
-      el.classList.remove('selected', 'border-secondary', 'bg-surface-container-low');
-      el.classList.add('border-outline-variant');
+      el.className = "profile-card flex items-center p-sm border border-outline-variant rounded-lg cursor-pointer hover:bg-surface-container-low";
+      const dot = el.querySelector('.rounded-full');
+      if (dot) {
+        dot.className = "w-5 h-5 rounded-full border border-outline-variant mr-md shrink-0";
+      }
     }
   });
-  const selected = document.getElementById('profile' + profile.charAt(0).toUpperCase() + profile.slice(1));
+  const selectedName = profile.charAt(0).toUpperCase() + profile.slice(1);
+  const selected = document.getElementById('profile' + selectedName);
   if (selected) {
-    selected.classList.add('selected', 'border-secondary', 'bg-surface-container-low');
-    selected.classList.remove('border-outline-variant');
+    selected.className = "profile-card selected flex items-center p-sm border-2 border-secondary bg-surface-container-low rounded-lg cursor-pointer";
+    const dot = selected.querySelector('.rounded-full');
+    if (dot) {
+      dot.className = "w-5 h-5 rounded-full border-4 border-secondary mr-md shrink-0";
+    }
   }
 }
 
