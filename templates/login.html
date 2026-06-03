@@ -1,0 +1,96 @@
+{% extends "_base.html" if not is_standalone else "_standalone.html" %}
+<!-- Si tienes una plantilla base usala, si no, aqui pondre el HTML completo -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - KeySearch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+    
+    <div class="glass-panel p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">KeySearch V6</h1>
+            <p class="text-gray-400 mt-2">Inicia sesión en tu perfil o crea uno nuevo</p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded mb-6 text-sm">
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if msg %}
+        <div class="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded mb-6 text-sm">
+            {{ msg }}
+        </div>
+        {% endif %}
+
+        <!-- Pestañas -->
+        <div class="flex border-b border-gray-700 mb-6">
+            <button id="tab-login" class="flex-1 py-2 text-center border-b-2 border-indigo-500 font-medium text-indigo-400 transition-colors" onclick="switchTab('login')">Ingresar</button>
+            <button id="tab-register" class="flex-1 py-2 text-center border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-300 transition-colors" onclick="switchTab('register')">Crear Perfil</button>
+        </div>
+
+        <!-- Formulario Login -->
+        <form id="form-login" action="/login" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Nombre de Perfil</label>
+                <input type="text" name="username" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition-colors">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
+                <input type="password" name="password" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition-colors">
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition-colors mt-4">
+                Entrar
+            </button>
+        </form>
+
+        <!-- Formulario Registro -->
+        <form id="form-register" action="/register" method="POST" class="space-y-4 hidden">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Nuevo Nombre de Perfil</label>
+                <input type="text" name="username" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition-colors">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
+                <input type="password" name="password" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition-colors">
+            </div>
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 rounded-lg transition-colors mt-4">
+                Crear e Ingresar
+            </button>
+        </form>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            if(tab === 'login') {
+                document.getElementById('form-login').classList.remove('hidden');
+                document.getElementById('form-register').classList.add('hidden');
+                document.getElementById('tab-login').classList.add('border-indigo-500', 'text-indigo-400');
+                document.getElementById('tab-login').classList.remove('border-transparent', 'text-gray-500');
+                document.getElementById('tab-register').classList.remove('border-indigo-500', 'text-indigo-400');
+                document.getElementById('tab-register').classList.add('border-transparent', 'text-gray-500');
+            } else {
+                document.getElementById('form-register').classList.remove('hidden');
+                document.getElementById('form-login').classList.add('hidden');
+                document.getElementById('tab-register').classList.add('border-indigo-500', 'text-indigo-400');
+                document.getElementById('tab-register').classList.remove('border-transparent', 'text-gray-500');
+                document.getElementById('tab-login').classList.remove('border-indigo-500', 'text-indigo-400');
+                document.getElementById('tab-login').classList.add('border-transparent', 'text-gray-500');
+            }
+        }
+    </script>
+</body>
+</html>

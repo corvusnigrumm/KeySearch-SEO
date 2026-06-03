@@ -36,6 +36,28 @@ from config import (
 from scraper.utils import dedupe_key, limpiar_texto, es_relevante_riguroso
 from scraper.http_cache import get_text, make_key, set_text
 
+# ─── Filtro de marcas comerciales para evitar contaminacion en expansion recursiva ───
+# Si la keyword_base NO menciona una de estas marcas y la sugerencia SI la menciona,
+# la sugerencia puede pasar como resultado pero NO puede ser semilla recursiva.
+_MARCAS_NO_SEED = {
+    "claro", "movistar", "tigo", "etb", "une", "wom", "directv", "virgin",
+    "netflix", "spotify", "amazon", "apple", "samsung", "huawei", "xiaomi",
+    "mercadolibre", "rappi", "uber", "didi", "cabify", "ifood",
+    "bancolombia", "davivienda", "bbva", "nequi", "daviplata",
+}
+
+
+def _es_semilla_valida(sugerencia: str, keyword_base: str) -> bool:
+    """Devuelve False si la sugerencia contiene una marca comercial que NO esta
+    en la keyword base. Tales sugerencias no deben usarse como semillas
+    recursivas porque generan cadenas completas de resultados de marca."""
+    sug_lower = sugerencia.lower()
+    kb_lower = keyword_base.lower()
+    for marca in _MARCAS_NO_SEED:
+        if marca in sug_lower and marca not in kb_lower:
+            return False
+    return True
+
 logger = logging.getLogger(__name__)
 
 
@@ -193,11 +215,13 @@ def get_autocomplete_suggestions(
             time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
 
     # En modo extremo: rondas recursivas sobre las mejores sugerencias encontradas
+    # SOLO se usan como semillas sugerencias que NO introduzcan marcas comerciales
     if _perfil_extremo(search_context) and todas:
         factor = 2
         profundidad = max(1, int(AUTOCOMPLETE_PAA_RECURSIVE_DEPTH)) * factor
         limite = max(1, int(AUTOCOMPLETE_DEEP_EXPANSION_LIMIT)) * factor
-        semillas = list(todas[:limite])
+        # Filtrar semillas: solo las que no son contaminacion de marca
+        semillas = [s for s in todas[:limite * 3] if _es_semilla_valida(s, keyword)][:limite]
         for _ in range(profundidad):
             nuevas = []
             for semilla in semillas:
@@ -213,7 +237,8 @@ def get_autocomplete_suggestions(
                 time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
             if not nuevas:
                 break
-            semillas = nuevas[:limite]
+            # Solo semillas limpias de marcas para el siguiente ciclo
+            semillas = [s for s in nuevas[:limite * 3] if _es_semilla_valida(s, keyword)][:limite]
 
     return todas
 
@@ -310,11 +335,14 @@ def get_question_suggestions(keyword: str, search_context: dict | None = None) -
                 preguntas.append(s)
         time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
 
-    # Expansion recursiva para no dejar preguntas sin descubrir
+    # Expansion recursiva para no dejar preguntas sin descubrir.
+    # CRITICO: solo usar como semillas preguntas que no introduzcan marcas comerciales,
+    # de lo contrario se generan cadenas enteras de preguntas de marca (Claro, Movistar, etc.)
     extra_factor = 2 if _perfil_extremo(search_context) else 1
     profundidad = max(1, int(AUTOCOMPLETE_PAA_RECURSIVE_DEPTH)) * extra_factor
     limite_semillas = max(1, int(AUTOCOMPLETE_DEEP_EXPANSION_LIMIT)) * extra_factor
-    semillas = list(preguntas[:limite_semillas])
+    # Filtrar semillas iniciales: excluir las que introducen marcas no presentes en el keyword
+    semillas = [p for p in preguntas[:limite_semillas * 3] if _es_semilla_valida(p, keyword)][:limite_semillas]
     for _ in range(profundidad):
         nuevas = []
         for semilla in semillas:
@@ -330,6 +358,7 @@ def get_question_suggestions(keyword: str, search_context: dict | None = None) -
             time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
         if not nuevas:
             break
-        semillas = nuevas[:limite_semillas]
+        # Filtrar semillas del siguiente ciclo tambien
+        semillas = [s for s in nuevas[:limite_semillas * 3] if _es_semilla_valida(s, keyword)][:limite_semillas]
 
     return preguntas

@@ -32,9 +32,13 @@ try:
 except ImportError:
     pass
 
-from fastapi import FastAPI, Request, Form, BackgroundTasks
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi import FastAPI, Request, Form, BackgroundTasks, Depends, HTTPException, status, Response
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+
+from sqlalchemy.orm import Session
+from core.database import init_db, get_db, User, SearchHistory
+from core.auth import verify_password, get_password_hash, create_access_token, decode_access_token
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("keysearch")
@@ -45,12 +49,16 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 app = FastAPI(title="KeySearch V 6.0", version="6.0")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+@app.on_event("startup")
+def on_startup():
+    init_db()
 
 # ── Estado global de sesión ───────────────────────────────────────────────────
 class SessionState:
     def __init__(self):
         self.reset()
         self.logs: List[Dict[str, str]] = []
+        self.user_id: Optional[int] = None
 
     def reset(self):
         self.keywords: List[str] = []
@@ -102,50 +110,114 @@ def get_session(request: Request) -> SessionState:
     return sessions.get(request.state.session_id)
 
 
-# ── Helpers de contexto ───────────────────────────────────────────────────────
-def _base_ctx(request: Request) -> dict:
+# ── Helpers de contexto e Identidad ──────────────────────────────────────────
+def get_current_user(request: Request, db: Session) -> Optional[User]:
+    token = request.cookies.get("access_token")
+    if not token:
+        return None
+    try:
+        payload = decode_access_token(token)
+        if not payload:
+            return None
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        return db.query(User).filter(User.id == int(user_id)).first()
+    except Exception:
+        return None
+
+def get_current_user_or_redirect(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+            headers={"Location": "/login"}
+        )
+    return user
+
+def _base_ctx(request: Request, user: User = None) -> dict:
     """Contexto base para todos los templates."""
     return {
         "state": get_session(request),
         "groq_active": bool(os.getenv("GROQ_API_KEY", "")),
         "google_ads_active": bool(os.getenv("GOOGLE_ADS_CUSTOMER_ID", "")),
+        "current_user": user,
     }
+
+
+# ── Rutas Autenticación ───────────────────────────────────────────────────────
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.post("/register")
+async def register(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if user:
+        return templates.TemplateResponse("login.html", {"request": request, "error": "El perfil ya existe."})
+    
+    new_user = User(username=username, password_hash=get_password_hash(password))
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    token = create_access_token({"sub": str(new_user.id)})
+    response = RedirectResponse(url="/", status_code=303)
+    response.set_cookie(key="access_token", value=token, httponly=True)
+    return response
+
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not verify_password(password, user.password_hash):
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Contraseña o usuario incorrecto."})
+    
+    token = create_access_token({"sub": str(user.id)})
+    response = RedirectResponse(url="/", status_code=303)
+    response.set_cookie(key="access_token", value=token, httponly=True)
+    return response
+
+@app.post("/api/logout")
+async def logout():
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie("access_token")
+    return response
 
 
 # ── Rutas HTML ────────────────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    return templates.TemplateResponse(request=request, name="dashboard.html", context=_base_ctx(request))
+async def dashboard(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="dashboard.html", context=_base_ctx(request, user))
 
 
 @app.get("/config", response_class=HTMLResponse)
-async def config_page(request: Request):
-    return templates.TemplateResponse(request=request, name="input.html", context=_base_ctx(request))
+async def config_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="input.html", context=_base_ctx(request, user))
 
 
 @app.get("/scraping", response_class=HTMLResponse)
-async def scraping_page(request: Request):
-    return templates.TemplateResponse(request=request, name="scraping.html", context=_base_ctx(request))
+async def scraping_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="scraping.html", context=_base_ctx(request, user))
 
 
 @app.get("/ia", response_class=HTMLResponse)
-async def ia_page(request: Request):
-    return templates.TemplateResponse(request=request, name="ia.html", context=_base_ctx(request))
+async def ia_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="ia.html", context=_base_ctx(request, user))
 
 
 @app.get("/export", response_class=HTMLResponse)
-async def export_page(request: Request):
-    return templates.TemplateResponse(request=request, name="export.html", context=_base_ctx(request))
+async def export_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="export.html", context=_base_ctx(request, user))
 
 
 @app.get("/api-status", response_class=HTMLResponse)
-async def api_status_page(request: Request):
-    return templates.TemplateResponse(request=request, name="api_status.html", context=_base_ctx(request))
+async def api_status_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="api_status.html", context=_base_ctx(request, user))
 
 
 @app.get("/logs-view", response_class=HTMLResponse)
-async def logs_page(request: Request):
-    return templates.TemplateResponse(request=request, name="logs.html", context=_base_ctx(request))
+async def logs_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="logs.html", context=_base_ctx(request, user))
 
 
 # ── API: Estado del pipeline ──────────────────────────────────────────────────
@@ -178,6 +250,7 @@ async def run_pipeline(
     keywords: str = Form(...),
     country: str = Form("co"),
     profile: str = Form("normal"),
+    user: User = Depends(get_current_user_or_redirect)
 ):
     user_state = get_session(request)
     if user_state.is_running:
@@ -194,6 +267,7 @@ async def run_pipeline(
         )
 
     user_state.reset()
+    user_state.user_id = user.id
     user_state.keywords = kw_list
     user_state.country = country
     user_state.profile = profile
@@ -201,17 +275,72 @@ async def run_pipeline(
     user_state.progress = 0
     user_state.status_msg = f"Iniciando pipeline para {len(kw_list)} keyword(s)..."
     user_state.started_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    user_state.add_log("INFO", f"Pipeline iniciado: {len(kw_list)} keywords | País: {country} | Perfil: {profile}")
+    user_state.add_log("INFO", f"Pipeline iniciado por {user.username}: {len(kw_list)} keywords | País: {country} | Perfil: {profile}")
 
     background_tasks.add_task(_run_pipeline_task, user_state, kw_list, country, profile)
     return JSONResponse({"status": "success", "message": "Pipeline iniciado."})
+
+
+# ── Historial de Búsquedas ────────────────────────────────────────────────────
+@app.get("/historial", response_class=HTMLResponse)
+async def historial_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="historial.html", context=_base_ctx(request, user))
+
+@app.get("/api/history")
+async def api_history(user: User = Depends(get_current_user_or_redirect), db: Session = Depends(get_db)):
+    searches = db.query(SearchHistory).filter(SearchHistory.user_id == user.id).order_by(SearchHistory.created_at.desc()).all()
+    history_list = []
+    for s in searches:
+        history_list.append({
+            "id": s.id,
+            "keyword": s.keyword,
+            "country": s.country,
+            "profile": s.profile,
+            "created_at": s.created_at.isoformat()
+        })
+    return {"history": history_list}
+
+@app.get("/download/history/{item_id}")
+async def download_history_excel(item_id: int, user: User = Depends(get_current_user_or_redirect), db: Session = Depends(get_db)):
+    search = db.query(SearchHistory).filter(SearchHistory.id == item_id, SearchHistory.user_id == user.id).first()
+    if not search:
+        return JSONResponse({"error": "Búsqueda no encontrada o no tienes permisos."}, status_code=404)
+    
+    try:
+        from exporters.excel_export import exportar_excel
+        item = json.loads(search.json_data)
+        
+        datos = {
+            "volumenes": item.get("metrics", {}),
+            "language_code": search.country.split("-")[0] if "-" in search.country else search.country,
+            "sugerencias": item.get("suggestions", []),
+            "preguntas_paa": item.get("paa", []),
+            "preguntas_autocompletado": item.get("preguntas_autocompletado", []),
+            "busquedas_relacionadas": item.get("related", []),
+            "country_name": item.get("country_name", ""),
+            "country_code": item.get("country_code", ""),
+            "category_name": item.get("category", ""),
+            "subcategory_name": item.get("subcategory", ""),
+            "google_ads": item.get("google_ads", {}),
+        }
+        
+        ruta_archivo = exportar_excel(search.keyword, datos)
+        filename = os.path.basename(ruta_archivo)
+        return FileResponse(
+            ruta_archivo, 
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename=filename
+        )
+    except Exception as e:
+        logger.exception("Error generando Excel histórico")
+        return JSONResponse({"error": f"Error generando Excel histórico: {e}"}, status_code=500)
 
 
 # ── Descarga de resultados ────────────────────────────────────────────────────
 from fastapi.responses import FileResponse
 
 @app.get("/download/excel")
-async def download_excel(request: Request):
+async def download_excel(request: Request, user: User = Depends(get_current_user_or_redirect)):
     user_state = get_session(request)
     if not user_state.last_run_data:
         return JSONResponse({"error": "No hay datos para exportar. Ejecuta primero el pipeline."}, status_code=404)
@@ -321,6 +450,30 @@ async def _run_pipeline_task(user_state: SessionState, keywords: List[str], coun
         user_state.progress = 100
         user_state.finished_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         user_state.add_log("SUCCESS", f"Pipeline completado exitosamente. {len(result)} resultados.")
+        
+        # Guardar en Base de Datos el historial de busqueda
+        if user_state.user_id:
+            try:
+                # Usar un generador manual de db session porque estamos en background sin request
+                db_gen = get_db()
+                db = next(db_gen)
+                for res in result:
+                    if res.get("category") != "Error":
+                        history_entry = SearchHistory(
+                            user_id=user_state.user_id,
+                            keyword=res["keyword"],
+                            country=country_code,
+                            profile=profile,
+                            json_data=json.dumps(res, ensure_ascii=False)
+                        )
+                        db.add(history_entry)
+                db.commit()
+                db_gen.close()
+                user_state.add_log("INFO", "Resultados guardados en tu Historial.")
+            except Exception as dbe:
+                logger.error(f"Error guardando historial en BD: {dbe}")
+                user_state.add_log("WARNING", "Error guardando en historial de BD.")
+                
     except Exception as exc:
         logger.exception("Error en pipeline")
         user_state.error_msg = str(exc)

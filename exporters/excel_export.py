@@ -319,11 +319,12 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
             row_num = priority_rows[cat]
             ws.cell(row=row_num, column=2, value=conteo[cat])
 
-        # Bloques editoriales con IA (Groq/Llama) basados en Top 5 por fuente.
-        top_autocomplete = ordenar_por_volumen(datos.get("sugerencias", []), volumenes)[:5]
-        top_paa = ordenar_por_volumen(datos.get("preguntas_paa", []), volumenes)[:5]
-        top_preguntas_ac = ordenar_por_volumen(datos.get("preguntas_autocompletado", []), volumenes)[:5]
-        top_relacionadas = ordenar_por_volumen(datos.get("busquedas_relacionadas", []), volumenes)[:5]
+        # Bloques editoriales con IA (Groq/Llama) basados en Top 15 por fuente.
+        # Top 15 da suficiente evidencia para detectar patrones tematicos, subtemas y brechas de contenido.
+        top_autocomplete = ordenar_por_volumen(datos.get("sugerencias", []), volumenes)[:15]
+        top_paa = ordenar_por_volumen(datos.get("preguntas_paa", []), volumenes)[:15]
+        top_preguntas_ac = ordenar_por_volumen(datos.get("preguntas_autocompletado", []), volumenes)[:15]
+        top_relacionadas = ordenar_por_volumen(datos.get("busquedas_relacionadas", []), volumenes)[:15]
 
         def _score(item: str):
             if not item:

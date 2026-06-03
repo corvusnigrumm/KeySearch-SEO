@@ -1,13 +1,39 @@
 import json
 import logging
+import re
 import requests
 
 from config import GROQ_API_KEY, GROQ_MODEL
 
 logger = logging.getLogger(__name__)
 
+# Marcas comerciales / operadores / ISPs conocidos que contaminan resultados
+# cuando NO son parte de la keyword_base buscada por el usuario.
+_MARCAS_COMERCIALES = [
+    "claro", "movistar", "tigo", "etb", "une", "wom", "virgin", "directv",
+    "netflix", "spotify", "amazon", "apple", "samsung", "huawei", "xiaomi",
+    "mercadolibre", "rappi", "uber", "ifood", "didi", "cabify",
+    "bancolombia", "davivienda", "bbva", "nequi", "daviplata", "bancamia",
+]
 
-def _post_groq_json(prompt: str, timeout: int = 35):
+_PATRONES_SEO_INUTILES = [
+    r"\bpara colorear\b",
+    r"\bdibujos?\b.*\bperro\b",
+    r"\bjuego(s)?\b",
+    r"\bvideo(s)?\b",
+    r"\bcancion(es)?\b",
+    r"\bcuento(s)?\b",
+    r"\bpintar\b",
+    r"\bcartoon\b",
+    r"\bpelicula(s)?\b",
+    r"\bserie(s)?\b",
+]
+
+# Máximo de keywords por llamada a Groq para no saturar el contexto
+_BATCH_SIZE = 40
+
+
+def _post_groq_json(prompt: str, timeout: int = 40):
     """Invoca Groq y devuelve contenido JSON parseado o None."""
     if not GROQ_API_KEY:
         return None
@@ -20,10 +46,13 @@ def _post_groq_json(prompt: str, timeout: int = 35):
     payload = {
         "model": GROQ_MODEL,
         "messages": [
-            {"role": "system", "content": "You are a JSON-only API. Output valid JSON only."},
+            {"role": "system", "content": (
+                "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, "
+                "sin markdown, sin texto extra, sin explicaciones."
+            )},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.2,
+        "temperature": 0.1,
     }
 
     try:
@@ -31,45 +60,136 @@ def _post_groq_json(prompt: str, timeout: int = 35):
         response.raise_for_status()
         data = response.json()
         content = data["choices"][0]["message"]["content"].strip()
+        # Limpiar posibles bloques markdown que el modelo a veces incluye
         if content.startswith("```json"):
-            content = content[7:-3].strip()
+            content = content[7:]
+            if "```" in content:
+                content = content[:content.rfind("```")]
+            content = content.strip()
         elif content.startswith("```"):
-            content = content[3:-3].strip()
+            content = content[3:]
+            if "```" in content:
+                content = content[:content.rfind("```")]
+            content = content.strip()
         return json.loads(content)
     except Exception as e:
         logger.warning("Error en llamada Groq JSON: %s", e)
         return None
 
-def filtrar_con_ia(keywords: list[str], keyword_base: str, pais: str) -> list[str]:
-    """
-    Usa la API de Groq para filtrar palabras clave irrelevantes o de otros paises.
-    Si hay algun error o la API no responde, devuelve la lista original intacta.
-    """
-    if not GROQ_API_KEY or not keywords:
-        return keywords
 
+def _filtro_determinista(keywords: list[str], keyword_base: str) -> list[str]:
+    """
+    Pre-filtro rápido sin IA:
+    1. Elimina keywords con marcas comerciales cuando la marca NO está en keyword_base.
+    2. Elimina patrones SEO-inútiles (para colorear, juegos, dibujos, etc.).
+    """
+    kb_lower = keyword_base.lower()
+    resultado = []
+    for kw in keywords:
+        kw_lower = kw.lower()
+
+        # Comprobar si hay una marca comercial en la sugerencia que NO está en la keyword base
+        marca_encontrada = False
+        for marca in _MARCAS_COMERCIALES:
+            if marca in kw_lower and marca not in kb_lower:
+                # Si la keyword base contiene la marca, es legítimo. Si no, es contaminación.
+                marca_encontrada = True
+                break
+        if marca_encontrada:
+            logger.debug("Filtro determinista eliminó (marca): %s", kw)
+            continue
+
+        # Eliminar patrones SEO-inútiles
+        patron_inutil = False
+        for patron in _PATRONES_SEO_INUTILES:
+            if re.search(patron, kw_lower):
+                patron_inutil = True
+                break
+        if patron_inutil:
+            logger.debug("Filtro determinista eliminó (patrón SEO inútil): %s", kw)
+            continue
+
+        resultado.append(kw)
+    return resultado
+
+
+def _filtrar_lote_con_ia(lote: list[str], keyword_base: str, pais: str) -> list[str]:
+    """
+    Filtra un lote de keywords (máx. _BATCH_SIZE) con una sola llamada a Groq.
+    Prompt en dos etapas explícitas: geo + SEO editorial.
+    """
     prompt = (
-        f"Actua como un analista SEO ESTRICTO E INFLEXIBLE. Analizas una lista de palabras clave descubiertas a partir de la keyword original: '{keyword_base}' "
-        f"para el pais: '{pais}'.\n"
-        f"Tu objetivo es limpiar resultados basura y filtraciones geograficas. Elimina CUALQUIER palabra clave que:\n"
-        f"1. Tenga intencion de OTRO pais, ciudad, municipio, provincia o region que NO SEA de {pais}. Si la busqueda dice 'mexico', 'venezuela', 'argentina', 'peru', 'chile', 'españa', o ciudades de esos paises (y {pais} es otro), ELIMINALA INMEDIATAMENTE sin excepcion.\n"
-        f"2. No tenga NINGUNA relacion, sentido util o coherencia con '{keyword_base}'.\n\n"
-        f"Responde UNICAMENTE con un JSON Array de strings conteniendo las keywords que SÍ pasaron el filtro. NO agregues texto markdown, ni explicaciones. Solo el array.\n\n"
-        f"Lista original:\n"
-        f"{json.dumps(keywords, ensure_ascii=False)}"
+        f"Eres un analista SEO SENIOR para un medio digital en {pais}. "
+        f"Analiza esta lista de keywords encontradas a partir de: '{keyword_base}'.\n\n"
+        f"TAREA: Filtra con criterio ESTRICTO. Elimina una keyword si cumple AL MENOS UNO de estos criterios:\n"
+        f"\n"
+        f"[CRITERIO GEO] Menciona explícitamente otro país, ciudad o región distinta a {pais}. "
+        f"Ejemplos de eliminación inmediata: 'en mexico', 'en venezuela', 'en argentina', 'en peru', "
+        f"'en chile', 'en españa', 'en bogota si el pais es mexico', etc.\n"
+        f"\n"
+        f"[CRITERIO SEO] No tiene valor editorial real para un redactor SEO que escribe sobre '{keyword_base}'. "
+        f"Ejemplos de eliminación: contenido para niños ('para colorear', 'dibujos'), "
+        f"marcas comerciales específicas que no son el tema principal, "
+        f"contenido de entretenimiento sin relación temática.\n"
+        f"\n"
+        f"[CRITERIO MARCA] Si '{keyword_base}' NO contiene nombre de empresa/marca/operador, "
+        f"elimina cualquier keyword que introduzca una marca comercial específica "
+        f"(ej: Claro, Movistar, Tigo, Nequi, Bancolombia, Rappi, etc.). "
+        f"Si la keyword base SÍ es una marca, entonces keywords de esa misma marca son válidas.\n"
+        f"\n"
+        f"IMPORTANTE: Si tienes duda, CONSERVA la keyword. Solo elimina lo que claramente no cumple.\n"
+        f"\n"
+        f"Responde ÚNICAMENTE con un JSON Array de strings con las keywords que PASARON el filtro.\n"
+        f"Ejemplo de respuesta válida: [\"keyword a\", \"keyword b\"]\n\n"
+        f"Lista a filtrar:\n"
+        f"{json.dumps(lote, ensure_ascii=False)}"
     )
 
     try:
-        filtered_list = _post_groq_json(prompt, timeout=25)
-        if isinstance(filtered_list, list):
-            # Aseguramos que solo devuelva keywords que realmente existian en la original (evitar alucinaciones)
-            original_set = set(keywords)
-            return [kw for kw in filtered_list if kw in original_set]
-            
-        return keywords
+        filtered = _post_groq_json(prompt, timeout=35)
+        if isinstance(filtered, list):
+            original_set = set(lote)
+            return [kw for kw in filtered if kw in original_set]
+        return lote
     except Exception as e:
-        logger.warning(f"Error en AI Filter (Groq): {e}. Se utilizara la lista original.")
+        logger.warning("Error en filtro IA de lote: %s", e)
+        return lote
+
+
+def filtrar_con_ia(keywords: list[str], keyword_base: str, pais: str) -> list[str]:
+    """
+    Pipeline completo de filtrado:
+    1. Pre-filtro determinista rápido (marcas, patrones inútiles)
+    2. Filtro IA por lotes de _BATCH_SIZE keywords (geo + SEO editorial)
+
+    Si hay algún error en la IA, se devuelve el resultado del pre-filtro.
+    Si no hay API key, solo aplica el pre-filtro determinista.
+    """
+    if not keywords:
         return keywords
+
+    # Paso 1: filtro rápido sin IA
+    pre_filtradas = _filtro_determinista(keywords, keyword_base)
+    logger.info(
+        "Pre-filtro determinista: %d → %d keywords (eliminadas %d)",
+        len(keywords), len(pre_filtradas), len(keywords) - len(pre_filtradas)
+    )
+
+    if not GROQ_API_KEY or not pre_filtradas:
+        return pre_filtradas
+
+    # Paso 2: filtro IA por lotes
+    resultado_final = []
+    for i in range(0, len(pre_filtradas), _BATCH_SIZE):
+        lote = pre_filtradas[i: i + _BATCH_SIZE]
+        lote_filtrado = _filtrar_lote_con_ia(lote, keyword_base, pais)
+        resultado_final.extend(lote_filtrado)
+        logger.info(
+            "Lote IA %d-%d: %d → %d",
+            i + 1, i + len(lote), len(lote), len(lote_filtrado)
+        )
+
+    return resultado_final
 
 
 def generar_bloques_editoriales(
@@ -84,11 +204,14 @@ def generar_bloques_editoriales(
     """
     Genera bloques editoriales para la plantilla de informe.
     Devuelve un dict con claves:
-      - ejes (4 lineas)
+      - ejes (9 ejes estrategicos)
       - propuesta (1 linea)
-      - enfoque (1 linea)
-      - titulos (5 lineas)
-      - subtitulos (4 lineas)
+      - enfoque (parrafo corto)
+      - titulos (10 titulos SEO)
+      - subtitulos (10 subtitulos)
+      - keywords_trends (10 keywords long-tail)
+
+    Usa top 15 por fuente para analisis SEO profundo.
     """
     if top_keywords_trends is None:
         top_keywords_trends = []
@@ -119,37 +242,50 @@ def generar_bloques_editoriales(
     if not GROQ_API_KEY:
         return fallback
 
+    # Usar top 15 por fuente para un analisis SEO mas profundo y representativo
+    ac_muestra = top_autocomplete[:15]
+    paa_muestra = top_paa[:15]
+    preg_ac_muestra = top_preguntas_autocomplete[:15]
+    rel_muestra = top_relacionadas[:15]
+    trends_muestra = top_keywords_trends[:20] if top_keywords_trends else []
+
     prompt = (
-        "Actua como estratega SEO senior. Construye contenido editorial en ESPANOL para una plantilla de informe.\n"
-        f"Keyword base: '{keyword_base}'. Pais objetivo: '{pais}'.\n"
-        "Usa SOLO esta evidencia (Top 5/10 por fuente):\n"
-        f"- Autocompletado: {json.dumps(top_autocomplete, ensure_ascii=False)}\n"
-        f"- Preguntas PAA: {json.dumps(top_paa, ensure_ascii=False)}\n"
-        f"- Preguntas Autocompletado: {json.dumps(top_preguntas_autocomplete, ensure_ascii=False)}\n"
-        f"- Busquedas relacionadas: {json.dumps(top_relacionadas, ensure_ascii=False)}\n"
-        f"- Keywords con buen volumen/trends: {json.dumps(top_keywords_trends[:15] if top_keywords_trends else [], ensure_ascii=False)}\n\n"
-        "Devuelve UNICAMENTE un JSON con esta estructura exacta:\n"
+        "Eres un estratega SEO senior con 10 anos de experiencia en medios digitales hispanohablantes. "
+        "Tu tarea es generar bloques editoriales ESTRATEGICOS Y PROFUNDOS para una plantilla de informe SEO "
+        "que usaran redactores profesionales para planificar su contenido.\n\n"
+        f"KEYWORD PRINCIPAL: '{keyword_base}'\n"
+        f"PAIS OBJETIVO: '{pais}'\n\n"
+        "EVIDENCIA REAL DE GOOGLE (lo que los usuarios REALMENTE buscan):\n"
+        f"- Autocompletado (Top 15): {json.dumps(ac_muestra, ensure_ascii=False)}\n"
+        f"- Preguntas PAA de la SERP (Top 15): {json.dumps(paa_muestra, ensure_ascii=False)}\n"
+        f"- Preguntas por Autocompletado (Top 15): {json.dumps(preg_ac_muestra, ensure_ascii=False)}\n"
+        f"- Busquedas relacionadas (Top 15): {json.dumps(rel_muestra, ensure_ascii=False)}\n"
+        f"- Keywords con mayor volumen/tendencia (Top 20): {json.dumps(trends_muestra, ensure_ascii=False)}\n\n"
+        "ANALISIS QUE DEBES REALIZAR:\n"
+        "1. Identifica la INTENCION DE BUSQUEDA predominante: informacional, transaccional, navegacional o comparativa.\n"
+        "2. Detecta los SUBTEMAS y ANGULOS mas recurrentes en la evidencia.\n"
+        "3. Identifica BRECHAS DE CONTENIDO: preguntas frecuentes sin respuesta optima clara.\n"
+        "4. Prioriza keywords con ALTA INTENSION EDITORIAL (no keywords de marca ni de contenido infantil).\n\n"
+        "REGLAS CRITICAS - VIOLACION = RESPUESTA INVALIDA:\n"
+        f"- NUNCA incluyas marcas comerciales especificas (Claro, Movistar, Tigo, Rappi, etc.) a menos que '{keyword_base}' sea exactamente esa marca.\n"
+        "- NUNCA incluyas contenido infantil (colorear, juegos, canciones, dibujos, cuentos).\n"
+        f"- NUNCA incluyas referencias a paises distintos a {pais}.\n"
+        "- Cada titulo H1 debe tener intencion SEO clara y ser accionable para un redactor.\n"
+        "- Los subtitulos son H2/H3 reales que estructuran el articulo (no vagues, no genericos).\n"
+        "- keywords_trends: variaciones long-tail reales extraidas de la evidencia, priorizando las de mayor potencial editorial.\n\n"
+        "Devuelve UNICAMENTE este JSON (sin markdown, sin texto adicional):\n"
         "{\n"
-        '  "ejes": ["9 ejes estrategicos aqui..."],\n'
-        '  "propuesta": "...",\n'
-        '  "enfoque": "...",\n'
-        '  "titulos": ["10 titulos SEO aqui..."],\n'
-        '  "subtitulos": ["10 subtitulos SEO aqui..."],\n'
-        '  "keywords_trends": ["10 mejores keywords basadas en tendencias aqui..."]\n'
+        '  "intencion_predominante": "informacional|transaccional|navegacional|comparativa",\n'
+        '  "ejes": ["9 ejes tematicos estrategicos con angulo editorial concreto cada uno"],\n'
+        '  "propuesta": "1 linea: tema central del articulo principal recomendado",\n'
+        '  "enfoque": "2-3 oraciones: angulo editorial, tono recomendado e intension del usuario objetivo",\n'
+        '  "titulos": ["10 titulos H1 variados en formato: preguntas, listas, guias, comparativas, how-to"],\n'
+        '  "subtitulos": ["10 subtitulos H2/H3 que estructuran el articulo principal de forma logica"],\n'
+        '  "keywords_trends": ["10 keywords long-tail de alta prioridad extraidas de la evidencia real"]\n'
         "}\n"
-        "Reglas IMPORTANTES:\n"
-        "- Si las listas de evidencia estan vacias o son muy cortas (algo comun con frases muy largas), genera el contenido basandote EXCLUSIVAMENTE en la intencion y contexto de la 'Keyword base'.\n"
-        "- BAJO NINGUNA CIRCUNSTANCIA inventes o incluyas nombres de empresas locales, marcas de telecomunicaciones (como Claro, Movistar, Tigo, etc.), ni tendencias generales del pais que NO TENGAN RELACION DIRECTA con la 'Keyword base'. Mantente estrictamente en el tema solicitado.\n"
-        "- ejes: EXACTAMENTE 9 lineas concretas (4 basadas en las fuentes y 5 adicionales estrategicas).\n"
-        "- propuesta: 1 linea corta (tema central del articulo).\n"
-        "- enfoque: 1 parrafo corto de intencion y angulo.\n"
-        "- titulos: EXACTAMENTE 10 titulos, optimizados para SEO, con alto potencial.\n"
-        "- subtitulos: EXACTAMENTE 10 subtitulos, alineados a los titulos y tematicas clave.\n"
-        "- keywords_trends: EXACTAMENTE 10 keywords destacadas (utiliza las Keywords con buen volumen dadas en la evidencia, o variaciones muy cercanas a la Keyword base).\n"
-        "- No markdown, no explicaciones fuera del JSON."
     )
 
-    result = _post_groq_json(prompt, timeout=40)
+    result = _post_groq_json(prompt, timeout=55)
     if not isinstance(result, dict):
         return fallback
 
