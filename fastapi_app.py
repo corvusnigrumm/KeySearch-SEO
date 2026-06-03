@@ -49,9 +49,28 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 app = FastAPI(title="KeySearch V 6.0", version="6.0")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+import urllib.request
+
+def ping_render():
+    # Evita que la instancia gratuita de Render se apague (spin down)
+    url = "https://keysearch-seo-1.onrender.com/api-status"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (KeepAlive)'})
+        with urllib.request.urlopen(req) as response:
+            logger.info(f"Keep-alive ping sent. Status: {response.status}")
+    except Exception as e:
+        logger.warning(f"Keep-alive ping failed: {e}")
+
+async def keep_alive_task():
+    while True:
+        await asyncio.sleep(14 * 60)  # Ping cada 14 minutos
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, ping_render)
+
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     init_db()
+    asyncio.create_task(keep_alive_task())
 
 # ── Estado global de sesión ───────────────────────────────────────────────────
 class SessionState:
