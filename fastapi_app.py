@@ -148,13 +148,13 @@ def _base_ctx(request: Request, user: User = None) -> dict:
 # ── Rutas Autenticación ───────────────────────────────────────────────────────
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="login.html", context={"request": request})
 
 @app.post("/register")
 async def register(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if user:
-        return templates.TemplateResponse("login.html", {"request": request, "error": "El perfil ya existe."})
+        return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": "El perfil ya existe."})
     
     new_user = User(username=username, password_hash=get_password_hash(password))
     db.add(new_user)
@@ -170,7 +170,7 @@ async def register(request: Request, username: str = Form(...), password: str = 
 async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Contraseña o usuario incorrecto."})
+        return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": "Contraseña o usuario incorrecto."})
     
     token = create_access_token({"sub": str(user.id)})
     response = RedirectResponse(url="/", status_code=303)
