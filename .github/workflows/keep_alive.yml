@@ -1,0 +1,16 @@
+name: Keep Alive Render App
+
+on:
+  schedule:
+    # Ejecutar cada 10 minutos para evitar el spin down de 15 minutos en Render
+    - cron: "*/10 * * * *"
+  workflow_dispatch: # Permite ejecutar el workflow manualmente
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render App Status URL
+        run: |
+          curl -s https://keysearch-seo.onrender.com/ping > /dev/null
+          echo "Pinged Render App!"
