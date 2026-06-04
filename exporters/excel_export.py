@@ -395,19 +395,33 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
             elif val_lower == "keywords":
                 row_keywords = r
 
+        def _clear_until(start_row, next_row, max_rows=10):
+            limit = min(start_row + max_rows, next_row) if next_row > start_row else start_row + max_rows
+            for i in range(start_row + 1, limit):
+                ws.cell(row=i, column=1, value="")
+
+        _clear_until(row_ejes, row_propuesta, 10)
+        _clear_until(row_propuesta, row_enfoque, 3)
+        _clear_until(row_enfoque, row_titulos, 5)
+        _clear_until(row_titulos, row_subtitulos, 12)
+        _clear_until(row_subtitulos, row_keywords, 12)
+        _clear_until(row_keywords, 150, 15)
+
         for i in range(9):
-            if i < len(bloques["ejes"]):
+            if i < len(bloques["ejes"]) and bloques["ejes"][i]:
                 ws.cell(row=row_ejes + 1 + i, column=1, value=bloques["ejes"][i])
         
-        ws.cell(row=row_propuesta + 1, column=1, value=bloques["propuesta"])
-        ws.cell(row=row_enfoque + 1, column=1, value=bloques["enfoque"])
+        if bloques.get("propuesta"):
+            ws.cell(row=row_propuesta + 1, column=1, value=bloques["propuesta"])
+        if bloques.get("enfoque"):
+            ws.cell(row=row_enfoque + 1, column=1, value=bloques["enfoque"])
 
         for i in range(10):
-            if i < len(bloques["titulos"]):
+            if i < len(bloques["titulos"]) and bloques["titulos"][i]:
                 ws.cell(row=row_titulos + 1 + i, column=1, value=bloques["titulos"][i])
-            if i < len(bloques["subtitulos"]):
+            if i < len(bloques["subtitulos"]) and bloques["subtitulos"][i]:
                 ws.cell(row=row_subtitulos + 1 + i, column=1, value=bloques["subtitulos"][i])
-            if i < len(bloques["keywords_trends"]):
+            if i < len(bloques["keywords_trends"]) and bloques["keywords_trends"][i]:
                 ws.cell(row=row_keywords + 1 + i, column=1, value=bloques["keywords_trends"][i])
 
         return ws

@@ -221,22 +221,12 @@ def generar_bloques_editoriales(
         kw_trends.append(f"{keyword_base} kw {len(kw_trends) + 1}")
 
     fallback = {
-        "ejes": [
-            f"Autocompletado: {top_autocomplete[0] if top_autocomplete else keyword_base}",
-            f"Preguntas PAA: {top_paa[0] if top_paa else keyword_base}",
-            f"Preguntas autocompletado: {top_preguntas_autocomplete[0] if top_preguntas_autocomplete else keyword_base}",
-            f"Busquedas relacionadas: {top_relacionadas[0] if top_relacionadas else keyword_base}",
-            f"Eje adicional 1 para {keyword_base}",
-            f"Eje adicional 2 para {keyword_base}",
-            f"Eje adicional 3 para {keyword_base}",
-            f"Eje adicional 4 para {keyword_base}",
-            f"Eje adicional 5 para {keyword_base}",
-        ],
-        "propuesta": f"Guia completa sobre {keyword_base}",
-        "enfoque": f"Resolver dudas reales de usuarios en {pais} con enfoque comparativo y accionable.",
-        "titulos": [f"{keyword_base} idea {i}" for i in range(1, 11)],
-        "subtitulos": [f"Subtema {i} para {keyword_base}" for i in range(1, 11)],
-        "keywords_trends": kw_trends,
+        "ejes": ["" for _ in range(9)],
+        "propuesta": "",
+        "enfoque": "",
+        "titulos": ["" for _ in range(10)],
+        "subtitulos": ["" for _ in range(10)],
+        "keywords_trends": ["" for _ in range(10)],
     }
 
     if not GROQ_API_KEY:
@@ -270,6 +260,7 @@ def generar_bloques_editoriales(
         f"- NUNCA incluyas marcas comerciales especificas (Claro, Movistar, Tigo, Rappi, etc.) a menos que '{keyword_base}' sea exactamente esa marca.\n"
         "- NUNCA incluyas contenido infantil (colorear, juegos, canciones, dibujos, cuentos).\n"
         f"- NUNCA incluyas referencias a paises distintos a {pais}.\n"
+        "- Si la evidencia es escasa o irrelevante para formar una estrategia coherente, DEJA LOS CAMPOS EN BLANCO (usando cadenas vacias \"\"). NO inventes informacion ni uses textos de relleno genericos.\n"
         "- Cada titulo H1 debe tener intencion SEO clara y ser accionable para un redactor.\n"
         "- Los subtitulos son H2/H3 reales que estructuran el articulo (no vagues, no genericos).\n"
         "- keywords_trends: variaciones long-tail reales extraidas de la evidencia, priorizando las de mayor potencial editorial.\n\n"
