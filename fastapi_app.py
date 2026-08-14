@@ -372,6 +372,13 @@ async def api_generate_ads_copy(request: Request, user: User = Depends(get_curre
         if not kw:
             return JSONResponse({"error": "Keyword requerida"}, status_code=400)
 
+        from scraper.ai_filter import generar_ads_copy
+        ads_data = generar_ads_copy(kw, preguntas=questions, intencion=intent, pais=country)
+        return JSONResponse(ads_data)
+    except Exception as e:
+        logger.error(f"Error generando ads copy: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 @app.post("/api/generate-brief")
 async def api_generate_brief(request: Request, user: User = Depends(get_current_user_or_redirect)):
     """Genera Content Brief Editorial (H1/H2/H3) para redactores bajo demanda."""
@@ -387,6 +394,10 @@ async def api_generate_brief(request: Request, user: User = Depends(get_current_
         from scraper.content_brief import generar_content_brief
         brief_data = generar_content_brief(kw, preguntas_paa=questions, intencion=intent, pais=country)
         return JSONResponse(brief_data)
+    except Exception as e:
+        logger.error(f"Error generando content brief: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 @app.post("/api/set-groq-model")
 async def api_set_groq_model(request: Request, user: User = Depends(get_current_user_or_redirect)):
     """Cambia el modelo de Groq activo dinámicamente."""
