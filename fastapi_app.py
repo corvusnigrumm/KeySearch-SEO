@@ -440,6 +440,30 @@ async def api_clusters_data(request: Request, user: User = Depends(get_current_u
         })
     return JSONResponse({"data": items, "has_data": True})
 
+@app.get("/api/editorial-session-data")
+async def api_editorial_session_data(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    """Devuelve los datos pre-generados por el Pipeline del Data Input para el Estudio Editorial."""
+    user_state = get_session(request)
+    if not user_state or not user_state.last_run_data:
+        return JSONResponse({"data": [], "has_data": False})
+    items = []
+    for item in user_state.last_run_data:
+        items.append({
+            "keyword": item.get("keyword", ""),
+            "category": item.get("category", ""),
+            "suggestions": item.get("suggestions", []),
+            "paa": item.get("paa", []),
+            "related": item.get("related", []),
+            "ai_clusters": item.get("ai_clusters", []),
+            "content_brief": item.get("content_brief"),
+            "editorial_tags": item.get("editorial_tags"),
+            "editorial_ideas": item.get("editorial_ideas"),
+            "editorial_nota": item.get("editorial_nota"),
+            "seo_schema": item.get("seo_schema"),
+            "ads_copy": item.get("ads_copy"),
+        })
+    return JSONResponse({"data": items, "has_data": True})
+
 # ── API Editorial: Ideas, Redacción y Tags Reales ────────────────────────────
 @app.post("/api/editorial/tags-reales")
 async def api_editorial_tags_reales(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -974,16 +998,32 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
             except Exception:
                 pass
 
-            # Generar Meta Tags, Schema FAQPage, Copies de Ads, Content Brief y KGR
+            # Generar Meta Tags, Schema FAQPage, Copies de Ads, Content Brief, KGR y Estudio Editorial
             from scraper.ai_filter import generar_schema_y_meta_tags, generar_copywriting_ads_y_hooks
             from scraper.content_brief import generar_content_brief
             from scraper.kgr_estimator import estimar_kgr
+            from scraper.editorial_ideator import obtener_tags_reales_google, generar_ideas_notas_angulos, redactar_nota_editorial
 
             c_name = ctx.get("country_name", "Colombia")
             all_questions = (paa + preg_ac)
             seo_schema = generar_schema_y_meta_tags(kw, all_questions, pais=c_name)
             ads_copy = generar_copywriting_ads_y_hooks(kw, all_questions, intencion=cat, pais=c_name)
             content_brief = generar_content_brief(kw, sugerencias=sug, preguntas_paa=paa, preguntas_ac=preg_ac, pais=c_name, intencion=cat)
+
+            # Generación automática del módulo editorial en el Pipeline
+            user_state.status_msg = f"[{idx}/{total}] ✍️ Estudio Editorial & Tags Google Trends: {kw}"
+            editorial_tags = obtener_tags_reales_google(kw, sugerencias=sug, preguntas_paa=paa, pais=c_name)
+            editorial_ideas = generar_ideas_notas_angulos(kw, sugerencias=sug, preguntas_paa=paa, pais=c_name, tags_reales=editorial_tags)
+            editorial_nota = redactar_nota_editorial(
+                kw,
+                angulo=editorial_ideas[0]["angulo"] if editorial_ideas else "Trucos y Hacks Cotidianos",
+                titular_h1=editorial_ideas[0].get("titular_h1") if editorial_ideas else None,
+                sugerencias=sug,
+                preguntas_paa=paa,
+                pais=c_name,
+                tags_reales=editorial_tags
+            )
+            user_state.add_log("INFO", f"  → 5 ideas de notas, tags reales y artículo editorial listos")
 
             serp_analysis = serp.get("serp_analysis", {})
             exact_count = serp_analysis.get("exact_match_count", 1) if serp_analysis else 1
@@ -1013,6 +1053,9 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
                 "kgr_data": kgr_data,
                 "serp_analysis": serp_analysis,
                 "google_ads": google_ads_res,
+                "editorial_tags": editorial_tags,
+                "editorial_ideas": editorial_ideas,
+                "editorial_nota": editorial_nota,
             })
 
 

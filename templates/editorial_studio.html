@@ -389,7 +389,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function cargarDatosSesion() {
   try {
-    const res = await fetch("/api/clusters-data");
+    const res = await fetch("/api/editorial-session-data");
     const json = await res.json();
     if (json.has_data && json.data.length > 0) {
       currentSessionData = json.data;
@@ -398,7 +398,8 @@ async function cargarDatosSesion() {
       json.data.forEach((item, idx) => {
         const opt = document.createElement("option");
         opt.value = idx;
-        opt.textContent = `${item.keyword} (${item.category || 'General'})`;
+        const statusIcon = item.editorial_ideas ? "⚡ " : "";
+        opt.textContent = `${statusIcon}${item.keyword} (${item.category || 'General'})`;
         select.appendChild(opt);
       });
       // Seleccionar la primera automáticamente
@@ -431,7 +432,25 @@ function seleccionarKeywordSesion(idx) {
   const item = currentSessionData[idx];
   if (!item) return;
   document.getElementById("editorialKeywordInput").value = item.keyword;
-  ejecutarAnalisisEditorialConDatos(item.keyword, item.suggestions || [], item.paa || []);
+  document.getElementById("badgeCurrentKw").textContent = `Tema: ${item.keyword}`;
+
+  // Si ya fue pre-generado por el pipeline del Data Input, cargar al instante sin espera
+  if (item.editorial_ideas && item.editorial_ideas.length > 0 && item.editorial_tags) {
+    currentIdeas = item.editorial_ideas;
+    currentTagsData = item.editorial_tags;
+    currentNotaData = item.editorial_nota || null;
+
+    renderizarTarjetasIdeas(currentIdeas, item.keyword);
+    renderizarTagsReales(currentTagsData);
+    renderizarDetalleTrends(currentTagsData);
+    if (currentNotaData) {
+      renderizarArticuloCompleto(currentNotaData);
+    }
+    mostrarToast(`⚡ Datos del Pipeline cargados para: "${item.keyword}"`);
+  } else {
+    // Si no tiene datos pre-procesados, ejecutar análisis
+    ejecutarAnalisisEditorialConDatos(item.keyword, item.suggestions || [], item.paa || []);
+  }
 }
 
 async function ejecutarAnalisisEditorial() {
