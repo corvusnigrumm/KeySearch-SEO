@@ -154,29 +154,57 @@ def _post_groq_json(prompt: str, timeout: int = 45, model: str = None):
 
 
 
+# Temas informativos, sucesos, desastres y salud donde modificadores comerciales son absurdos
+_TEMAS_NO_TRANSACCIONALES = {
+    "terremoto", "sismo", "temblor", "tsunami", "volcan", "erupcion", "inundacion",
+    "huracan", "tornado", "desastre", "tragedia", "muerte", "fallecimiento", "funeral",
+    "accidente", "asesinato", "cancer", "infarto", "enfermedad", "sintomas", "guerra",
+    "masacre", "atentado", "emergencia", "historia", "biografia", "definicion", "significado",
+    "clima", "temperatura", "hora", "fecha"
+}
+
+_MODIFICADORES_COMERCIALES_ABSURDOS = [
+    r"\bgratis\b", r"\bgratuito\b", r"\bbarato\b", r"\bbarata\b", r"\bprecio\b",
+    r"\bprecios\b", r"\bcosto\b", r"\bcostos\b", r"\bcomprar\b", r"\bventa\b",
+    r"\bvender\b", r"\bdescuento\b", r"\bcupon\b", r"\btienda\b", r"\balquiler\b",
+    r"\bdomicilio\b", r"\bdescargar\b", r"\bpdf gratis\b", r"\bcuanto vale\b",
+]
+
+
+def _es_tema_no_transaccional(keyword_base: str) -> bool:
+    """Detecta si la keyword pertenece a eventos, desastres, salud o noticias sin fin comercial."""
+    kb_lower = keyword_base.lower()
+    palabras = set(re.findall(r"\w+", kb_lower))
+    return bool(palabras.intersection(_TEMAS_NO_TRANSACCIONALES))
+
+
 def _filtro_determinista(keywords: list[str], keyword_base: str) -> list[str]:
     """
     Pre-filtro rápido sin IA:
     1. Elimina keywords con marcas comerciales cuando la marca NO está en keyword_base.
     2. Elimina patrones SEO-inútiles (para colorear, juegos, dibujos, etc.).
+    3. Elimina combinaciones absurdas e incongruentes (ej: 'terremoto gratis', 'sismo precio').
     """
     kb_lower = keyword_base.lower()
+    es_no_comercial = _es_tema_no_transaccional(keyword_base)
     resultado = []
-    for kw in keywords:
-        kw_lower = kw.lower()
 
-        # Comprobar si hay una marca comercial en la sugerencia que NO está en la keyword base
+    for kw in keywords:
+        kw_lower = kw.lower().strip()
+        if not kw_lower or len(kw_lower) < 3:
+            continue
+
+        # 1. Comprobar marcas comerciales
         marca_encontrada = False
         for marca in _MARCAS_COMERCIALES:
             if marca in kw_lower and marca not in kb_lower:
-                # Si la keyword base contiene la marca, es legítimo. Si no, es contaminación.
                 marca_encontrada = True
                 break
         if marca_encontrada:
             logger.debug("Filtro determinista eliminó (marca): %s", kw)
             continue
 
-        # Eliminar patrones SEO-inútiles
+        # 2. Eliminar patrones SEO-inútiles
         patron_inutil = False
         for patron in _PATRONES_SEO_INUTILES:
             if re.search(patron, kw_lower):
@@ -186,6 +214,21 @@ def _filtro_determinista(keywords: list[str], keyword_base: str) -> list[str]:
             logger.debug("Filtro determinista eliminó (patrón SEO inútil): %s", kw)
             continue
 
+        # 3. Eliminar modificadores comerciales absurdos en temas no transaccionales
+        if es_no_comercial:
+            modificador_absurdo = False
+            for mod in _MODIFICADORES_COMERCIALES_ABSURDOS:
+                if re.search(mod, kw_lower):
+                    modificador_absurdo = True
+                    break
+            if modificador_absurdo:
+                logger.debug("Filtro determinista eliminó (incongruencia semántica): %s", kw)
+                continue
+
+        # 4. Eliminar combinaciones de sufijos vacíos o basura concatenada
+        if re.search(r"\b(gratis online|online gratis|pdf descargar gratis)\b", kw_lower) and es_no_comercial:
+            continue
+
         resultado.append(kw)
     return resultado
 
@@ -193,31 +236,25 @@ def _filtro_determinista(keywords: list[str], keyword_base: str) -> list[str]:
 def _filtrar_lote_con_ia(lote: list[str], keyword_base: str, pais: str) -> list[str]:
     """
     Filtra un lote de keywords (máx. _BATCH_SIZE) con una sola llamada a Groq.
-    Prompt en dos etapas explícitas: geo + SEO editorial.
+    Prompt en tres etapas explícitas: geo + SEO editorial + coherencia y sentido real.
     """
     prompt = (
-        f"Eres un analista SEO SENIOR para un medio digital en {pais}. "
-        f"Analiza esta lista de keywords encontradas a partir de: '{keyword_base}'.\n\n"
-        f"TAREA: Filtra con criterio ESTRICTO. Elimina una keyword si cumple AL MENOS UNO de estos criterios:\n"
+        f"Eres un analista SEO SENIOR y Editor Jefe para un medio digital en {pais}. "
+        f"Analiza esta lista de keywords y preguntas extraídas para el tema: '{keyword_base}'.\n\n"
+        f"TAREA: Filtra con criterio ESTRICTO DE SENTIDO REAL Y COHERENCIA. Elimina cualquier elemento que cumpla AL MENOS UNO de estos criterios:\n"
         f"\n"
-        f"[CRITERIO GEO] Menciona explícitamente otro país, ciudad o región distinta a {pais}. "
-        f"Ejemplos de eliminación inmediata: 'en mexico', 'en venezuela', 'en argentina', 'en peru', "
-        f"'en chile', 'en españa', 'en bogota si el pais es mexico', etc.\n"
+        f"[CRITERIO SENTIDO Y COHERENCIA REAL] Frases absurdas, incongruentes o sin sentido humano real producidas por concatenaciones automáticas (ejemplos a ELIMINAR: 'terremoto en colombia gratis online', 'sismo precio', 'muerte comprar', 'accidente descargar'). La búsqueda debe tener sentido gramatical y lógico natural en español.\n"
         f"\n"
-        f"[CRITERIO SEO] No tiene valor editorial real para un redactor SEO que escribe sobre '{keyword_base}'. "
-        f"Ejemplos de eliminación: contenido para niños ('para colorear', 'dibujos'), "
-        f"marcas comerciales específicas que no son el tema principal, "
-        f"contenido de entretenimiento sin relación temática.\n"
+        f"[CRITERIO GEO] Menciona explícitamente otro país, ciudad o región distinta a {pais} (ej: 'en mexico', 'en venezuela', 'en peru', 'en chile' si el país analizado es {pais}).\n"
         f"\n"
-        f"[CRITERIO MARCA] Si '{keyword_base}' NO contiene nombre de empresa/marca/operador, "
-        f"elimina cualquier keyword que introduzca una marca comercial específica "
-        f"(ej: Claro, Movistar, Tigo, Nequi, Bancolombia, Rappi, etc.). "
-        f"Si la keyword base SÍ es una marca, entonces keywords de esa misma marca son válidas.\n"
+        f"[CRITERIO SEO EDITORIAL] Sin valor para un lector/redactor (contenido infantil tipo 'para colorear', 'dibujos para pintar', etc.).\n"
         f"\n"
-        f"IMPORTANTE: Si tienes duda, CONSERVA la keyword. Solo elimina lo que claramente no cumple.\n"
+        f"[CRITERIO MARCA] Si '{keyword_base}' NO es una marca/empresa, elimina sugerencias que introduzcan marcas comerciales no solicitadas.\n"
         f"\n"
-        f"Responde ÚNICAMENTE con un JSON Array de strings con las keywords que PASARON el filtro.\n"
-        f"Ejemplo de respuesta válida: [\"keyword a\", \"keyword b\"]\n\n"
+        f"IMPORTANTE: Conserva todas las preguntas y variaciones informativas reales ('dónde fue', 'a qué hora', 'magnitud', 'cómo actuar', 'últimas noticias'). Solo elimina lo que carece de sentido o viola los criterios.\n"
+        f"\n"
+        f"Responde ÚNICAMENTE con un JSON Array de strings con las keywords/preguntas que PASARON el filtro.\n"
+        f"Ejemplo: [\"keyword valida 1\", \"pregunta valida 2\"]\n\n"
         f"Lista a filtrar:\n"
         f"{json.dumps(lote, ensure_ascii=False)}"
     )

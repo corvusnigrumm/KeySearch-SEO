@@ -455,18 +455,18 @@ function construirTreeData(item) {
     }
   });
 
-  // Si hay muy pocos datos, añadir sugerencias heurísticas
+  // Si hay muy pocos datos, añadir sugerencias heurísticas con sentido real
   if (placed < 4) {
     const kw = item.keyword;
     const heur = [
-      { branch: 0, texts: [`¿Qué es ${kw}?`, `${kw} significado`, `¿Para qué sirve ${kw}?`] },
-      { branch: 1, texts: [`Cómo usar ${kw}`, `Cómo funciona ${kw}`, `Tutorial ${kw} paso a paso`] },
-      { branch: 3, texts: [`${kw} vs alternativas`, `Mejores opciones de ${kw}`] },
-      { branch: 4, texts: [`Precio de ${kw}`, `${kw} gratis`] },
+      { branch: 0, texts: [`¿Qué es ${kw}?`, `${kw} información`, `¿Para qué sirve ${kw}?`] },
+      { branch: 1, texts: [`Cómo entender ${kw}`, `Cómo funciona ${kw}`, `Guía sobre ${kw}`] },
+      { branch: 2, texts: [`Dónde consultar ${kw}`, `Cuándo ocurrió ${kw}`] },
+      { branch: 3, texts: [`${kw} comparativa`, `Recomendaciones sobre ${kw}`] },
     ];
     heur.forEach(({ branch, texts }) => {
       texts.forEach(t => {
-        if (root.children[branch].children.length < 5)
+        if (root.children[branch] && root.children[branch].children.length < 5)
           root.children[branch].children.push({ name: t, value: 1, isHeuristic: true });
       });
     });

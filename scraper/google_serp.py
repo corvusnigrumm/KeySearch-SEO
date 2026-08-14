@@ -457,18 +457,17 @@ def _extraer_preguntas_paa_autocomplete(
             "el mejor {keyword}",
             "{keyword} recomendaciones",
             "{keyword} cual elegir",
-            "{keyword} opciones",
-            # Precios y economía
-            "precio de {keyword}",
-            "costo de {keyword}",
-            "cuánto vale {keyword}",
-            "{keyword} barato",
-            "{keyword} gratis",
-            "{keyword} gratuito",
-            # Intención práctica
-            "aprender {keyword}",
-            "estudiar {keyword}",
-            "certificacion {keyword}",
+            # Información y verificación
+            "información sobre {keyword}",
+            "últimas noticias de {keyword}",
+            "reporte oficial de {keyword}",
+            "qué pasó con {keyword}",
+            "dónde consultar {keyword}",
+            # Intención práctica e informativa
+            "qué hacer en caso de {keyword}",
+            "cómo prepararse para {keyword}",
+            "protocolo de {keyword}",
+            "cómo saber sobre {keyword}",
             "curso de {keyword}",
             "como usar {keyword}",
             "como instalar {keyword}",
@@ -657,12 +656,11 @@ def _extraer_busquedas_relacionadas_autocomplete(
     vistas = set()
     vistas.add(dedupe_key(keyword))
 
-    # Buscar variaciones con sufijos comunes
+    # Buscar variaciones con sufijos comunes y conectores naturales
     sufijos = [
         " a", " b", " c", " d", " e",
         " para", " en", " de", " con", " sin",
-        " mejor", " nuevo", " gratis", " online",
-        " 2025", " 2026",
+        " hoy", " que", " como", " cuando", " donde",
     ]
 
     for suf in sufijos:
