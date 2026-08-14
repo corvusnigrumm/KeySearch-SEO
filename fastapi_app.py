@@ -236,6 +236,11 @@ async def clusters_page(request: Request, user: User = Depends(get_current_user_
     return templates.TemplateResponse(request=request, name="clusters_map.html", context=_base_ctx(request, user))
 
 
+@app.get("/editorial", response_class=HTMLResponse)
+async def editorial_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="editorial_studio.html", context=_base_ctx(request, user))
+
+
 @app.get("/ia", response_class=HTMLResponse)
 async def ia_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
     return templates.TemplateResponse(request=request, name="ia.html", context=_base_ctx(request, user))
@@ -434,6 +439,102 @@ async def api_clusters_data(request: Request, user: User = Depends(get_current_u
             "content_brief": item.get("content_brief"),
         })
     return JSONResponse({"data": items, "has_data": True})
+
+# ── API Editorial: Ideas, Redacción y Tags Reales ────────────────────────────
+@app.post("/api/editorial/tags-reales")
+async def api_editorial_tags_reales(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    """Extrae tags 100% reales de Google Trends (Rising/Breakout, Top y Topics) y Google Suggest."""
+    try:
+        data = await request.json()
+        kw = data.get("keyword", "").strip()
+        suggestions = data.get("suggestions", [])
+        paa = data.get("paa", [])
+        country = data.get("country", "Colombia")
+        if not kw:
+            return JSONResponse({"error": "Keyword requerida"}, status_code=400)
+
+        from scraper.editorial_ideator import obtener_tags_reales_google
+        tags_data = obtener_tags_reales_google(kw, sugerencias=suggestions, preguntas_paa=paa, pais=country)
+        return JSONResponse(tags_data)
+    except Exception as e:
+        logger.error("Error obteniendo tags reales: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/editorial/idear")
+async def api_editorial_idear(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    """Genera 5 ángulos e ideas de notas periodísticas siguiendo el manual de estilo."""
+    try:
+        data = await request.json()
+        kw = data.get("keyword", "").strip()
+        suggestions = data.get("suggestions", [])
+        paa = data.get("paa", [])
+        country = data.get("country", "Colombia")
+        if not kw:
+            return JSONResponse({"error": "Keyword requerida"}, status_code=400)
+
+        from scraper.editorial_ideator import obtener_tags_reales_google, generar_ideas_notas_angulos
+        tags_data = data.get("tags_reales") or obtener_tags_reales_google(kw, sugerencias=suggestions, preguntas_paa=paa, pais=country)
+        ideas = generar_ideas_notas_angulos(kw, sugerencias=suggestions, preguntas_paa=paa, pais=country, tags_reales=tags_data)
+        return JSONResponse({"ideas": ideas, "tags_reales": tags_data})
+    except Exception as e:
+        logger.error("Error ideando notas editoriales: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/editorial/redactar")
+async def api_editorial_redactar(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    """Redacta una nota periodística completa respetando la fórmula editorial de referencia."""
+    try:
+        data = await request.json()
+        kw = data.get("keyword", "").strip()
+        angulo = data.get("angulo", "Trucos y Hacks Cotidianos")
+        titular_h1 = data.get("titular_h1")
+        suggestions = data.get("suggestions", [])
+        paa = data.get("paa", [])
+        country = data.get("country", "Colombia")
+        tags_reales = data.get("tags_reales")
+        if not kw:
+            return JSONResponse({"error": "Keyword requerida"}, status_code=400)
+
+        from scraper.editorial_ideator import redactar_nota_editorial
+        nota = redactar_nota_editorial(
+            keyword_base=kw,
+            angulo=angulo,
+            titular_h1=titular_h1,
+            sugerencias=suggestions,
+            preguntas_paa=paa,
+            pais=country,
+            tags_reales=tags_reales,
+        )
+        return JSONResponse(nota)
+    except Exception as e:
+        logger.error("Error redactando nota editorial: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/editorial/exportar-docx")
+async def api_editorial_exportar_docx(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    """Genera y descarga un archivo .docx profesional de la nota redactada."""
+    try:
+        data = await request.json()
+        nota_data = data.get("nota_data", {})
+        if not nota_data:
+            return JSONResponse({"error": "Datos de nota requeridos"}, status_code=400)
+
+        from scraper.editorial_ideator import exportar_nota_docx
+        doc_stream = exportar_nota_docx(nota_data)
+        
+        # Nombre de archivo limpio
+        h1_raw = nota_data.get("titular_h1", "Nota_Editorial")
+        clean_name = re.sub(r'[\\/*?:"<>|¿¡]', "", h1_raw).strip().replace(" ", "_")[:60]
+        filename = f"{clean_name}.docx"
+
+        return StreamingResponse(
+            doc_stream,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except Exception as e:
+        logger.error("Error exportando docx: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/download/history/{item_id}")
 async def download_history_excel(item_id: int, user: User = Depends(get_current_user_or_redirect), db: Session = Depends(get_db)):

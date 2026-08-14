@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Key Search V 10.0 Ultra - Estudio Editorial, Ideas de Notas & Tags de Google Trends</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  {% include "_tailwind_config.html" %}
+  <style>
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .editorial-body { font-family: 'Merriweather', serif; }
+    .tab-btn.active { border-bottom: 3px solid #00677f; color: #00677f; font-weight: 700; }
+    .code-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+    .code-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .tag-chip { transition: all 0.15s ease-in-out; }
+    .tag-chip:hover { transform: translateY(-1px); }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+{% include "_sidebar.html" %}
+{% include "_topbar.html" %}
+
+<main class="ml-[240px] mt-16 p-lg">
+  <div class="max-w-container-max mx-auto space-y-lg">
+
+    <!-- HEADER PRINCIPAL -->
+    <header class="flex flex-col lg:flex-row lg:items-center justify-between gap-md mb-md">
+      <div>
+        <div class="flex items-center gap-xs text-primary font-bold text-label-sm uppercase tracking-wider mb-xs">
+          <span class="material-symbols-outlined text-sm">feed</span>
+          <span>Redacción Periodística & Estrategia de Contenidos SEO</span>
+        </div>
+        <h1 class="font-h1 text-h1 text-primary">Estudio Editorial & Creador de Notas</h1>
+        <p class="text-on-surface-variant mt-xs">
+          Convierte búsquedas reales de Google en <strong>artículos periodísticos estructurados</strong> con el manual de estilo y <strong>Tags Reales de Google Trends</strong> (Zero Alucinaciones).
+        </p>
+      </div>
+
+      <!-- BUSCADOR / GENERADOR EN VIVO -->
+      <div class="flex items-center gap-sm bg-surface-container-lowest border border-outline-variant p-xs rounded-xl shadow-sm">
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-2 top-2.5 text-on-surface-variant text-sm">search</span>
+          <input id="editorialKeywordInput" type="text" placeholder="Escribe un tema o keyword..." 
+                 class="bg-transparent border-0 focus:ring-0 text-body-sm pl-8 pr-2 py-xs w-48 md:w-64"/>
+        </div>
+        <select id="editorialCountrySelect" class="bg-surface border border-outline-variant text-on-surface text-body-xs font-bold py-1.5 px-2 rounded-lg">
+          <option value="Colombia">🇨🇴 Colombia</option>
+          <option value="España">🇪🇸 España</option>
+          <option value="México">🇲🇽 México</option>
+          <option value="Argentina">🇦🇷 Argentina</option>
+          <option value="Chile">🇨🇱 Chile</option>
+          <option value="Perú">🇵🇪 Perú</option>
+          <option value="Estados Unidos">🇺🇸 Estados Unidos</option>
+        </select>
+        <button onclick="ejecutarAnalisisEditorial()" id="btnGenerarEditorial" 
+                class="bg-primary hover:bg-primary/90 text-white font-bold text-label-sm px-md py-sm rounded-lg flex items-center gap-xs transition-all shadow-sm">
+          <span class="material-symbols-outlined text-sm">auto_awesome</span>
+          <span>Analizar & Idear</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- BARRA DE SELECCIÓN DE PROYECTO / SESIÓN Y MODELO DE IA -->
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-md">
+      <div class="flex items-center gap-sm">
+        <div class="bg-primary/10 text-primary p-xs rounded-lg flex items-center justify-center">
+          <span class="material-symbols-outlined text-sm">database</span>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Keyword del Proyecto Actual:</label>
+          <select id="sessionKeywordSelect" onchange="seleccionarKeywordSesion(this.value)" 
+                  class="bg-surface border border-outline-variant text-on-surface rounded-lg text-body-xs font-medium py-1 px-2 focus:ring-2 focus:ring-primary w-64 md:w-80">
+            {% if state.last_run_data %}
+              {% for item in state.last_run_data %}
+              <option value="{{ loop.index0 }}" {% if loop.first %}selected{% endif %}>{{ item.keyword }} ({{ item.category }})</option>
+              {% endfor %}
+            {% else %}
+              <option value="">(Sin datos previos — Escribe una keyword arriba)</option>
+            {% endif %}
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-sm">
+        <div class="bg-secondary/10 text-secondary p-xs rounded-lg flex items-center justify-center">
+          <span class="material-symbols-outlined text-sm">psychology</span>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Modelo de IA (Groq Cloud):</label>
+          <select id="editorialGroqModel" onchange="cambiarModeloGroq(this.value)" 
+                  class="bg-surface border border-outline-variant text-on-surface rounded-lg text-body-xs font-bold py-1 px-2 focus:ring-2 focus:ring-primary">
+            <option value="openai/gpt-oss-120b" {% if groq_model == 'openai/gpt-oss-120b' %}selected{% endif %}>🚀 GPT-OSS 120B (Reasoning / Medium)</option>
+            <option value="llama-3.3-70b-versatile" {% if groq_model == 'llama-3.3-70b-versatile' %}selected{% endif %}>⚡ Llama 3.3 70B Versatile (Rápido & Preciso)</option>
+            <option value="deepseek-r1-distill-llama-70b" {% if groq_model == 'deepseek-r1-distill-llama-70b' %}selected{% endif %}>🧠 DeepSeek R1 Distill 70B</option>
+            <option value="llama-3.1-8b-instant" {% if groq_model == 'llama-3.1-8b-instant' %}selected{% endif %}>💨 Llama 3.1 8B Instant</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑAS DE NAVEGACIÓN -->
+    <div class="flex items-center gap-md border-b border-outline-variant">
+      <button onclick="cambiarPestana('ideas')" id="tabBtnIdeas" class="tab-btn active pb-sm px-sm font-label-md flex items-center gap-xs transition-all">
+        <span class="material-symbols-outlined text-sm">lightbulb</span>
+        <span>1. Matriz de Ideas de Notas (5 Ángulos)</span>
+      </button>
+      <button onclick="cambiarPestana('redactor')" id="tabBtnRedactor" class="tab-btn pb-sm px-sm font-label-md text-on-surface-variant hover:text-primary flex items-center gap-xs transition-all">
+        <span class="material-symbols-outlined text-sm">article</span>
+        <span>2. Redactor & Artículo Completo</span>
+      </button>
+      <button onclick="cambiarPestana('tags')" id="tabBtnTags" class="tab-btn pb-sm px-sm font-label-md text-on-surface-variant hover:text-primary flex items-center gap-xs transition-all">
+        <span class="material-symbols-outlined text-sm">loyalty</span>
+        <span>3. Tags Reales de Google Trends</span>
+      </button>
+    </div>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <!-- PESTAÑA 1: MATRIZ DE IDEAS DE NOTAS POR ÁNGULOS                          -->
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <div id="panelIdeas" class="space-y-md">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="font-h3 text-h3 text-primary">Ideas de Notas Basadas en lo que Busca la Gente</h3>
+          <p class="text-body-xs text-on-surface-variant">Selecciona un ángulo periodístico y haz clic en <strong>Redactar Nota Completa</strong> para generar el artículo según el manual de estilo.</p>
+        </div>
+        <span id="badgeCurrentKw" class="bg-primary/10 text-primary font-mono text-body-xs px-sm py-xs rounded-full font-bold">
+          Tema: Selecciona o escribe una keyword
+        </span>
+      </div>
+
+      <!-- CONTENEDOR DE TARJETAS DE IDEAS -->
+      <div id="ideasListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+        <!-- Estado inicial vacío o cargando -->
+        <div class="col-span-full py-xl text-center bg-surface-container-lowest border border-dashed border-outline-variant rounded-2xl p-xl">
+          <span class="material-symbols-outlined text-4xl text-primary/40 mb-sm">post_add</span>
+          <p class="font-bold text-on-surface">No hay ideas generadas aún</p>
+          <p class="text-body-xs text-on-surface-variant mt-xs">Haz clic en <strong>"Analizar & Idear"</strong> arriba o selecciona una keyword de tu proyecto actual.</p>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <!-- PESTAÑA 2: REDACTOR & ARTÍCULO COMPLETO                                  -->
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <div id="panelRedactor" class="hidden space-y-md">
+      
+      <!-- TOOLBAR DE ACCIONES EDITORIALES -->
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-sm shadow-xs flex flex-wrap items-center justify-between gap-sm">
+        <div class="flex items-center gap-xs text-body-xs text-on-surface-variant font-medium">
+          <span class="material-symbols-outlined text-sm text-secondary">verified</span>
+          <span>Fórmula Editorial de Referencia Activa</span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-xs">
+          <button onclick="copiarTagsParaCMS()" class="bg-surface hover:bg-surface-container border border-outline-variant text-on-surface px-sm py-1.5 rounded-lg text-body-xs font-bold flex items-center gap-xs shadow-xs transition-all">
+            <span class="material-symbols-outlined text-sm text-primary">sell</span>
+            <span id="btnCopyTagsText">Copiar Tags CMS</span>
+          </button>
+          <button onclick="copiarArticuloMarkdown()" class="bg-surface hover:bg-surface-container border border-outline-variant text-on-surface px-sm py-1.5 rounded-lg text-body-xs font-bold flex items-center gap-xs shadow-xs transition-all">
+            <span class="material-symbols-outlined text-sm">code</span>
+            <span id="btnCopyMdText">Copiar Markdown</span>
+          </button>
+          <button onclick="copiarArticuloHTML()" class="bg-surface hover:bg-surface-container border border-outline-variant text-on-surface px-sm py-1.5 rounded-lg text-body-xs font-bold flex items-center gap-xs shadow-xs transition-all">
+            <span class="material-symbols-outlined text-sm text-secondary">html</span>
+            <span id="btnCopyHtmlText">Copiar HTML (CMS)</span>
+          </button>
+          <button onclick="descargarArticuloDocx()" class="bg-primary hover:bg-primary/90 text-white px-md py-1.5 rounded-lg text-body-xs font-bold flex items-center gap-xs shadow-sm transition-all">
+            <span class="material-symbols-outlined text-sm">download</span>
+            <span>Descargar Word (.docx)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- GRID PRINCIPAL: ARTÍCULO A LA IZQUIERDA + TAXONOMÍA A LA DERECHA -->
+      <div class="grid grid-cols-12 gap-md">
+
+        <!-- COLUMNA IZQUIERDA: VISTA PREVIA DEL ARTÍCULO PERIODÍSTICO -->
+        <div class="col-span-12 lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-2xl p-xl shadow-sm space-y-md">
+          
+          <div id="redactorLoading" class="hidden py-xl text-center space-y-md">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+            <p class="font-bold text-primary">Redactando nota periodística según el manual de estilo...</p>
+            <p class="text-body-xs text-on-surface-variant">Estructurando H1, bajada, respaldo de autoridad, bullets con negrita, pies de foto y tags de Google Trends.</p>
+          </div>
+
+          <div id="articuloContainer" class="space-y-md">
+            <!-- TITULAR H1 -->
+            <h1 id="artH1" class="font-h1 text-2xl lg:text-3xl font-bold text-primary leading-tight">
+              ¿Para qué sirve poner una cuchara en la ventana y por qué recomiendan hacerlo?
+            </h1>
+
+            <!-- BAJADA / COPETE -->
+            <div id="artBajada" class="p-md bg-surface border-l-4 border-primary rounded-r-xl text-body-md text-on-surface font-semibold italic">
+              El método aprovecha la conductividad térmica del metal para concentrar el exceso de vapor y proteger las estructuras de las habitaciones.
+            </div>
+
+            <!-- INTERLINK SUGERIDO -->
+            <div id="artInterlinkBox" class="flex items-center gap-xs p-xs px-sm bg-secondary/5 border border-secondary/20 rounded-lg text-body-xs text-secondary font-medium">
+              <span class="material-symbols-outlined text-sm">link</span>
+              <span>Tema relacionado:</span>
+              <a href="#" id="artInterlinkText" class="font-bold underline hover:text-primary">¿Tiene humedad en casa y no sabe por qué? Su origen y tipo es clave para evitar daños</a>
+            </div>
+
+            <!-- CUERPO DEL ARTÍCULO (EDITORIAL) -->
+            <div class="editorial-body text-body-md text-on-surface space-y-md leading-relaxed pt-sm">
+              
+              <!-- Párrafos Introductorios -->
+              <p id="artIntro1">El exceso de humedad en los hogares suele manifestarse en situaciones cotidianas como ventanas cerradas durante varios días, ambientes con poca ventilación o actividades diarias como cocinar y ducharse.</p>
+              <p id="artIntro2">Frente a este panorama, diversas recomendaciones domésticas sugieren métodos prácticos como recursos accesibles y económicos para mitigar el impacto de la condensación en espacios cerrados.</p>
+
+              <!-- Respaldo de Autoridad -->
+              <div id="artAutoridad" class="p-sm bg-surface-container-high border-l-2 border-secondary text-body-sm text-on-surface-variant rounded-r-lg font-sans">
+                De acuerdo con análisis técnicos y estudios especializados en climatización, la correcta ventilación y el control térmico de los cristales previenen la acumulación de vapor.
+              </div>
+
+              <!-- Foto 1 Sugerida -->
+              <div id="artFoto1Box" class="my-md p-xs bg-surface border border-outline-variant rounded-xl text-center">
+                <div class="bg-surface-container-high h-44 rounded-lg flex items-center justify-center text-on-surface-variant font-sans text-xs gap-xs">
+                  <span class="material-symbols-outlined text-lg">image</span>
+                  <span>[Espacio para Fotografía Editorial 1]</span>
+                </div>
+                <p class="text-[12px] font-sans text-on-surface-variant mt-xs italic">
+                  <span id="artFoto1Pie">El truco de la cuchara de metal en el marco de la ventana es de gran utilidad.</span>
+                  <strong id="artFoto1Cred" class="not-italic text-primary ml-1">Foto: Imagen generada por IA</strong>
+                </p>
+              </div>
+
+              <!-- Secciones H2 Dinámicas -->
+              <div id="artSeccionesH2" class="space-y-md"></div>
+
+              <!-- Foto 2 Sugerida -->
+              <div id="artFoto2Box" class="my-md p-xs bg-surface border border-outline-variant rounded-xl text-center">
+                <div class="bg-surface-container-high h-44 rounded-lg flex items-center justify-center text-on-surface-variant font-sans text-xs gap-xs">
+                  <span class="material-symbols-outlined text-lg">image</span>
+                  <span>[Espacio para Fotografía Editorial 2]</span>
+                </div>
+                <p class="text-[12px] font-sans text-on-surface-variant mt-xs italic">
+                  <span id="artFoto2Pie">Puede prevenir el deterioro de los materiales en el hogar.</span>
+                  <strong id="artFoto2Cred" class="not-italic text-primary ml-1">Foto: iStock</strong>
+                </p>
+              </div>
+
+              <!-- Sección FAQ / Pregunta Adicional -->
+              <div id="artFaqSection" class="space-y-xs pt-sm">
+                <h2 id="artFaqH2" class="font-sans font-bold text-h2 text-primary text-xl">¿Qué hacer si el problema persiste?</h2>
+                <p id="artFaqP" class="text-body-md">Para situaciones de condensación severa o presencia continua de moho, se aconseja verificar las filtraciones estructurales y consultar con técnicos especializados.</p>
+              </div>
+
+              <!-- Cierre Responsable -->
+              <div class="border-t border-outline-variant pt-md text-body-sm font-sans text-on-surface-variant">
+                <p id="artCierre" class="italic">Antes de adoptar cambios en el mantenimiento del hogar o rutinas de salud, es recomendable consultar con profesionales certificados. Su incorporación debe entenderse como un complemento accesible dentro de los hábitos diarios.</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: TAXONOMÍA & TAGS REALES DE GOOGLE TRENDS -->
+        <div class="col-span-12 lg:col-span-4 space-y-md">
+          
+          <!-- TARJETA DE TAGS CMS -->
+          <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-md shadow-sm space-y-md">
+            <div class="flex items-center justify-between border-b border-outline-variant pb-xs">
+              <div class="flex items-center gap-xs">
+                <span class="material-symbols-outlined text-primary text-base">sell</span>
+                <h3 class="font-bold text-body-sm text-primary">Tags Reales de Google Trends</h3>
+              </div>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 bg-secondary/10 text-secondary rounded">100% Verificados</span>
+            </div>
+
+            <p class="text-[11px] text-on-surface-variant">
+              Términos extraídos de <strong>Google Trends (Breakouts & Top)</strong> y <strong>Google Suggest</strong>. Clic en cualquier tag para copiarlo.
+            </p>
+
+            <!-- Tags Clasificados -->
+            <div class="space-y-sm">
+              <div>
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">🔥 Breakout / En Aumento (+%):</label>
+                <div id="tagBoxBreakout" class="flex flex-wrap gap-1"></div>
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">📊 Top Volumen de Búsqueda:</label>
+                <div id="tagBoxTop" class="flex flex-wrap gap-1"></div>
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">🏷️ Entidades & Marcas:</label>
+                <div id="tagBoxEntidades" class="flex flex-wrap gap-1"></div>
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">🔍 Long-Tail Autocompletado:</label>
+                <div id="tagBoxLongTail" class="flex flex-wrap gap-1"></div>
+              </div>
+            </div>
+
+            <!-- Botón Copiado Rápido -->
+            <div class="pt-sm border-t border-outline-variant">
+              <button onclick="copiarTagsParaCMS()" class="w-full bg-primary/10 hover:bg-primary/20 text-primary font-bold text-body-xs py-2 rounded-lg flex items-center justify-center gap-xs transition-all">
+                <span class="material-symbols-outlined text-sm">content_copy</span>
+                <span>Copiar Todos los Tags para WordPress</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- TARJETA DE TITULARES ALTERNATIVOS -->
+          <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-md shadow-sm space-y-sm">
+            <div class="flex items-center gap-xs border-b border-outline-variant pb-xs">
+              <span class="material-symbols-outlined text-secondary text-base">alt_route</span>
+              <h3 class="font-bold text-body-sm text-secondary">Titular para Google Discover</h3>
+            </div>
+            <p id="artTitularDiscover" class="text-body-xs font-semibold text-on-surface p-sm bg-surface rounded-lg border border-outline-variant">
+              El truco con la cuchara en la ventana que pocos conocen y resuelve la humedad en minutos
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <!-- PESTAÑA 3: EXPLORADOR DE TAGS DE GOOGLE TRENDS                           -->
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <div id="panelTags" class="hidden space-y-md">
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-lg shadow-sm space-y-md">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-h3 text-h3 text-primary">Detalle de Consultas de Google Trends</h3>
+            <p class="text-body-xs text-on-surface-variant">Evidencia de consultas en aumento e interés relativo capturado por Pytrends.</p>
+          </div>
+          <button onclick="copiarTagsParaCMS()" class="bg-primary hover:bg-primary/90 text-white font-bold text-body-xs px-md py-sm rounded-lg flex items-center gap-xs">
+            <span class="material-symbols-outlined text-sm">content_copy</span>
+            <span>Copiar Tags CSV</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+          <!-- Rising -->
+          <div class="bg-surface border border-outline-variant rounded-xl p-md space-y-xs">
+            <h4 class="font-bold text-body-sm text-primary flex items-center gap-xs">
+              <span class="material-symbols-outlined text-sm">trending_up</span>
+              <span>Consultas en Aumento (Rising)</span>
+            </h4>
+            <div id="trendsRisingTable" class="text-body-xs space-y-1"></div>
+          </div>
+
+          <!-- Top -->
+          <div class="bg-surface border border-outline-variant rounded-xl p-md space-y-xs">
+            <h4 class="font-bold text-body-sm text-secondary flex items-center gap-xs">
+              <span class="material-symbols-outlined text-sm">leaderboard</span>
+              <span>Consultas Top (Interés Relativo)</span>
+            </h4>
+            <div id="trendsTopTable" class="text-body-xs space-y-1"></div>
+          </div>
+
+          <!-- Topics -->
+          <div class="bg-surface border border-outline-variant rounded-xl p-md space-y-xs">
+            <h4 class="font-bold text-body-sm text-tertiary flex items-center gap-xs">
+              <span class="material-symbols-outlined text-sm">category</span>
+              <span>Temas & Entidades Oficiales</span>
+            </h4>
+            <div id="trendsTopicsTable" class="text-body-xs space-y-1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// Estado de la vista editorial
+let currentSessionData = [];
+let currentNotaData = null;
+let currentTagsData = null;
+let currentIdeas = [];
+
+// Inicialización
+document.addEventListener("DOMContentLoaded", async () => {
+  await cargarDatosSesion();
+});
+
+async function cargarDatosSesion() {
+  try {
+    const res = await fetch("/api/clusters-data");
+    const json = await res.json();
+    if (json.has_data && json.data.length > 0) {
+      currentSessionData = json.data;
+      const select = document.getElementById("sessionKeywordSelect");
+      select.innerHTML = "";
+      json.data.forEach((item, idx) => {
+        const opt = document.createElement("option");
+        opt.value = idx;
+        opt.textContent = `${item.keyword} (${item.category || 'General'})`;
+        select.appendChild(opt);
+      });
+      // Seleccionar la primera automáticamente
+      seleccionarKeywordSesion(0);
+    }
+  } catch (err) {
+    console.warn("No se pudieron cargar datos de sesión previos:", err);
+  }
+}
+
+function cambiarPestana(tabName) {
+  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+  document.getElementById("panelIdeas").classList.add("hidden");
+  document.getElementById("panelRedactor").classList.add("hidden");
+  document.getElementById("panelTags").classList.add("hidden");
+
+  if (tabName === "ideas") {
+    document.getElementById("tabBtnIdeas").classList.add("active");
+    document.getElementById("panelIdeas").classList.remove("hidden");
+  } else if (tabName === "redactor") {
+    document.getElementById("tabBtnRedactor").classList.add("active");
+    document.getElementById("panelRedactor").classList.remove("hidden");
+  } else if (tabName === "tags") {
+    document.getElementById("tabBtnTags").classList.add("active");
+    document.getElementById("panelTags").classList.remove("hidden");
+  }
+}
+
+function seleccionarKeywordSesion(idx) {
+  const item = currentSessionData[idx];
+  if (!item) return;
+  document.getElementById("editorialKeywordInput").value = item.keyword;
+  ejecutarAnalisisEditorialConDatos(item.keyword, item.suggestions || [], item.paa || []);
+}
+
+async function ejecutarAnalisisEditorial() {
+  const kw = document.getElementById("editorialKeywordInput").value.trim();
+  if (!kw) {
+    alert("Por favor ingresa una keyword o tema para analizar.");
+    return;
+  }
+  ejecutarAnalisisEditorialConDatos(kw, [], []);
+}
+
+async function ejecutarAnalisisEditorialConDatos(keyword, suggestions, paa) {
+  const btn = document.getElementById("btnGenerarEditorial");
+  const container = document.getElementById("ideasListContainer");
+  const badge = document.getElementById("badgeCurrentKw");
+  const country = document.getElementById("editorialCountrySelect").value;
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent"></span> Analizando...`;
+  badge.textContent = `Tema: ${keyword}`;
+
+  container.innerHTML = `
+    <div class="col-span-full py-xl text-center space-y-md">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+      <p class="font-bold text-primary">Consultando Google Trends & Generando 5 Ángulos de Notas...</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch("/api/editorial/idear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        keyword: keyword,
+        suggestions: suggestions,
+        paa: paa,
+        country: country
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      alert("Error: " + data.error);
+      return;
+    }
+
+    currentIdeas = data.ideas || [];
+    currentTagsData = data.tags_reales || null;
+
+    renderizarTarjetasIdeas(currentIdeas, keyword);
+    renderizarTagsReales(currentTagsData);
+    renderizarDetalleTrends(currentTagsData);
+
+  } catch (err) {
+    console.error("Error en analisis editorial:", err);
+    alert("Ocurrió un error al procesar el análisis editorial.");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<span class="material-symbols-outlined text-sm">auto_awesome</span><span>Analizar & Idear</span>`;
+  }
+}
+
+function renderizarTarjetasIdeas(ideas, keyword) {
+  const container = document.getElementById("ideasListContainer");
+  container.innerHTML = "";
+
+  ideas.forEach((idea, idx) => {
+    const card = document.createElement("div");
+    card.className = "bg-surface-container-lowest border border-outline-variant hover:border-primary/50 transition-all rounded-2xl p-md shadow-xs flex flex-col justify-between space-y-md";
+
+    const tagsHtml = (idea.tags_recomendados || []).map(t => 
+      `<span class="tag-chip text-[11px] font-mono bg-surface border border-outline-variant text-on-surface-variant px-1.5 py-0.5 rounded cursor-pointer" onclick="copiarTextoIndividual('${t}')">${t}</span>`
+    ).join("");
+
+    card.innerHTML = `
+      <div class="space-y-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-xs text-primary font-bold text-label-sm">
+            <span class="material-symbols-outlined text-sm">${idea.icono || 'article'}</span>
+            <span>${idea.angulo}</span>
+          </div>
+          <span class="text-[10px] font-mono text-on-surface-variant bg-surface px-1.5 py-0.5 rounded">${idea.longitud_sugerida || '1.000 palabras'}</span>
+        </div>
+
+        <h4 class="font-bold text-body-md text-on-surface hover:text-primary transition-colors leading-snug">
+          ${idea.titular_h1}
+        </h4>
+
+        <p class="text-body-xs text-on-surface-variant leading-relaxed">
+          ${idea.bajada}
+        </p>
+
+        <div class="p-xs bg-surface rounded-lg border border-outline-variant text-[11px] text-secondary space-y-0.5">
+          <div class="flex items-center gap-xs font-semibold">
+            <span class="material-symbols-outlined text-xs">alt_route</span>
+            <span>Titular Discover / Viral:</span>
+          </div>
+          <div class="italic text-on-surface">${idea.titular_discover || idea.titular_h1}</div>
+        </div>
+
+        <div class="space-y-1">
+          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Tags Reales Sugeridos:</span>
+          <div class="flex flex-wrap gap-1">${tagsHtml}</div>
+        </div>
+      </div>
+
+      <div class="pt-sm border-t border-outline-variant">
+        <button onclick="redactarNotaDesdeIdea(${idx})" class="w-full bg-primary hover:bg-primary/90 text-white font-bold text-body-xs py-2 rounded-xl flex items-center justify-center gap-xs shadow-sm transition-all">
+          <span class="material-symbols-outlined text-sm">edit_note</span>
+          <span>Redactar Esta Nota Completa</span>
+        </button>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+async function redactarNotaDesdeIdea(idx) {
+  const idea = currentIdeas[idx];
+  if (!idea) return;
+
+  const kw = document.getElementById("editorialKeywordInput").value.trim() || document.getElementById("badgeCurrentKw").textContent.replace("Tema: ", "").trim();
+  const country = document.getElementById("editorialCountrySelect").value;
+
+  cambiarPestana("redactor");
+
+  const loader = document.getElementById("redactorLoading");
+  const container = document.getElementById("articuloContainer");
+
+  loader.classList.remove("hidden");
+  container.classList.add("hidden");
+
+  try {
+    const res = await fetch("/api/editorial/redactar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        keyword: kw,
+        angulo: idea.angulo,
+        titular_h1: idea.titular_h1,
+        country: country,
+        tags_reales: currentTagsData
+      })
+    });
+
+    const nota = await res.json();
+    if (nota.error) {
+      alert("Error: " + nota.error);
+      return;
+    }
+
+    currentNotaData = nota;
+    renderizarArticuloCompleto(nota);
+
+  } catch (err) {
+    console.error("Error redactando nota:", err);
+    alert("Ocurrió un error al redactar la nota.");
+  } finally {
+    loader.classList.add("hidden");
+    container.classList.remove("hidden");
+  }
+}
+
+function renderizarArticuloCompleto(nota) {
+  document.getElementById("artH1").textContent = nota.titular_h1 || "";
+  document.getElementById("artBajada").textContent = nota.bajada || "";
+  document.getElementById("artInterlinkText").textContent = nota.interlink_sugerido || "";
+  document.getElementById("artIntro1").textContent = nota.parrafo_intro_1 || "";
+  document.getElementById("artIntro2").textContent = nota.parrafo_intro_2 || "";
+  document.getElementById("artAutoridad").textContent = nota.respaldo_autoridad || "";
+
+  if (nota.foto_1) {
+    document.getElementById("artFoto1Pie").textContent = nota.foto_1.pie_de_foto || "";
+    document.getElementById("artFoto1Cred").textContent = nota.foto_1.credito || "Foto: iStock";
+  }
+  if (nota.foto_2) {
+    document.getElementById("artFoto2Pie").textContent = nota.foto_2.pie_de_foto || "";
+    document.getElementById("artFoto2Cred").textContent = nota.foto_2.credito || "Foto: iStock";
+  }
+
+  // Render Secciones H2
+  const secContainer = document.getElementById("artSeccionesH2");
+  secContainer.innerHTML = "";
+
+  (nota.secciones_h2 || []).forEach(sec => {
+    const secDiv = document.createElement("div");
+    secDiv.className = "space-y-sm";
+
+    let bulletsHtml = "";
+    (sec.bullets || []).forEach(b => {
+      bulletsHtml += `
+        <li class="flex items-start gap-xs">
+          <span class="text-primary font-bold mt-1">•</span>
+          <span><strong class="font-sans font-bold text-on-surface">${b.negrita || ''}</strong> ${b.texto || ''}</span>
+        </li>
+      `;
+    });
+
+    secDiv.innerHTML = `
+      <h2 class="font-sans font-bold text-h2 text-primary text-xl pt-xs">${sec.h2}</h2>
+      ${sec.parrafo_intro_seccion ? `<p class="text-body-md">${sec.parrafo_intro_seccion}</p>` : ''}
+      <ul class="space-y-xs pl-sm">${bulletsHtml}</ul>
+    `;
+    secContainer.appendChild(secDiv);
+  });
+
+  // FAQ
+  if (nota.seccion_preguntas_frecuentes) {
+    document.getElementById("artFaqH2").textContent = nota.seccion_preguntas_frecuentes.h2 || "";
+    document.getElementById("artFaqP").textContent = nota.seccion_preguntas_frecuentes.parrafo || "";
+  }
+
+  // Cierre
+  document.getElementById("artCierre").textContent = nota.cierre_responsable || "";
+  document.getElementById("artTitularDiscover").textContent = nota.titular_discover || nota.titular_h1;
+}
+
+function renderizarTagsReales(tagsData) {
+  if (!tagsData) return;
+  const clasif = tagsData.tags_clasificados || {};
+
+  const makeChips = (arr, colorClass) => {
+    if (!arr || arr.length === 0) return '<span class="text-[11px] text-on-surface-variant italic">Ninguno detectado</span>';
+    return arr.map(t => 
+      `<span class="tag-chip text-[11px] font-mono ${colorClass} px-2 py-0.5 rounded cursor-pointer font-medium" onclick="copiarTextoIndividual('${t}')" title="Clic para copiar">${t}</span>`
+    ).join("");
+  };
+
+  document.getElementById("tagBoxBreakout").innerHTML = makeChips(clasif.tendencias_breakout, "bg-red-500/10 text-red-600 border border-red-500/20");
+  document.getElementById("tagBoxTop").innerHTML = makeChips(clasif.alto_volumen_top, "bg-primary/10 text-primary border border-primary/20");
+  document.getElementById("tagBoxEntidades").innerHTML = makeChips(clasif.entidades_y_marcas, "bg-secondary/10 text-secondary border border-secondary/20");
+  document.getElementById("tagBoxLongTail").innerHTML = makeChips(clasif.long_tail_exacto, "bg-surface border border-outline-variant text-on-surface-variant");
+}
+
+function renderizarDetalleTrends(tagsData) {
+  if (!tagsData || !tagsData.detalles_trends) return;
+  const dt = tagsData.detalles_trends;
+
+  // Rising
+  const risingDiv = document.getElementById("trendsRisingTable");
+  risingDiv.innerHTML = (dt.rising && dt.rising.length > 0)
+    ? dt.rising.map(r => `<div class="flex justify-between py-0.5 border-b border-outline-variant/40 font-mono"><span>${r.tag}</span><strong class="text-red-500">${r.crecimiento}</strong></div>`).join("")
+    : '<p class="text-on-surface-variant italic">Sin datos rising específicos</p>';
+
+  // Top
+  const topDiv = document.getElementById("trendsTopTable");
+  topDiv.innerHTML = (dt.top && dt.top.length > 0)
+    ? dt.top.map(t => `<div class="flex justify-between py-0.5 border-b border-outline-variant/40 font-mono"><span>${t.tag}</span><strong class="text-primary">${t.interes_relativo}/100</strong></div>`).join("")
+    : '<p class="text-on-surface-variant italic">Sin datos top específicos</p>';
+
+  // Topics
+  const topicsDiv = document.getElementById("trendsTopicsTable");
+  topicsDiv.innerHTML = (dt.topics && dt.topics.length > 0)
+    ? dt.topics.map(tp => `<div class="flex justify-between py-0.5 border-b border-outline-variant/40 font-mono"><span>${tp.tag}</span><span class="text-secondary">${tp.tipo}</span></div>`).join("")
+    : '<p class="text-on-surface-variant italic">Sin temas de entidad detectados</p>';
+}
+
+// ── Funciones de Copiado y Exportación ────────────────────────────────────────
+function copiarTextoIndividual(texto) {
+  navigator.clipboard.writeText(texto);
+  mostrarToast(`Tag copiado: "${texto}"`);
+}
+
+function copiarTagsParaCMS() {
+  if (!currentTagsData || !currentTagsData.tags_csv_ready) {
+    alert("No hay tags generados para copiar.");
+    return;
+  }
+  navigator.clipboard.writeText(currentTagsData.tags_csv_ready);
+  const btn = document.getElementById("btnCopyTagsText");
+  if (btn) {
+    const old = btn.textContent;
+    btn.textContent = "✓ ¡Tags Copiados!";
+    setTimeout(() => btn.textContent = old, 2000);
+  }
+  mostrarToast("¡Tags de Google Trends copiados al portapapeles en formato CSV!");
+}
+
+function copiarArticuloMarkdown() {
+  if (!currentNotaData) {
+    alert("Primero redacta una nota.");
+    return;
+  }
+  // Construir markdown simple
+  let md = `# ${currentNotaData.titular_h1}\n\n> **${currentNotaData.bajada}**\n\n`;
+  if (currentNotaData.interlink_sugerido) {
+    md += `🔗 *Le puede interesar:* [${currentNotaData.interlink_sugerido}](#)\n\n`;
+  }
+  md += `${currentNotaData.parrafo_intro_1}\n\n${currentNotaData.parrafo_intro_2}\n\n`;
+  if (currentNotaData.respaldo_autoridad) {
+    md += `> ${currentNotaData.respaldo_autoridad}\n\n`;
+  }
+  (currentNotaData.secciones_h2 || []).forEach(sec => {
+    md += `## ${sec.h2}\n\n`;
+    if (sec.parrafo_intro_seccion) md += `${sec.parrafo_intro_seccion}\n\n`;
+    (sec.bullets || []).forEach(b => {
+      md += `- **${b.negrita}** ${b.texto}\n`;
+    });
+    md += "\n";
+  });
+  if (currentNotaData.seccion_preguntas_frecuentes) {
+    md += `## ${currentNotaData.seccion_preguntas_frecuentes.h2}\n\n${currentNotaData.seccion_preguntas_frecuentes.parrafo}\n\n`;
+  }
+  md += `${currentNotaData.cierre_responsable}\n\n---\n**Tags:** ${(currentNotaData.tags_reales || []).join(", ")}`;
+
+  navigator.clipboard.writeText(md);
+  const btn = document.getElementById("btnCopyMdText");
+  if (btn) {
+    const old = btn.textContent;
+    btn.textContent = "✓ ¡Markdown Copiado!";
+    setTimeout(() => btn.textContent = old, 2000);
+  }
+  mostrarToast("¡Artículo copiado en formato Markdown!");
+}
+
+function copiarArticuloHTML() {
+  if (!currentNotaData) {
+    alert("Primero redacta una nota.");
+    return;
+  }
+  let html = `<h1>${currentNotaData.titular_h1}</h1>\n<p class="lead"><strong>${currentNotaData.bajada}</strong></p>\n`;
+  if (currentNotaData.interlink_sugerido) {
+    html += `<p><em>Lea también:</em> <a href="#">${currentNotaData.interlink_sugerido}</a></p>\n`;
+  }
+  html += `<p>${currentNotaData.parrafo_intro_1}</p>\n<p>${currentNotaData.parrafo_intro_2}</p>\n`;
+  if (currentNotaData.respaldo_autoridad) {
+    html += `<blockquote><p>${currentNotaData.respaldo_autoridad}</p></blockquote>\n`;
+  }
+  (currentNotaData.secciones_h2 || []).forEach(sec => {
+    html += `<h2>${sec.h2}</h2>\n`;
+    if (sec.parrafo_intro_seccion) html += `<p>${sec.parrafo_intro_seccion}</p>\n`;
+    html += `<ul>\n`;
+    (sec.bullets || []).forEach(b => {
+      html += `  <li><strong>${b.negrita}</strong> ${b.texto}</li>\n`;
+    });
+    html += `</ul>\n`;
+  });
+  if (currentNotaData.seccion_preguntas_frecuentes) {
+    html += `<h2>${currentNotaData.seccion_preguntas_frecuentes.h2}</h2>\n<p>${currentNotaData.seccion_preguntas_frecuentes.parrafo}</p>\n`;
+  }
+  html += `<p>${currentNotaData.cierre_responsable}</p>`;
+
+  navigator.clipboard.writeText(html);
+  const btn = document.getElementById("btnCopyHtmlText");
+  if (btn) {
+    const old = btn.textContent;
+    btn.textContent = "✓ ¡HTML Copiado!";
+    setTimeout(() => btn.textContent = old, 2000);
+  }
+  mostrarToast("¡HTML para CMS / WordPress copiado!");
+}
+
+async function descargarArticuloDocx() {
+  if (!currentNotaData) {
+    alert("Primero redacta una nota para poder descargarla.");
+    return;
+  }
+  try {
+    const res = await fetch("/api/editorial/exportar-docx", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nota_data: currentNotaData })
+    });
+
+    if (!res.ok) throw new Error("Error en la descarga");
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(currentNotaData.titular_h1 || 'Nota_Editorial').substring(0, 40).replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    mostrarToast("¡Archivo Word (.docx) descargado exitosamente!");
+  } catch (err) {
+    console.error("Error descargando docx:", err);
+    alert("Error al generar el archivo .docx");
+  }
+}
+
+async function cambiarModeloGroq(model) {
+  try {
+    await fetch("/api/set-groq-model", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: model })
+    });
+    mostrarToast(`Modelo de IA actualizado: ${model}`);
+  } catch (err) {
+    console.error("Error cambiando modelo:", err);
+  }
+}
+
+function mostrarToast(msg) {
+  const toast = document.createElement("div");
+  toast.className = "fixed bottom-5 right-5 bg-primary text-white text-body-xs font-bold px-md py-sm rounded-xl shadow-lg z-50 transition-all transform duration-300";
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+</script>
+</body>
+</html>
