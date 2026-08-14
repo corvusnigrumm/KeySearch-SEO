@@ -6,6 +6,11 @@ google-ads.yaml
 archivo google-ads.yaml.txt
 google-ads.customer-id.txt
 client_secret_*.json
+oauth_*.py
+intercambiar_token.py
+renovar_token_google_ads.py
+generate_google_ads_refresh_token.py
+Nuevo Documento de texto.txt
 outputs/
 dist/
 build/

@@ -35,9 +35,14 @@ def exportar_json(keyword: str, datos: Dict[str, List[str]]) -> str:
                     "referencia": vol.get("referencia"),
                     "score_prioridad": vol.get("score", 0),
                     "prioridad": vol.get("categoria", "-"),
+                    "intencion": vol.get("intencion", "Informativa"),
+                    "funnel": vol.get("funnel", "ToFU (Descubrimiento / Aprendizaje)"),
+                    "formato_recomendado": vol.get("formato_recomendado"),
                     "fuente_principal": vol.get("fuente"),
                     "posicion_fuente": vol.get("posicion_fuente"),
                     "fuentes_detectadas": vol.get("fuentes", []),
+                    "wikipedia_visitas_mensuales": vol.get("wikipedia_visitas_mensuales"),
+                    "wikipedia_promedio_diario": vol.get("wikipedia_promedio_diario"),
                     "google_ads_keyword_text": vol.get("google_ads_keyword_text"),
                     "google_ads_close_variants": vol.get("google_ads_close_variants", []),
                     "google_ads_avg_monthly_searches": vol.get("google_ads_avg_monthly_searches"),
@@ -49,9 +54,10 @@ def exportar_json(keyword: str, datos: Dict[str, List[str]]) -> str:
                     "google_trends_promedio_12m": vol.get("google_trends_promedio"),
                     "google_trends_pico_12m": vol.get("google_trends_pico"),
                     "google_trends_ultimo_punto": vol.get("google_trends_ultimo"),
+                    "google_trends_rising": vol.get("google_trends_rising"),
                     "google_trends_timeframe": vol.get("google_trends_timeframe"),
                     "google_trends_geo": vol.get("google_trends_geo"),
-                    "volumen_mensual_exacto": None,
+                    "volumen_mensual_exacto": vol.get("wikipedia_visitas_mensuales") or vol.get("google_ads_avg_monthly_searches"),
                 }
             )
 

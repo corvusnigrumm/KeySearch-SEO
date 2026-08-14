@@ -369,6 +369,7 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
             top_relacionadas=top_relacionadas,
             top_keywords_trends=top_keywords_trends,
         )
+        datos["bloques_editoriales"] = bloques
 
         row_ejes = 47
         row_propuesta = 54
@@ -553,6 +554,152 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
     return ws
 
 
+def _crear_hoja_campana_ads(wb: Workbook, keyword: str, datos: dict, volumenes: dict):
+    """
+    Crea una hoja estructurada como plantilla de importación para Google Ads Editor.
+    Esto demuestra que la herramienta sirve para estructurar y crear campañas.
+    """
+    titulo = "Estructura de Campaña Ads"
+    if titulo in wb.sheetnames:
+        ws = wb[titulo]
+        # Limpiar filas existentes si ya existe
+        for row_idx in range(2, ws.max_row + 1):
+            for col_idx in range(1, 12):
+                ws.cell(row=row_idx, column=col_idx).value = None
+    else:
+        ws = wb.create_sheet(title=titulo)
+
+    encabezados = [
+        "Campaign",
+        "Ad Group",
+        "Keyword",
+        "Criterion Type",
+        "Headline 1",
+        "Headline 2",
+        "Headline 3",
+        "Description 1",
+        "Description 2",
+        "Final URL",
+        "Prioridad Sugerida"
+    ]
+    anchos = [24, 20, 30, 15, 25, 25, 25, 35, 35, 45, 15]
+
+    for col_idx, (encabezado, ancho) in enumerate(zip(encabezados, anchos), 1):
+        cell = ws.cell(row=1, column=col_idx, value=encabezado)
+        cell.font = FONT_HEADER
+        cell.fill = FILL_HEADER
+        cell.alignment = ALIGN_CENTER
+        cell.border = BORDER
+        ws.column_dimensions[get_column_letter(col_idx)].width = ancho
+
+    # Recuperar bloques editoriales de la IA si existen, si no, crear fallback
+    bloques = datos.get("bloques_editoriales")
+    if not bloques:
+        # En caso de que no se hayan generado antes, intentamos generarlos
+        top_autocomplete = ordenar_por_volumen(datos.get("sugerencias", []), volumenes)[:15]
+        top_paa = ordenar_por_volumen(datos.get("preguntas_paa", []), volumenes)[:15]
+        top_preguntas_ac = ordenar_por_volumen(datos.get("preguntas_autocompletado", []), volumenes)[:15]
+        top_relacionadas = ordenar_por_volumen(datos.get("busquedas_relacionadas", []), volumenes)[:15]
+        all_items = list(volumenes.keys())
+        top_keywords_trends = ordenar_por_volumen(all_items, volumenes)[:20]
+
+        bloques = generar_bloques_editoriales(
+            keyword_base=keyword,
+            pais=datos.get("country_name", ""),
+            top_autocomplete=top_autocomplete,
+            top_paa=top_paa,
+            top_preguntas_autocomplete=top_preguntas_ac,
+            top_relacionadas=top_relacionadas,
+            top_keywords_trends=top_keywords_trends,
+        )
+        datos["bloques_editoriales"] = bloques
+
+    # Tomar los titulares de la IA para armar los anuncios
+    titulos_ia = bloques.get("titulos", []) if bloques else []
+    # Filtrar cadenas vacías
+    titulos_ia = [t for t in titulos_ia if t.strip()]
+    
+    enfoque_ia = bloques.get("enfoque", "") if bloques else ""
+    propuesta_ia = bloques.get("propuesta", "") if bloques else ""
+
+    # Preparar copys de anuncios (ajustados a los límites de Google Ads: 30 para headlines, 90 para descripciones)
+    h1_base = f"Leer Nota: {keyword.title()}"
+    if len(h1_base) > 30:
+        h1_base = h1_base[:27] + "..."
+        
+    headline_1_sug = h1_base
+    
+    headline_2_sug = titulos_ia[0] if (titulos_ia and len(titulos_ia[0]) <= 30) else keyword.title()
+    if len(headline_2_sug) > 30:
+        headline_2_sug = headline_2_sug[:27] + "..."
+        
+    headline_3_sug = "Noticias de Hoy | El Periódico"
+    if len(headline_3_sug) > 30:
+        headline_3_sug = "Noticias de Hoy"
+
+    desc_1_sug = propuesta_ia if propuesta_ia else f"Entérate de las últimas novedades sobre {keyword}. Análisis profundo y veracidad periodística."
+    if len(desc_1_sug) > 90:
+        desc_1_sug = desc_1_sug[:87] + "..."
+        
+    desc_2_sug = enfoque_ia if enfoque_ia else "Mantente informado las 24 horas con el equipo de redacción de nuestro periódico. Suscríbete."
+    if len(desc_2_sug) > 90:
+        desc_2_sug = desc_2_sug[:87] + "..."
+
+    # Agrupar las keywords
+    all_keywords = list(volumenes.keys())
+    # Ordenar por volumen/score y tomar las top 30
+    keywords_prioritarias = ordenar_por_volumen(all_keywords, volumenes)[:30]
+
+    campaign_name = f"Promo_Periodico_{keyword.lower().replace(' ', '_')}"
+    url_slug = keyword.lower().replace(' ', '-')
+    final_url = f"https://www.elperiodico.com/noticias/{url_slug}"
+
+    for row_idx, kw in enumerate(keywords_prioritarias, 2):
+        vol = volumenes.get(kw, {})
+        cat = vol.get("categoria_padre", "General")
+        subcat = vol.get("subcategoria", "")
+        ad_group = f"{cat} - {subcat}" if subcat and subcat != "-" else cat
+        prioridad = _categorizar_score_texto(vol.get("score", 0))
+        
+        row_fill = FILL_EVEN if row_idx % 2 == 0 else FILL_ODD
+
+        # Si tenemos un titular de IA específico de la lista para esta fila (para dar variedad a los anuncios)
+        headline_2_local = headline_2_sug
+        if titulos_ia:
+            cand = titulos_ia[row_idx % len(titulos_ia)]
+            if cand and len(cand) <= 30:
+                headline_2_local = cand
+
+        valores = [
+            campaign_name,
+            ad_group,
+            kw,
+            "Phrase",
+            headline_1_sug,
+            headline_2_local,
+            headline_3_sug,
+            desc_1_sug,
+            desc_2_sug,
+            final_url,
+            prioridad
+        ]
+
+        for col_idx, value in enumerate(valores, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.font = FONT_BODY
+            cell.border = BORDER
+            cell.fill = row_fill
+            if col_idx in [4, 11]:
+                cell.alignment = ALIGN_CENTER
+            else:
+                cell.alignment = ALIGN_LEFT
+
+    ws.auto_filter.ref = ws.dimensions
+    ws.freeze_panes = "A2"
+    ws.sheet_properties.tabColor = "C0392B" # Rojo Google Ads
+    return ws
+
+
 def exportar_excel(keyword: str, datos: Dict[str, List[str]]) -> str:
     """Exporta el reporte a Excel con trazabilidad real."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -583,6 +730,9 @@ def exportar_excel(keyword: str, datos: Dict[str, List[str]]) -> str:
     relacionadas = datos.get("busquedas_relacionadas", [])
     if relacionadas:
         _crear_hoja_datos(wb, "Busquedas relacionadas", relacionadas, volumenes, "Busqueda relacionada", FILL_HEADER, language_code)
+
+    # Crear hoja estructurada de Campaña de Ads para cumplir políticas de Google Ads API
+    _crear_hoja_campana_ads(wb, keyword, datos, volumenes)
 
     nombre = generar_nombre_archivo(keyword, "xlsx")
     ruta = os.path.join(OUTPUT_DIR, nombre)

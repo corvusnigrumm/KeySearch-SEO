@@ -2,49 +2,65 @@
 <html lang="es"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>KeySearch V 6.0 - Scraping</title>
+<title>Key Search V 10.0 Ultra - Scraping & Oportunidades SERP</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 {% include "_tailwind_config.html" %}
-<style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}</style>
+<style>
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}
+.gold-glow{box-shadow:0 0 15px rgba(245,158,11,0.25)}
+</style>
 </head>
 <body class="bg-background text-on-surface font-body-md">
 {% include "_sidebar.html" %}
 {% include "_topbar.html" %}
 <main class="ml-[240px] mt-16 p-lg">
 <div class="max-w-container-max mx-auto space-y-lg">
-  <header class="mb-lg">
-    <h2 class="font-h1 text-h1 text-primary">Módulo de Scraping</h2>
-    <p class="text-on-surface-variant mt-sm">Monitoreo en tiempo real del proceso de extracción de datos de Google.</p>
+  <header class="flex flex-col md:flex-row md:items-center justify-between gap-md mb-md">
+    <div>
+      <div class="flex items-center gap-xs text-secondary font-bold text-label-sm uppercase tracking-wider mb-xs">
+        <span class="material-symbols-outlined text-sm">radar</span>
+        <span>Extracción en Vivo & Diagnóstico de Competencia</span>
+      </div>
+      <h2 class="font-h1 text-h1 text-primary">Módulo de Scraping & Oportunidades de Oro</h2>
+      <p class="text-on-surface-variant mt-xs">Inspección de señales de búsqueda multi-motor y detección de debilidades en el Top 10 de Google (Reddit, Quora, foros y redes).</p>
+    </div>
+    <a href="/config" class="bg-primary hover:bg-primary/90 text-white font-bold text-label-sm px-lg py-sm rounded-lg flex items-center gap-xs transition-all shadow-sm shrink-0">
+      <span class="material-symbols-outlined text-sm">add</span>
+      <span>Nueva Búsqueda</span>
+    </a>
   </header>
 
-  <!-- Estado actual -->
+  <!-- Estado actual y Métricas Rápidas -->
   <div class="grid grid-cols-12 gap-gutter">
     <div class="col-span-12 lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
-      <h3 class="font-h3 text-h3 mb-md">Estado del Motor</h3>
+      <h3 class="font-h3 text-h3 mb-md">Estado del Motor de Scraping</h3>
       <div class="space-y-md">
         <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
           <span class="font-label-md">Estado</span>
-          <span id="statusBadge" class="px-md py-xs rounded-full font-label-sm font-bold {% if state.is_running %}bg-emerald-100 text-emerald-800{% else %}bg-surface-variant text-on-surface-variant{% endif %}">
-            {% if state.is_running %}🟢 Activo{% else %}⚪ En espera{% endif %}
+          <span id="statusBadge" class="px-md py-xs rounded-full font-label-sm font-bold {% if state.is_running %}bg-emerald-100 text-emerald-800 animate-pulse{% else %}bg-surface-variant text-on-surface-variant{% endif %}">
+            {% if state.is_running %}🟢 Activo (Procesando){% else %}⚪ En espera{% endif %}
           </span>
         </div>
         <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
-          <span class="font-label-md">Mensaje</span>
-          <span id="statusMsg" class="text-body-sm text-on-surface-variant">{{ state.status_msg }}</span>
+          <span class="font-label-md">Mensaje en Vivo</span>
+          <span id="statusMsg" class="text-body-sm font-medium text-primary">{{ state.status_msg }}</span>
         </div>
-        <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
-          <span class="font-label-md">Keywords en lote</span>
-          <span class="font-label-md font-bold text-secondary">{{ state.keywords|length }}</span>
-        </div>
-        <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
-          <span class="font-label-md">Inicio</span>
-          <span class="font-label-sm text-on-surface-variant">{{ state.started_at or "—" }}</span>
-        </div>
-        <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg">
-          <span class="font-label-md">Fin</span>
-          <span class="font-label-sm text-on-surface-variant">{{ state.finished_at or "—" }}</span>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-sm">
+          <div class="p-sm bg-surface-container-low rounded-lg">
+            <span class="text-label-xs text-on-surface-variant block">Keywords en lote</span>
+            <span class="font-bold text-secondary text-body-md">{{ state.keywords|length }}</span>
+          </div>
+          <div class="p-sm bg-surface-container-low rounded-lg">
+            <span class="text-label-xs text-on-surface-variant block">Inicio</span>
+            <span class="font-medium text-body-sm">{{ state.started_at or "—" }}</span>
+          </div>
+          <div class="p-sm bg-surface-container-low rounded-lg">
+            <span class="text-label-xs text-on-surface-variant block">Fin</span>
+            <span class="font-medium text-body-sm">{{ state.finished_at or "—" }}</span>
+          </div>
         </div>
       </div>
       {% if state.is_running %}
@@ -57,51 +73,195 @@
       {% endif %}
     </div>
 
-    <div class="col-span-12 lg:col-span-4 space-y-lg">
-      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm text-center">
-        <div class="text-display font-display text-primary">{{ state.last_run_data|length if state.last_run_data else 0 }}</div>
-        <p class="text-body-sm text-on-surface-variant mt-sm">Keywords procesadas</p>
+    <!-- Tarjetas Resumen -->
+    <div class="col-span-12 lg:col-span-4 space-y-md">
+      <div class="pipeline-gradient rounded-xl p-lg text-white shadow-md">
+        <div class="flex items-center justify-between">
+          <span class="text-label-xs uppercase tracking-wider opacity-80">Oportunidades de Oro</span>
+          <span class="material-symbols-outlined text-amber-300">military_tech</span>
+        </div>
+        <div class="text-display font-display mt-xs">
+          {% set gold_count = 0 %}
+          {% if state.last_run_data %}
+            {% for it in state.last_run_data %}
+              {% if it.serp_analysis and it.serp_analysis.es_oportunidad_oro %}
+                {% set gold_count = gold_count + 1 %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {{ gold_count }}
+        </div>
+        <p class="text-body-xs text-white/80 mt-xs">Keywords con foros (Reddit, Quora) o redes en el Top 3-5 de Google.</p>
       </div>
-      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm text-center">
-        <div class="text-h1 font-h1 text-secondary">99.8%</div>
-        <p class="text-body-sm text-on-surface-variant mt-sm">Efectividad de extracción</p>
+
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm flex items-center justify-between">
+        <div>
+          <span class="text-label-xs text-on-surface-variant uppercase">Efectividad Multi-Motor</span>
+          <div class="text-h2 font-h2 text-secondary mt-xs">100% Gratuito</div>
+        </div>
+        <div class="bg-emerald-50 text-emerald-700 p-sm rounded-lg">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
       </div>
-      <a href="/config" class="block w-full bg-primary text-white text-center py-md rounded-lg font-bold hover:opacity-90 transition-all">
-        + Nueva Búsqueda
-      </a>
     </div>
   </div>
 
-  <!-- Keywords procesadas -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- TABLA DE RESULTADOS CON DETECTOR DE OPORTUNIDADES                      -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
   {% if state.last_run_data %}
   <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
-    <div class="px-lg py-md border-b border-outline-variant bg-surface-container-low/30">
-      <h3 class="font-h3 text-h3">Resultados de Scraping</h3>
+    <div class="px-lg py-md border-b border-outline-variant bg-surface-container-low/30 flex flex-wrap justify-between items-center gap-md">
+      <div>
+        <h3 class="font-h3 text-h3">Diagnóstico de Keywords & SERP</h3>
+        <p class="text-body-sm text-on-surface-variant">Haz clic en cualquier keyword para desplegar la anatomía del Top 10 de competidores</p>
+      </div>
+
+      <!-- Buscador y Filtros -->
+      <div class="flex flex-wrap items-center gap-sm">
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+          <input type="text" id="kwSearchInput" onkeyup="filterKeywords()" placeholder="Filtrar palabra..."
+            class="pl-9 pr-md py-xs border border-outline-variant rounded-lg bg-surface text-body-sm focus:ring-2 focus:ring-secondary focus:border-secondary transition-all"/>
+        </div>
+        <div class="flex gap-xs">
+          <button onclick="setFilter('all')" class="filter-pill active bg-secondary text-white px-sm py-xs rounded-md text-xs font-bold transition-all">Todas</button>
+          <button onclick="setFilter('gold')" class="filter-pill bg-surface-container-high text-on-surface-variant hover:bg-surface-variant px-sm py-xs rounded-md text-xs font-bold transition-all flex items-center gap-xs">
+            <span>🏆 Oro</span>
+          </button>
+          <button onclick="setFilter('high')" class="filter-pill bg-surface-container-high text-on-surface-variant hover:bg-surface-variant px-sm py-xs rounded-md text-xs font-bold transition-all">🟢 Alta</button>
+          <button onclick="setFilter('questions')" class="filter-pill bg-surface-container-high text-on-surface-variant hover:bg-surface-variant px-sm py-xs rounded-md text-xs font-bold transition-all">❓ Preguntas</button>
+        </div>
+      </div>
     </div>
+
     <div class="overflow-x-auto">
-      <table class="w-full text-left">
+      <table class="w-full text-left" id="kwTable">
         <thead class="bg-surface-container-low">
           <tr>
-            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Keyword</th>
+            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Keyword Principal</th>
+            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Diagnóstico SERP (Oportunidad)</th>
             <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Sugerencias</th>
             <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">PAA</th>
-            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Relacionadas</th>
-            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Status</th>
+            <th class="px-lg py-sm font-label-sm text-on-surface-variant uppercase">Acción</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-outline-variant">
           {% for item in state.last_run_data %}
-          <tr class="hover:bg-secondary-container/5 transition-colors">
-            <td class="px-lg py-md font-bold text-primary">{{ item.keyword }}</td>
-            <td class="px-lg py-md font-label-md">{{ item.suggestions_count }}</td>
-            <td class="px-lg py-md font-label-md">{{ item.paa_count }}</td>
-            <td class="px-lg py-md font-label-md">{{ item.related_count }}</td>
+          {% set serp_info = item.serp_analysis or {} %}
+          {% set is_gold = serp_info.es_oportunidad_oro | default(false) %}
+          {% set opp_level = serp_info.nivel_oportunidad | default('Moderada') %}
+          
+          <tr class="kw-row hover:bg-secondary-container/5 transition-colors cursor-pointer" 
+              onclick="toggleCompetitors({{ loop.index0 }})"
+              data-kw="{{ item.keyword | lower }}"
+              data-gold="{{ 'true' if is_gold else 'false' }}"
+              data-level="{{ opp_level | lower }}">
             <td class="px-lg py-md">
-              {% if item.error is defined and item.error %}
-              <span class="bg-error-container text-on-error-container px-sm py-xs rounded text-[12px] font-bold">ERROR</span>
+              <div class="flex items-center gap-sm">
+                <span class="material-symbols-outlined text-on-surface-variant text-sm" id="iconExp-{{ loop.index0 }}">expand_more</span>
+                <div>
+                  <div class="font-bold text-primary text-body-md">{{ item.keyword }}</div>
+                  <div class="text-body-xs text-on-surface-variant">{{ item.category }} › {{ item.subcategory }}</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Diagnóstico SERP Badge -->
+            <td class="px-lg py-md">
+              {% if is_gold %}
+              <span class="inline-flex items-center gap-xs bg-amber-100 text-amber-900 border border-amber-300 px-sm py-xs rounded-lg text-label-xs font-bold gold-glow">
+                <span class="material-symbols-outlined text-xs text-amber-700">military_tech</span>
+                <span>Oportunidad de Oro (Fácil Rankear)</span>
+              </span>
+              {% elif 'alta' in opp_level | lower %}
+              <span class="inline-flex items-center gap-xs bg-emerald-100 text-emerald-900 border border-emerald-300 px-sm py-xs rounded-lg text-label-xs font-bold">
+                <span class="material-symbols-outlined text-xs text-emerald-700">trending_up</span>
+                <span>Oportunidad Alta</span>
+              </span>
+              {% elif 'media' in opp_level | lower or 'moderada' in opp_level | lower %}
+              <span class="inline-flex items-center gap-xs bg-sky-100 text-sky-900 border border-sky-300 px-sm py-xs rounded-lg text-label-xs font-bold">
+                <span class="material-symbols-outlined text-xs text-sky-700">speed</span>
+                <span>Dificultad Media</span>
+              </span>
               {% else %}
-              <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded text-[12px] font-bold">OK</span>
+              <span class="inline-flex items-center gap-xs bg-slate-100 text-slate-800 border border-slate-300 px-sm py-xs rounded-lg text-label-xs font-medium">
+                <span class="material-symbols-outlined text-xs text-slate-600">shield</span>
+                <span>Competencia Alta</span>
+              </span>
               {% endif %}
+            </td>
+
+            <td class="px-lg py-md font-label-md">
+              <span class="bg-secondary/10 text-secondary px-sm py-xs rounded-md">{{ item.suggestions_count }}</span>
+            </td>
+
+            <td class="px-lg py-md font-label-md">
+              <span class="bg-tertiary/10 text-tertiary px-sm py-xs rounded-md">{{ item.paa_count }}</span>
+            </td>
+
+            <td class="px-lg py-md">
+              <a href="/ia" class="inline-flex items-center gap-xs text-primary hover:underline text-label-xs font-bold bg-surface-container px-sm py-xs rounded-md">
+                <span class="material-symbols-outlined text-xs">auto_awesome</span>
+                <span>Ver Schema & IA</span>
+              </a>
+            </td>
+          </tr>
+
+          <!-- Fila Expandible: Anatomía de Competidores SERP -->
+          <tr id="competitorsRow-{{ loop.index0 }}" class="hidden bg-slate-50 border-b border-outline-variant">
+            <td colspan="5" class="p-lg">
+              <div class="bg-white border border-slate-200 rounded-xl p-md shadow-inner space-y-md">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-sm border-b border-slate-100 pb-sm">
+                  <div>
+                    <h4 class="font-bold text-body-sm text-primary flex items-center gap-xs">
+                      <span class="material-symbols-outlined text-amber-600">travel_explore</span>
+                      <span>Anatomía del Top 10 en Google para: <em>"{{ item.keyword }}"</em></span>
+                    </h4>
+                    <p class="text-body-xs text-slate-600 mt-xs">
+                      {{ serp_info.resumen_editorial | default("Inspección de competidores orgánicos.") }}
+                    </p>
+                  </div>
+                  {% if serp_info.debilidades_detectadas %}
+                  <div class="flex flex-wrap gap-xs">
+                    {% for deb in serp_info.debilidades_detectadas %}
+                    <span class="bg-amber-50 text-amber-900 border border-amber-200 text-label-xs px-sm py-xs rounded font-medium">
+                      {{ deb }}
+                    </span>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+
+                <!-- Lista de los 10 Competidores Orgánicos -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-sm">
+                  {% if serp_info.competidores and serp_info.competidores | length > 0 %}
+                    {% for comp in serp_info.competidores %}
+                    <div class="flex items-start justify-between gap-sm p-sm rounded-lg border {% if comp.es_debilidad %}bg-amber-50/50 border-amber-200{% else %}bg-slate-50 border-slate-200{% endif %}">
+                      <div class="flex items-start gap-sm overflow-hidden">
+                        <span class="font-bold text-body-xs text-slate-500 bg-white border border-slate-200 w-6 h-6 rounded flex items-center justify-center shrink-0">
+                          #{{ comp.posicion }}
+                        </span>
+                        <div class="truncate">
+                          <a href="{{ comp.url }}" target="_blank" class="text-body-xs font-bold text-blue-700 hover:underline truncate block">
+                            {{ comp.titulo }}
+                          </a>
+                          <span class="text-label-xs text-slate-500 truncate block">{{ comp.dominio }}</span>
+                        </div>
+                      </div>
+                      <span class="inline-flex items-center gap-xs px-xs py-0.5 rounded text-[10px] font-bold border shrink-0 {{ comp.badge_color }}">
+                        <span class="material-symbols-outlined text-[12px]">{{ comp.icono }}</span>
+                        <span>{{ comp.tipo }}</span>
+                      </span>
+                    </div>
+                    {% endfor %}
+                  {% else %}
+                    <div class="col-span-2 text-center text-body-xs text-slate-500 py-md">
+                      Resultados orgánicos directos extraídos vía SERP.
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
             </td>
           </tr>
           {% endfor %}
@@ -109,19 +269,60 @@
       </table>
     </div>
   </div>
+  {% else %}
+  <div class="bg-surface-container-lowest border border-dashed border-outline rounded-xl p-xl text-center">
+    <span class="material-symbols-outlined text-4xl text-outline mb-md block">radar</span>
+    <p class="text-on-surface-variant">No hay datos de scraping disponibles en este momento.</p>
+    <a href="/config" class="mt-md inline-block bg-primary text-white px-lg py-sm rounded-lg font-bold hover:opacity-90">Comenzar Nueva Búsqueda</a>
+  </div>
   {% endif %}
+
 </div>
 </main>
-{% if state.is_running %}
+
 <script>
-setInterval(async () => {
-  const r = await fetch('/status');
-  const d = await r.json();
-  document.getElementById('statusMsg').innerText = d.status_msg;
-  document.getElementById('progressBar') && (document.getElementById('progressBar').style.width = d.progress + '%');
-  document.getElementById('progressPct') && (document.getElementById('progressPct').innerText = d.progress);
-  if (!d.is_running) location.reload();
-}, 2000);
+let currentFilter = 'all';
+
+function toggleCompetitors(index) {
+  const row = document.getElementById(`competitorsRow-${index}`);
+  const icon = document.getElementById(`iconExp-${index}`);
+  if (!row) return;
+
+  if (row.classList.contains('hidden')) {
+    row.classList.remove('hidden');
+    if (icon) icon.textContent = 'expand_less';
+  } else {
+    row.classList.add('hidden');
+    if (icon) icon.textContent = 'expand_more';
+  }
+}
+
+function setFilter(type) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-pill').forEach(b => {
+    b.classList.remove('bg-secondary', 'text-white');
+    b.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+  });
+  event.target.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+  event.target.classList.add('bg-secondary', 'text-white');
+  filterKeywords();
+}
+
+function filterKeywords() {
+  const q = document.getElementById('kwSearchInput').value.toLowerCase();
+  document.querySelectorAll('.kw-row').forEach(row => {
+    const kw = row.getAttribute('data-kw') || '';
+    const isGold = row.getAttribute('data-gold') === 'true';
+    const level = row.getAttribute('data-level') || '';
+
+    let matchFilter = true;
+    if (currentFilter === 'gold') matchFilter = isGold;
+    else if (currentFilter === 'high') matchFilter = level.includes('alta') || isGold;
+    else if (currentFilter === 'questions') matchFilter = kw.startsWith('que') || kw.startsWith('como') || kw.startsWith('donde') || kw.startsWith('por que');
+
+    const matchSearch = kw.includes(q);
+    row.style.display = (matchFilter && matchSearch) ? '' : 'none';
+  });
+}
 </script>
-{% endif %}
 </body></html>

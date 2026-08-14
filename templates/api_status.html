@@ -1,18 +1,52 @@
 <!DOCTYPE html>
 <html lang="es"><head>
 <meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>KeySearch V 6.0 - API Status</title>
+<title>Key Search V 10.0 Ultra - API Status</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 {% include "_tailwind_config.html" %}
-<style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}</style>
+<style>
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}
+.gads-gradient{background:linear-gradient(135deg,#1a73e8 0%,#34a853 50%,#fbbc04 100%)}
+.tab-btn{transition:all 0.3s ease}
+.tab-btn.active{border-bottom:3px solid #00677f;color:#00677f;font-weight:700}
+.tab-panel{display:none;animation:fadeIn 0.3s ease}
+.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse-ring{0%{transform:scale(0.8);opacity:1}100%{transform:scale(2.2);opacity:0}}
+.pulse-dot::before{content:'';position:absolute;inset:-4px;border-radius:9999px;animation:pulse-ring 1.5s ease-out infinite;background:currentColor;opacity:0.4}
+.field-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#75777e;pointer-events:none}
+.test-spinner{display:inline-block;width:18px;height:18px;border:2.5px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.oauth-success-banner{animation:slideDown 0.5s ease}
+@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}
+</style>
 </head>
 <body class="bg-background text-on-surface font-body-md">
 {% include "_sidebar.html" %}
 {% include "_topbar.html" %}
 <main class="ml-[240px] mt-16 p-lg">
 <div class="max-w-container-max mx-auto space-y-lg">
+
+  <!-- OAuth Success Banner -->
+  <script>
+  if (new URLSearchParams(window.location.search).get('oauth') === 'success') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const banner = document.getElementById('oauthBanner');
+      if (banner) { banner.classList.remove('hidden'); setTimeout(() => banner.classList.add('hidden'), 8000); }
+    });
+  }
+  </script>
+  <div id="oauthBanner" class="hidden oauth-success-banner bg-emerald-50 border border-emerald-300 rounded-xl p-md flex items-center gap-md shadow-md">
+    <span class="material-symbols-outlined text-emerald-600 text-3xl">check_circle</span>
+    <div>
+      <p class="font-h3 text-emerald-800">¡Refresh Token obtenido exitosamente!</p>
+      <p class="text-body-sm text-emerald-700">El token fue guardado automáticamente en tu archivo de configuración. Ya puedes probar la conexión.</p>
+    </div>
+  </div>
+
   <header class="mb-lg">
     <h2 class="font-h1 text-h1 text-primary">API Status</h2>
     <p class="text-on-surface-variant mt-sm">Estado de todas las integraciones y servicios externos del motor.</p>
@@ -24,65 +58,64 @@
       <div class="flex items-center justify-between mb-md">
         <div class="flex items-center gap-md">
           <img src="https://www.google.com/favicon.ico" class="w-6 h-6" alt="Google"/>
-          <h3 class="font-h3 text-h3">Google Autocomplete</h3>
+          <h3 class="font-h3 text-h3">Google Suggest</h3>
         </div>
-        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Activo</span>
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ 100% Gratuito</span>
       </div>
-      <p class="text-body-sm text-on-surface-variant">Endpoint semi-público de Google Suggest. No requiere API Key.</p>
+      <p class="text-body-sm text-on-surface-variant">Endpoint de autocompletado y preguntas directas de Google Search.</p>
       <div class="mt-md font-label-sm text-on-surface-variant font-label-md">Endpoint: <code class="bg-surface-container p-xs rounded">suggestqueries.google.com</code></div>
     </div>
 
-    <!-- Google SERP -->
+    <!-- YouTube Suggest -->
     <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
       <div class="flex items-center justify-between mb-md">
         <div class="flex items-center gap-md">
-          <img src="https://www.google.com/favicon.ico" class="w-6 h-6" alt="Google"/>
-          <h3 class="font-h3 text-h3">Google SERP</h3>
+          <img src="https://www.youtube.com/favicon.ico" class="w-6 h-6" alt="YouTube"/>
+          <h3 class="font-h3 text-h3">YouTube Suggest</h3>
         </div>
-        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Activo</span>
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ 100% Gratuito</span>
       </div>
-      <p class="text-body-sm text-on-surface-variant">Scraping de resultados de búsqueda para PAA y búsquedas relacionadas.</p>
-      <div class="mt-md font-label-sm text-on-surface-variant">Endpoint: <code class="bg-surface-container p-xs rounded font-label-md">google.com/search</code></div>
+      <p class="text-body-sm text-on-surface-variant">Demanda de tutoriales, guías, comparativas en video y reviews en tiempo real.</p>
+      <div class="mt-md font-label-sm text-on-surface-variant font-label-md">Tipo: <code class="bg-surface-container p-xs rounded">Intención Audiovisual & How-To</code></div>
     </div>
 
-    <!-- Groq IA -->
+    <!-- Amazon Autosuggest -->
     <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
       <div class="flex items-center justify-between mb-md">
         <div class="flex items-center gap-md">
-          <span class="material-symbols-outlined text-secondary">psychology</span>
-          <h3 class="font-h3 text-h3">Groq LLM</h3>
+          <img src="https://www.amazon.com/favicon.ico" class="w-6 h-6" alt="Amazon"/>
+          <h3 class="font-h3 text-h3">Amazon Autosuggest</h3>
         </div>
-        {% if groq_active %}
-        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Configurado</span>
-        {% else %}
-        <span class="bg-error-container text-on-error-container px-sm py-xs rounded font-label-sm font-bold">❌ Sin API Key</span>
-        {% endif %}
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ 100% Gratuito</span>
       </div>
-      <p class="text-body-sm text-on-surface-variant">Motor de IA para categorización semántica y enrichment.</p>
-      <div class="mt-md font-label-sm">
-        GROQ_API_KEY: 
-        {% if groq_active %}
-        <code class="bg-emerald-50 text-emerald-800 p-xs rounded font-label-md">gsk_••••••••••</code>
-        {% else %}
-        <code class="bg-error-container text-on-error-container p-xs rounded font-label-md">No configurada</code>
-        {% endif %}
-      </div>
+      <p class="text-body-sm text-on-surface-variant">Extracción de intención transaccional y comercial directa (marcas, modelos, compras).</p>
+      <div class="mt-md font-label-sm text-on-surface-variant font-label-md">Tipo: <code class="bg-surface-container p-xs rounded">Intención Transaccional & Compra</code></div>
     </div>
 
-    <!-- Google Ads -->
+    <!-- Bing & DuckDuckGo -->
     <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
       <div class="flex items-center justify-between mb-md">
         <div class="flex items-center gap-md">
-          <img src="https://www.google.com/favicon.ico" class="w-6 h-6" alt="Google Ads"/>
-          <h3 class="font-h3 text-h3">Google Ads API</h3>
+          <img src="https://www.bing.com/favicon.ico" class="w-6 h-6" alt="Bing"/>
+          <h3 class="font-h3 text-h3">Bing & DuckDuckGo</h3>
         </div>
-        {% if google_ads_active %}
-        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Configurado</span>
-        {% else %}
-        <span class="bg-surface-variant text-on-surface-variant px-sm py-xs rounded font-label-sm font-bold">⚪ Opcional</span>
-        {% endif %}
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ 100% Gratuito</span>
       </div>
-      <p class="text-body-sm text-on-surface-variant">Métricas históricas de volumen de búsqueda mensual. Opcional.</p>
+      <p class="text-body-sm text-on-surface-variant">Señales de búsqueda complementarias y neutrales sin burbujas de personalización.</p>
+      <div class="mt-md font-label-sm text-on-surface-variant font-label-md">Tipo: <code class="bg-surface-container p-xs rounded">Multi-Motor Web</code></div>
+    </div>
+
+    <!-- Wikipedia Pageviews API -->
+    <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center justify-between mb-md">
+        <div class="flex items-center gap-md">
+          <img src="https://www.wikipedia.org/static/favicon/wikipedia.ico" class="w-6 h-6" alt="Wikipedia"/>
+          <h3 class="font-h3 text-h3">Wikimedia Pageviews API</h3>
+        </div>
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ API Oficial Gratuita</span>
+      </div>
+      <p class="text-body-sm text-on-surface-variant">Métricas cuantitativas reales de visitas mensuales y promedio diario para entidades y temas.</p>
+      <div class="mt-md font-label-sm text-on-surface-variant">Endpoint: <code class="bg-surface-container p-xs rounded font-label-md">wikimedia.org/api/rest_v1</code></div>
     </div>
 
     <!-- Google Trends -->
@@ -90,37 +123,377 @@
       <div class="flex items-center justify-between mb-md">
         <div class="flex items-center gap-md">
           <span class="material-symbols-outlined text-tertiary">trending_up</span>
-          <h3 class="font-h3 text-h3">Google Trends</h3>
+          <h3 class="font-h3 text-h3">Google Trends & Breakouts</h3>
         </div>
-        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Activo</span>
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ 100% Gratuito</span>
       </div>
-      <p class="text-body-sm text-on-surface-variant">Datos de tendencias via pytrends. No requiere API Key.</p>
+      <p class="text-body-sm text-on-surface-variant">Interés relativo histórico (0-100) y detección de consultas en aumento (+5000% / Breakout).</p>
+      <div class="mt-md font-label-sm text-on-surface-variant font-label-md">Tipo: <code class="bg-surface-container p-xs rounded">Tendencia & Estacionalidad</code></div>
     </div>
 
-    <!-- Pipeline Status -->
+    <!-- Groq IA -->
     <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
       <div class="flex items-center justify-between mb-md">
         <div class="flex items-center gap-md">
-          <span class="material-symbols-outlined text-secondary">hub</span>
-          <h3 class="font-h3 text-h3">Motor de Pipeline</h3>
+          <span class="material-symbols-outlined text-secondary">psychology</span>
+          <div>
+            <h3 class="font-h3 text-h3">Groq LLM Engine</h3>
+            <span class="text-label-xs text-secondary font-bold">{{ groq_model }}</span>
+          </div>
         </div>
-        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Online</span>
+        {% if groq_active %}
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Configurado (Groq SDK)</span>
+        {% else %}
+        <span class="bg-error-container text-on-error-container px-sm py-xs rounded font-label-sm font-bold">❌ Sin API Key</span>
+        {% endif %}
       </div>
-      <p class="text-body-sm text-on-surface-variant">FastAPI + Uvicorn. Procesamiento asíncrono con thread pool.</p>
-      <div class="mt-md space-y-xs">
-        <div class="flex justify-between text-label-sm">
-          <span class="text-on-surface-variant">Estado</span>
-          <span class="font-bold {% if state.is_running %}text-emerald-600{% else %}text-secondary{% endif %}">
-            {% if state.is_running %}Procesando{% else %}Idle{% endif %}
+        <code class="bg-error-container text-on-error-container p-xs rounded font-label-md">No configurada</code>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Google SERP -->
+    <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center justify-between mb-md">
+        <div class="flex items-center gap-md">
+          <img src="https://www.google.com/favicon.ico" class="w-6 h-6" alt="Google"/>
+          <h3 class="font-h3 text-h3">Google SERP & PAA</h3>
+        </div>
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ 100% Gratuito</span>
+      </div>
+      <p class="text-body-sm text-on-surface-variant">Scraping anti-bloqueo de People Also Ask y búsquedas relacionadas.</p>
+      <div class="mt-md font-label-sm text-on-surface-variant">Endpoint: <code class="bg-surface-container p-xs rounded font-label-md">google.com/search</code></div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- GOOGLE ADS API — PANEL COMPLETO                                       -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-lg">
+
+    <!-- Header con gradiente de Google -->
+    <div class="gads-gradient p-lg flex items-center justify-between">
+      <div class="flex items-center gap-md">
+        <div class="bg-white/20 backdrop-blur-sm p-sm rounded-lg">
+          <img src="https://www.google.com/favicon.ico" class="w-8 h-8" alt="Google Ads"/>
+        </div>
+        <div>
+          <h3 class="font-h2 text-h2 text-white">Google Ads API</h3>
+          <p class="text-white/80 text-body-sm">Métricas históricas reales de volumen de búsqueda mensual</p>
+        </div>
+      </div>
+      <div>
+        {% if google_ads.enabled %}
+        <span class="bg-white/20 backdrop-blur-sm text-white px-md py-sm rounded-lg font-label-md font-bold flex items-center gap-xs relative">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-300 pulse-dot relative"></span>
+          Conectado
+        </span>
+        {% else %}
+        <span class="bg-white/20 backdrop-blur-sm text-white px-md py-sm rounded-lg font-label-md font-bold flex items-center gap-xs">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-300"></span>
+          Configurar
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Diagnóstico Rápido -->
+    <div class="p-lg border-b border-outline-variant">
+      <h4 class="font-h3 text-h3 mb-md">Diagnóstico del Sistema</h4>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+        <div class="flex items-center gap-sm p-md rounded-lg {{ 'bg-emerald-50' if google_ads.lib_installed else 'bg-red-50' }}">
+          <span class="material-symbols-outlined {{ 'text-emerald-600' if google_ads.lib_installed else 'text-red-500' }}">
+            {{ 'check_circle' if google_ads.lib_installed else 'cancel' }}
           </span>
+          <div>
+            <p class="font-label-md font-bold">Biblioteca Python</p>
+            <p class="text-label-sm text-on-surface-variant">{{ 'google-ads instalada' if google_ads.lib_installed else 'pip install google-ads' }}</p>
+          </div>
         </div>
-        <div class="flex justify-between text-label-sm">
-          <span class="text-on-surface-variant">Última ejecución</span>
-          <span>{{ state.finished_at or "—" }}</span>
+        <div class="flex items-center gap-sm p-md rounded-lg {{ 'bg-emerald-50' if google_ads.yaml_exists else 'bg-amber-50' }}">
+          <span class="material-symbols-outlined {{ 'text-emerald-600' if google_ads.yaml_exists else 'text-amber-500' }}">
+            {{ 'check_circle' if google_ads.yaml_exists else 'warning' }}
+          </span>
+          <div>
+            <p class="font-label-md font-bold">Archivo YAML</p>
+            <p class="text-label-sm text-on-surface-variant">{{ 'google-ads.yaml presente' if google_ads.yaml_exists else 'No encontrado' }}</p>
+          </div>
         </div>
+        <div class="flex items-center gap-sm p-md rounded-lg {{ 'bg-emerald-50' if google_ads.customer_id else 'bg-amber-50' }}">
+          <span class="material-symbols-outlined {{ 'text-emerald-600' if google_ads.customer_id else 'text-amber-500' }}">
+            {{ 'check_circle' if google_ads.customer_id else 'warning' }}
+          </span>
+          <div>
+            <p class="font-label-md font-bold">Customer ID</p>
+            <p class="text-label-sm text-on-surface-variant">{{ google_ads.customer_id if google_ads.customer_id else 'No definido' }}</p>
+          </div>
+        </div>
+      </div>
+      {% if not google_ads.enabled %}
+      <div class="mt-md bg-amber-50 border border-amber-200 rounded-lg p-md flex items-start gap-sm">
+        <span class="material-symbols-outlined text-amber-600 mt-0.5">info</span>
+        <p class="text-body-sm text-amber-800">{{ google_ads.reason }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Tabs -->
+    <div class="border-b border-outline-variant">
+      <div class="flex">
+        <button onclick="switchTab('manual')" id="tab-manual" class="tab-btn active flex-1 py-md px-lg text-center font-label-md text-on-surface-variant hover:bg-surface-container-low transition-colors flex items-center justify-center gap-xs">
+          <span class="material-symbols-outlined text-[18px]">edit</span>
+          Configuración Manual
+        </button>
+        <button onclick="switchTab('oauth')" id="tab-oauth" class="tab-btn flex-1 py-md px-lg text-center font-label-md text-on-surface-variant hover:bg-surface-container-low transition-colors flex items-center justify-center gap-xs">
+          <span class="material-symbols-outlined text-[18px]">key</span>
+          Autenticación OAuth
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab: Configuración Manual -->
+    <div id="panel-manual" class="tab-panel active p-lg">
+      <form id="gadsForm" class="space-y-lg">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+
+          <!-- Developer Token -->
+          <div>
+            <label class="block font-label-md mb-xs text-on-surface">Developer Token</label>
+            <div class="relative">
+              <span class="field-icon material-symbols-outlined text-[18px]">token</span>
+              <input type="text" name="developer_token" value="{{ google_ads.developer_token }}"
+                class="w-full pl-10 pr-md py-sm border border-outline-variant rounded-lg bg-surface font-label-md focus:ring-2 focus:ring-secondary focus:border-secondary transition-all"
+                placeholder="Ej: B3Yezg4gQC1owaIR6S_xjw"/>
+            </div>
+            <p class="text-label-sm text-on-surface-variant mt-xs">Obtén tu developer token desde Google Ads.</p>
+          </div>
+
+          <!-- Customer ID -->
+          <div>
+            <label class="block font-label-md mb-xs text-on-surface">Customer ID (CID)</label>
+            <div class="relative">
+              <span class="field-icon material-symbols-outlined text-[18px]">person</span>
+              <input type="text" name="customer_id" value="{{ google_ads.customer_id }}"
+                class="w-full pl-10 pr-md py-sm border border-outline-variant rounded-lg bg-surface font-label-md focus:ring-2 focus:ring-secondary focus:border-secondary transition-all"
+                placeholder="Ej: 1234567890 o 123-456-7890"/>
+            </div>
+            <p class="text-label-sm text-on-surface-variant mt-xs">ID de la cuenta donde consultar métricas.</p>
+          </div>
+
+          <!-- Client ID -->
+          <div>
+            <label class="block font-label-md mb-xs text-on-surface">OAuth Client ID</label>
+            <div class="relative">
+              <span class="field-icon material-symbols-outlined text-[18px]">fingerprint</span>
+              <input type="text" name="client_id" value="{{ google_ads.client_id }}"
+                class="w-full pl-10 pr-md py-sm border border-outline-variant rounded-lg bg-surface font-label-md focus:ring-2 focus:ring-secondary focus:border-secondary transition-all"
+                placeholder="xxxx.apps.googleusercontent.com"/>
+            </div>
+          </div>
+
+          <!-- Client Secret -->
+          <div>
+            <label class="block font-label-md mb-xs text-on-surface">OAuth Client Secret</label>
+            <div class="relative">
+              <span class="field-icon material-symbols-outlined text-[18px]">lock</span>
+              <input type="password" name="client_secret" value="{{ google_ads.client_secret }}"
+                class="w-full pl-10 pr-md py-sm border border-outline-variant rounded-lg bg-surface font-label-md focus:ring-2 focus:ring-secondary focus:border-secondary transition-all"
+                placeholder="GOCSPX-•••••••••••••••"/>
+            </div>
+          </div>
+
+          <!-- Refresh Token -->
+          <div>
+            <label class="block font-label-md mb-xs text-on-surface">Refresh Token</label>
+            <div class="relative">
+              <span class="field-icon material-symbols-outlined text-[18px]">autorenew</span>
+              <input type="password" name="refresh_token" value="{{ google_ads.refresh_token }}" id="refreshTokenInput"
+                class="w-full pl-10 pr-md py-sm border border-outline-variant rounded-lg bg-surface font-label-md focus:ring-2 focus:ring-secondary focus:border-secondary transition-all"
+                placeholder="1//05Eo1SyD•••••••"/>
+            </div>
+            <p class="text-label-sm text-on-surface-variant mt-xs">Usa la pestaña OAuth para generarlo automáticamente.</p>
+          </div>
+
+          <!-- Login Customer ID -->
+          <div>
+            <label class="block font-label-md mb-xs text-on-surface">Login Customer ID <span class="text-on-surface-variant">(MCC / Opcional)</span></label>
+            <div class="relative">
+              <span class="field-icon material-symbols-outlined text-[18px]">supervisor_account</span>
+              <input type="text" name="login_customer_id" value="{{ google_ads.login_customer_id }}"
+                class="w-full pl-10 pr-md py-sm border border-outline-variant rounded-lg bg-surface font-label-md focus:ring-2 focus:ring-secondary focus:border-secondary transition-all"
+                placeholder="Solo si usas cuenta administradora"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="flex flex-wrap gap-md items-center pt-md border-t border-outline-variant">
+          <button type="submit" id="btnSave"
+            class="bg-primary text-white px-xl py-sm rounded-lg font-label-md font-bold hover:opacity-90 transition-all flex items-center gap-xs shadow-md">
+            <span class="material-symbols-outlined text-[18px]">save</span>
+            Guardar Configuración
+          </button>
+          <button type="button" id="btnTest" onclick="testConnection()"
+            class="bg-secondary text-white px-xl py-sm rounded-lg font-label-md font-bold hover:opacity-90 transition-all flex items-center gap-xs shadow-md">
+            <span class="material-symbols-outlined text-[18px]" id="testIcon">network_check</span>
+            <span id="testLabel">Probar Conexión</span>
+          </button>
+        </div>
+
+        <!-- Resultado del test -->
+        <div id="testResult" class="hidden rounded-xl p-lg border shadow-sm mt-md transition-all"></div>
+      </form>
+    </div>
+
+    <!-- Tab: OAuth Asistido -->
+    <div id="panel-oauth" class="tab-panel p-lg">
+      <div class="max-w-2xl mx-auto space-y-lg">
+        <div class="text-center">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-secondary/10 mb-md">
+            <span class="material-symbols-outlined text-secondary text-4xl">key</span>
+          </div>
+          <h4 class="font-h2 text-h2">Asistente de Autenticación OAuth</h4>
+          <p class="text-body-sm text-on-surface-variant mt-sm max-w-lg mx-auto">
+            Este asistente genera automáticamente un <strong>Refresh Token</strong> válido usando el flujo OAuth 2.0 de Google.
+            Solo necesitas tener configurados el <strong>Client ID</strong> y <strong>Client Secret</strong>.
+          </p>
+        </div>
+
+        <!-- Pasos -->
+        <div class="space-y-md">
+          <div class="flex items-start gap-md p-md bg-surface-container-low rounded-lg">
+            <div class="w-8 h-8 min-w-[32px] rounded-full bg-secondary text-white flex items-center justify-center font-bold text-sm">1</div>
+            <div>
+              <p class="font-label-md font-bold">Configura Client ID y Client Secret</p>
+              <p class="text-body-sm text-on-surface-variant">Asegúrate de haber guardado tus credenciales OAuth en la pestaña "Configuración Manual".</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-md p-md bg-surface-container-low rounded-lg">
+            <div class="w-8 h-8 min-w-[32px] rounded-full bg-secondary text-white flex items-center justify-center font-bold text-sm">2</div>
+            <div>
+              <p class="font-label-md font-bold">Agrega la URI de redirección en Google Cloud Console</p>
+              <p class="text-body-sm text-on-surface-variant">
+                En tu proyecto de Google Cloud, ve a <strong>APIs & Services → Credentials</strong>, 
+                edita tu cliente OAuth y añade esta URI a <em>"URIs de redireccionamiento autorizadas"</em>:
+              </p>
+              <code class="block mt-sm bg-inverse-surface text-inverse-on-surface p-sm rounded font-label-md select-all">
+                http://localhost:8001/api/google-ads/callback
+              </code>
+            </div>
+          </div>
+          <div class="flex items-start gap-md p-md bg-surface-container-low rounded-lg">
+            <div class="w-8 h-8 min-w-[32px] rounded-full bg-secondary text-white flex items-center justify-center font-bold text-sm">3</div>
+            <div>
+              <p class="font-label-md font-bold">Haz clic en el botón para iniciar la autenticación</p>
+              <p class="text-body-sm text-on-surface-variant">Se abrirá la pantalla de consentimiento de Google. Autoriza la aplicación y el token se guardará automáticamente.</p>
+            </div>
+          </div>
+        </div>
+
+        {% if google_ads.client_id and google_ads.client_secret %}
+        <div class="text-center pt-md">
+          <a href="/api/google-ads/auth" id="btnOAuth"
+            class="inline-flex items-center gap-sm bg-primary text-white px-2xl py-md rounded-xl font-label-md font-bold hover:opacity-90 transition-all shadow-lg text-lg">
+            <img src="https://www.google.com/favicon.ico" class="w-5 h-5" alt=""/>
+            Iniciar Autenticación con Google
+          </a>
+        </div>
+        {% else %}
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-md flex items-start gap-sm">
+          <span class="material-symbols-outlined text-amber-600 mt-0.5">warning</span>
+          <p class="text-body-sm text-amber-800">
+            Primero guarda <strong>Client ID</strong> y <strong>Client Secret</strong> en la pestaña "Configuración Manual" antes de iniciar el flujo OAuth.
+          </p>
+        </div>
+        {% endif %}
+
+        {% if google_ads.refresh_token %}
+        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-md flex items-start gap-sm">
+          <span class="material-symbols-outlined text-emerald-600 mt-0.5">check_circle</span>
+          <div>
+            <p class="font-label-md font-bold text-emerald-800">Refresh Token Configurado</p>
+            <p class="text-body-sm text-emerald-700 mt-xs">
+              Ya tienes un refresh token almacenado: <code class="bg-emerald-100 p-xs rounded">{{ google_ads.refresh_token[:20] }}•••</code>
+            </p>
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
+
 </div>
 </main>
+
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// Guardar configuración via AJAX
+document.getElementById('gadsForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="test-spinner"></span> Guardando...';
+  try {
+    const fd = new FormData(e.target);
+    const r = await fetch('/api/config/google-ads', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.status === 'ok') {
+      showTestResult(true, d.message);
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showTestResult(false, d.message || 'Error guardando.');
+    }
+  } catch (err) {
+    showTestResult(false, 'Error de red: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Guardar Configuración';
+  }
+});
+
+async function testConnection() {
+  const btn = document.getElementById('btnTest');
+  const icon = document.getElementById('testIcon');
+  const label = document.getElementById('testLabel');
+  btn.disabled = true;
+  icon.style.display = 'none';
+  label.innerHTML = '<span class="test-spinner"></span> Probando...';
+  try {
+    const r = await fetch('/api/test/google-ads', { method: 'POST' });
+    const d = await r.json();
+    showTestResult(d.success, d.detail);
+  } catch (err) {
+    showTestResult(false, 'Error de red: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    icon.style.display = '';
+    label.textContent = 'Probar Conexión';
+  }
+}
+
+function showTestResult(success, message) {
+  const el = document.getElementById('testResult');
+  el.classList.remove('hidden');
+  if (success) {
+    el.className = 'rounded-xl p-lg border shadow-sm mt-md bg-emerald-50 border-emerald-300';
+    el.innerHTML = `<div class="flex items-start gap-md">
+      <span class="material-symbols-outlined text-emerald-600 text-2xl">check_circle</span>
+      <div><p class="font-label-md font-bold text-emerald-800">Conexión Exitosa</p>
+      <p class="text-body-sm text-emerald-700 mt-xs">${message}</p></div></div>`;
+  } else {
+    el.className = 'rounded-xl p-lg border shadow-sm mt-md bg-red-50 border-red-300';
+    el.innerHTML = `<div class="flex items-start gap-md">
+      <span class="material-symbols-outlined text-red-600 text-2xl">error</span>
+      <div><p class="font-label-md font-bold text-red-800">Error de Conexión</p>
+      <p class="text-body-sm text-red-700 mt-xs">${message}</p></div></div>`;
+  }
+}
+</script>
 </body></html>

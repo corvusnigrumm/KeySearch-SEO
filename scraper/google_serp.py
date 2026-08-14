@@ -837,11 +837,18 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
                 serp_pages_ok += 1
 
                 if progress_callback:
-                    progress_callback("Parseando HTML de la SERP...")
+                    progress_callback("Parseando HTML de la SERP y analizando competidores...")
                 soup = BeautifulSoup(html, "lxml")
                 page_paa = _extraer_preguntas_paa_html(soup, keyword)
                 page_rel = _extraer_busquedas_relacionadas_html(soup, keyword)
                 page_rel.extend(_extraer_people_also_search_for_html(soup, keyword))
+
+                # Extraer análisis de debilidades y competidores de la primera página orgánica
+                if not resultado.get("serp_analysis"):
+                    from scraper.serp_analyzer import analizar_debilidades_serp
+                    resultado["serp_analysis"] = analizar_debilidades_serp(soup, keyword)
+                    if progress_callback and resultado["serp_analysis"].get("es_oportunidad_oro"):
+                        progress_callback("⭐ ¡Oportunidad de Oro detectada! (Foros o resultados débiles en Top 10)")
 
                 for item in page_paa:
                     key = dedupe_key(item)
@@ -860,9 +867,9 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
                     time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
 
     if paa_html and progress_callback:
-        progress_callback(f"✅ {len(paa_html)} preguntas PAA extraídas del HTML (multi-página)")
+        progress_callback(f"[OK] {len(paa_html)} preguntas PAA extraidas del HTML (multi-pagina)")
     if rel_html and progress_callback:
-        progress_callback(f"✅ {len(rel_html)} búsquedas relacionadas del HTML (multi-página)")
+        progress_callback(f"[OK] {len(rel_html)} busquedas relacionadas del HTML (multi-pagina)")
 
     # ─── Paso 2: Complementar con autocompletado inteligente ────────────
     if progress_callback:
@@ -926,6 +933,6 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
     if progress_callback:
         n_paa = len(resultado["preguntas_paa"])
         n_rel = len(resultado["busquedas_relacionadas"])
-        progress_callback(f"✅ Extracción completa: {n_paa} preguntas PAA, {n_rel} relacionadas")
+        progress_callback(f"[OK] Extraccion completa: {n_paa} preguntas PAA, {n_rel} relacionadas")
 
     return resultado

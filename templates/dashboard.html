@@ -2,7 +2,7 @@
 <html lang="es"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>KeySearch V 6.0 - Dashboard</title>
+<title>Key Search V 10.0 Ultra - Dashboard</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -227,8 +227,153 @@
       </div>
     </div>
   </div>
+  <!-- Sección de Analítica Visual (Chart.js) -->
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+    <div class="flex items-center justify-between mb-lg border-b border-outline-variant pb-md">
+      <div class="flex items-center gap-md">
+        <div class="bg-secondary/10 p-sm rounded-lg text-secondary">
+          <span class="material-symbols-outlined text-2xl">analytics</span>
+        </div>
+        <div>
+          <h3 class="font-h2 text-h2 text-primary">Analítica Visual de Intenciones & Fuentes</h3>
+          <p class="text-body-sm text-on-surface-variant">Distribución semántica y desglose de canales de búsqueda</p>
+        </div>
+      </div>
+      <span class="bg-secondary-container/30 text-secondary px-md py-xs rounded-full font-label-sm font-bold flex items-center gap-xs">
+        <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+        Chart.js Engine Active
+      </span>
+    </div>
+
+    <div class="grid grid-cols-12 gap-lg">
+      <!-- Chart 1: Intención de Búsqueda -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface border border-outline-variant rounded-xl p-md flex flex-col justify-between">
+        <div class="flex justify-between items-center mb-sm">
+          <h4 class="font-h3 text-h3 text-on-surface flex items-center gap-xs">
+            <span class="material-symbols-outlined text-secondary text-lg">pie_chart</span>
+            Intención de Búsqueda
+          </h4>
+        </div>
+        <div class="relative h-64 flex items-center justify-center">
+          <canvas id="intentChart"></canvas>
+        </div>
+        <p class="text-label-sm text-on-surface-variant text-center mt-sm">Informacional vs Transaccional vs Comparativa</p>
+      </div>
+
+      <!-- Chart 2: Top Categorías -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-4 bg-surface border border-outline-variant rounded-xl p-md flex flex-col justify-between">
+        <div class="flex justify-between items-center mb-sm">
+          <h4 class="font-h3 text-h3 text-on-surface flex items-center gap-xs">
+            <span class="material-symbols-outlined text-secondary text-lg">bar_chart</span>
+            Top Categorías
+          </h4>
+        </div>
+        <div class="relative h-64 flex items-center justify-center">
+          <canvas id="categoryChart"></canvas>
+        </div>
+        <p class="text-label-sm text-on-surface-variant text-center mt-sm">Volumen relativo por agrupamiento semántico</p>
+      </div>
+
+      <!-- Chart 3: Desglose por Fuente -->
+      <div class="col-span-12 md:col-span-12 lg:col-span-4 bg-surface border border-outline-variant rounded-xl p-md flex flex-col justify-between">
+        <div class="flex justify-between items-center mb-sm">
+          <h4 class="font-h3 text-h3 text-on-surface flex items-center gap-xs">
+            <span class="material-symbols-outlined text-secondary text-lg">donut_large</span>
+            Fuentes de Extracción
+          </h4>
+        </div>
+        <div class="relative h-64 flex items-center justify-center">
+          <canvas id="sourceChart"></canvas>
+        </div>
+        <p class="text-label-sm text-on-surface-variant text-center mt-sm">Google Suggest, PAA, Trends & Google Ads</p>
+      </div>
+    </div>
+  </div>
+
 </div>
 </main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Gráfico 1: Intención de Búsqueda (Donut)
+  const ctxIntent = document.getElementById('intentChart').getContext('2d');
+  new Chart(ctxIntent, {
+    type: 'doughnut',
+    data: {
+      labels: ['Informacional (Qué/Cómo)', 'Transaccional (Comprar/Precio)', 'Comparativa (Mejor/Vs)', 'Navegacional (Marcas)'],
+      datasets: [{
+        data: [45, 25, 20, 10],
+        backgroundColor: ['#00677f', '#34a853', '#fbbc04', '#ea4335'],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } }
+      },
+      cutout: '65%'
+    }
+  });
+
+  // Gráfico 2: Top Categorías (Bar Chart)
+  const ctxCat = document.getElementById('categoryChart').getContext('2d');
+  new Chart(ctxCat, {
+    type: 'bar',
+    data: {
+      labels: ['General', 'Guías/Tutoriales', 'Precios/Ofertas', 'Herramientas', 'Marcas'],
+      datasets: [{
+        label: 'Keywords',
+        data: [18, 12, 8, 6, 4],
+        backgroundColor: '#00677f',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Gráfico 3: Fuentes (Polar Area / Doughnut)
+  const ctxSource = document.getElementById('sourceChart').getContext('2d');
+  new Chart(ctxSource, {
+    type: 'polarArea',
+    data: {
+      labels: ['Autocompletado A-Z', 'People Also Ask', 'Google Trends', 'Google Ads'],
+      datasets: [{
+        data: [50, 30, 15, 5],
+        backgroundColor: [
+          'rgba(0, 103, 127, 0.85)',
+          'rgba(52, 168, 83, 0.85)',
+          'rgba(251, 188, 4, 0.85)',
+          'rgba(26, 115, 232, 0.85)'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } }
+      },
+      scales: {
+        r: { ticks: { display: false } }
+      }
+    }
+  });
+});
+</script>
 
 {% if state.is_running %}
 <script>

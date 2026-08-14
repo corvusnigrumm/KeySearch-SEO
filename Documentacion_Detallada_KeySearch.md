@@ -1,7 +1,7 @@
 # 📖 Documentación Técnica y Funcional Profunda: KeySearch V6.0
 **Análisis Explicativo y Lógica de Negocio de cada Componente**
 
-Este documento está diseñado para entender a fondo la arquitectura, las lógicas internas de programación y los algoritmos que componen la herramienta **KeySearch Diarrea de Perro V6.0**. Está escrito para que sea comprensible, revelando el "por qué" y el "cómo" detrás de cada archivo.
+Este documento está diseñado para entender a fondo la arquitectura, las lógicas internas de programación y los algoritmos que componen la herramienta **KeySearch Editorial & Ads Optimizer V6.0**. Está escrito para que sea comprensible, revelando el "por qué" y el "cómo" detrás de cada archivo.
 
 ---
 

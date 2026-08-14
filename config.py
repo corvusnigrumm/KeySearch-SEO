@@ -23,7 +23,7 @@ def _runtime_base_dir() -> str:
 
 
 BASE_DIR = _runtime_base_dir()
-APP_NAME = "KeySearch Diarrea de Perro con Sangre sin Coagular"
+APP_NAME = "KeySearch Editorial & Ads Optimizer"
 APP_VERSION = "6.0"
 
 
@@ -290,12 +290,46 @@ GOOGLE_ADS_CUSTOMER_ID = (
     os.getenv("GOOGLE_ADS_CUSTOMER_ID", "").replace("-", "").strip()
     or _read_optional_value(GOOGLE_ADS_CUSTOMER_ID_FILE).replace("-", "").strip()
 )
+
+def get_dynamic_google_ads_customer_id() -> str:
+    """Obtiene el Customer ID de Google Ads recargándolo en caliente."""
+    val = os.getenv("GOOGLE_ADS_CUSTOMER_ID", "").replace("-", "").strip()
+    if not val:
+        val = _read_optional_value(GOOGLE_ADS_CUSTOMER_ID_FILE).replace("-", "").strip()
+    return val
+
+def parse_yaml_simple(path: str) -> dict:
+    """Parsea archivos yaml simples de clave-valor sin dependencias."""
+    res = {}
+    if not path or not os.path.exists(path):
+        return res
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if ":" in line:
+                    k, v = line.split(":", 1)
+                    k = k.strip()
+                    v = v.strip().strip('"').strip("'")
+                    res[k] = v
+    except Exception:
+        pass
+    return res
+
 GOOGLE_ADS_LANGUAGE_CODE = LANG
 GOOGLE_ADS_GEO_TARGETS = COUNTRY_CATALOG.get(COUNTRY.lower(), {}).get("google_ads_geo_targets", [])
 
 # Groq API
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip() or "openai/gpt-oss-120b"
+GROQ_AVAILABLE_MODELS = [
+    {"id": "openai/gpt-oss-120b", "name": "GPT-OSS 120B (Reasoning / Medium)", "badge": "Nuevo / Alta Potencia"},
+    {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B Versatile", "badge": "Ultra Rápido & Preciso"},
+    {"id": "deepseek-r1-distill-llama-70b", "name": "DeepSeek R1 Distill 70B", "badge": "Razonamiento"},
+    {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B Instant", "badge": "Ultra Ligero"},
+]
 
 
 def normalize_country(user_value: str | None = None) -> dict:

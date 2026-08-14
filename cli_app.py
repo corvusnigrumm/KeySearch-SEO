@@ -1,5 +1,5 @@
 """
-Keysearch Diarrea de Perro
+Keysearch Editorial & Ads Optimizer
   - Sugerencias de autocompletado
   - People Also Ask
   - Preguntas generadas por autocompletado
@@ -16,6 +16,13 @@ import csv
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Cargar .env local si existe (GROQ_API_KEY, DATABASE_URL, etc.)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # pyrefly: ignore [missing-import]
 from rich import box
 # pyrefly: ignore [missing-import]
@@ -30,8 +37,8 @@ from config import APP_NAME, APP_VERSION, GROQ_API_KEY, SCRAPE_PROFILE, normaliz
 from scraper.categorizer import auto_categorizar
 
 PROFILE_DISPLAY_LABELS = {
-    "normal": "Normal Precoz Eyaculation",
-    "extreme": "Sex Extreme Toro",
+    "normal": "Standard Search Engine",
+    "extreme": "Deep Expansion Engine",
 }
 
 console = Console()
@@ -193,13 +200,13 @@ def _solicitar_perfil_scrape() -> str:
     console.print(
         Panel(
             "[bold]Perfil de extraccion:[/]\n"
-            "  [cyan]1[/] -> Normal Precoz Eyaculation (equilibrado)\n"
-            "  [cyan]2[/] -> Sex Extreme Toro (maxima cobertura, mas lento)",
+            "  [cyan]1[/] -> Standard Search Engine (equilibrado)\n"
+            "  [cyan]2[/] -> Deep Expansion Engine (maxima cobertura, mas lento)",
             border_style="bright_cyan",
             title="[bold]Perfil de scraping[/]",
         )
     )
-    opcion = Prompt.ask("  Seleccione una opcion (SOLO UNA, POR FAVOR, NO COLOQUE MÁS DE UNA, ANIMAL)", choices=["1", "2"], default="1")
+    opcion = Prompt.ask("  Seleccione una opcion", choices=["1", "2"], default="1")
     return "extreme" if opcion == "2" else "normal"
 
 

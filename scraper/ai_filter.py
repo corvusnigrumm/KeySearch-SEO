@@ -33,48 +33,125 @@ _PATRONES_SEO_INUTILES = [
 _BATCH_SIZE = 40
 
 
-def _post_groq_json(prompt: str, timeout: int = 40):
-    """Invoca Groq y devuelve contenido JSON parseado o None."""
+try:
+    from groq import Groq
+    _groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+except Exception:
+    _groq_client = None
+
+
+def _limpiar_respuesta_json(raw_text: str) -> str:
+    """Elimina etiquetas de razonamiento <think> y bloques markdown ```json."""
+    if not raw_text:
+        return ""
+    text = raw_text.strip()
+    # Eliminar bloques de razonamiento si el modelo los emite
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+
+    if text.startswith("```json"):
+        text = text[7:]
+        if "```" in text:
+            text = text[:text.rfind("```")]
+        text = text.strip()
+    elif text.startswith("```"):
+        text = text[3:]
+        if "```" in text:
+            text = text[:text.rfind("```")]
+        text = text.strip()
+    return text
+
+
+def _post_groq_json(prompt: str, timeout: int = 45, model: str = None):
+    """
+    Invoca Groq utilizando el SDK oficial (soporta openai/gpt-oss-120b con reasoning_effort='medium'
+    y Llama 3.3 70B) y devuelve contenido JSON parseado.
+    """
     if not GROQ_API_KEY:
         return None
 
+    target_model = model or GROQ_MODEL
+    is_reasoning = ("gpt-oss" in target_model.lower() or "deepseek-r1" in target_model.lower())
+
+    # 1. Intento con SDK oficial de Groq
+    if _groq_client is not None:
+        try:
+            req_params = {
+                "model": target_model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, "
+                            "sin etiquetas markdown, sin texto extra y sin explicaciones."
+                        )
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+            }
+
+            if is_reasoning:
+                req_params["temperature"] = 1
+                req_params["max_completion_tokens"] = 2048
+                req_params["top_p"] = 1
+                if "gpt-oss" in target_model.lower():
+                    req_params["reasoning_effort"] = "medium"
+            else:
+                req_params["temperature"] = 0.2
+                req_params["max_tokens"] = 2048
+
+            completion = _groq_client.chat.completions.create(**req_params)
+            raw_content = completion.choices[0].message.content or ""
+            clean_json = _limpiar_respuesta_json(raw_content)
+            if clean_json:
+                return json.loads(clean_json)
+        except Exception as e:
+            logger.warning("Error con SDK Groq (%s): %s. Intentando fallback...", target_model, e)
+            # Fallback a llama-3.3-70b-versatile si el modelo solicitado falló
+            if target_model != "llama-3.3-70b-versatile":
+                try:
+                    fallback_comp = _groq_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[
+                            {"role": "system", "content": "Devuelve UNICAMENTE JSON valido."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.2,
+                        max_tokens=2048
+                    )
+                    raw_content = fallback_comp.choices[0].message.content or ""
+                    clean_json = _limpiar_respuesta_json(raw_content)
+                    if clean_json:
+                        return json.loads(clean_json)
+                except Exception as fb_err:
+                    logger.warning("Fallback SDK falló: %s", fb_err)
+
+    # 2. Fallback por HTTP requests directo
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {GROQ_API_KEY}"
     }
     payload = {
-        "model": GROQ_MODEL,
+        "model": target_model,
         "messages": [
-            {"role": "system", "content": (
-                "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, "
-                "sin markdown, sin texto extra, sin explicaciones."
-            )},
+            {"role": "system", "content": "Devuelve UNICAMENTE JSON valido sin markdown."},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.1,
+        "temperature": 0.2,
+        "max_tokens": 2048,
     }
 
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=timeout)
         response.raise_for_status()
         data = response.json()
-        content = data["choices"][0]["message"]["content"].strip()
-        # Limpiar posibles bloques markdown que el modelo a veces incluye
-        if content.startswith("```json"):
-            content = content[7:]
-            if "```" in content:
-                content = content[:content.rfind("```")]
-            content = content.strip()
-        elif content.startswith("```"):
-            content = content[3:]
-            if "```" in content:
-                content = content[:content.rfind("```")]
-            content = content.strip()
-        return json.loads(content)
+        raw_content = data["choices"][0]["message"]["content"]
+        clean_json = _limpiar_respuesta_json(raw_content)
+        return json.loads(clean_json)
     except Exception as e:
-        logger.warning("Error en llamada Groq JSON: %s", e)
+        logger.warning("Error en llamada HTTP Groq JSON: %s", e)
         return None
+
 
 
 def _filtro_determinista(keywords: list[str], keyword_base: str) -> list[str]:
@@ -306,3 +383,296 @@ def generar_bloques_editoriales(
         merged["keywords_trends"].append(fallback["keywords_trends"][len(merged["keywords_trends"])])
 
     return merged
+
+
+def clasificar_intencion_ia(keywords: list[str], keyword_base: str, pais: str) -> dict:
+    """
+    Clasifica un conjunto de keywords en categorías de intención, etapa del funnel
+    y formato recomendado de contenido usando Groq LLM.
+    """
+    if not GROQ_API_KEY or not keywords:
+        return {}
+
+    muestra = keywords[:30]
+    prompt = (
+        f"Eres un consultor SEO senior. Clasifica estas palabras clave sobre '{keyword_base}' para {pais}.\n"
+        "Devuelve UNICAMENTE un objeto JSON donde cada clave es la keyword exacta y el valor es un objeto con:\n"
+        '- "intencion": "Informativa" | "Comercial" | "Transaccional" | "Navegacional"\n'
+        '- "funnel": "ToFU" | "MoFU" | "BoFU"\n'
+        '- "formato_recomendado": "Guia/Tutorial" | "Comparativa/Review" | "Landing/Precios" | "Video"\n\n'
+        f"Keywords:\n{json.dumps(muestra, ensure_ascii=False)}"
+    )
+
+    try:
+        resultado = _post_groq_json(prompt, timeout=45)
+        if isinstance(resultado, dict):
+            return resultado
+    except Exception as e:
+        logger.warning("Error en clasificar_intencion_ia: %s", e)
+    return {}
+
+
+def generar_clusters_tematicos(keywords: list[str], keyword_base: str) -> list[dict]:
+    """
+    Agrupa palabras clave en clusters semánticos (Pilares de contenido)
+    para evitar canibalización y estructurar la arquitectura del sitio.
+    """
+    if not GROQ_API_KEY or not keywords:
+        return []
+
+    muestra = keywords[:40]
+    prompt = (
+        f"Eres un arquitecto de contenido SEO. Agrupa estas keywords derivadas de '{keyword_base}' "
+        "en clusters semánticos coherentes (grupos de temas relacionados).\n\n"
+        "Devuelve UNICAMENTE un JSON Array con este formato:\n"
+        "[\n"
+        "  {\n"
+        '    "nombre_cluster": "Nombre temático del cluster",\n'
+        '    "intencion_principal": "Informativa|Comercial|Transaccional",\n'
+        '    "h1_sugerido": "Título principal recomendado para este cluster",\n'
+        '    "keywords": ["kw1", "kw2", "kw3"]\n'
+        "  }\n"
+        "]\n\n"
+        f"Keywords a agrupar:\n{json.dumps(muestra, ensure_ascii=False)}"
+    )
+
+    try:
+        clusters = _post_groq_json(prompt, timeout=45)
+        if isinstance(clusters, list):
+            return clusters
+    except Exception as e:
+        logger.warning("Error en generar_clusters_tematicos: %s", e)
+    return []
+
+
+def generar_schema_y_meta_tags(
+    keyword_base: str,
+    preguntas: list[str],
+    pais: str = "Colombia",
+) -> dict:
+    """
+    Genera Meta Tags de alto CTR y código de Marcado Estructurado Schema FAQPage (JSON-LD)
+    listo para copiar y pegar en WordPress, Shopify o aplicaciones web.
+    """
+    preguntas_muestra = [p for p in preguntas if p.strip()][:5]
+
+    # Fallback determinista si no hay IA disponible
+    slug_limpio = re.sub(r"[^a-zA-Z0-9\s-]", "", keyword_base.lower()).strip().replace(" ", "-")
+    fallback = {
+        "meta_title": f"{keyword_base.title()}: Guía Completa y Preguntas Frecuentes"[:60],
+        "meta_titles_alternativos": [
+            f"¿Qué es {keyword_base.title()}? Todo lo que debes saber"[:60],
+            f"{keyword_base.title()} en {pais}: Precios, Guía y Consejos"[:60],
+        ],
+        "meta_description": f"Descubre todo sobre {keyword_base}: guía definitiva, respuestas a dudas frecuentes y consejos expertos para {pais}. ¡Haz clic aquí!"[:155],
+        "slug_sugerido": slug_limpio,
+        "og_tags": {
+            "og:title": f"{keyword_base.title()}: Guía y Preguntas Frecuentes",
+            "og:description": f"Todo sobre {keyword_base} con respuestas a dudas frecuentes.",
+            "og:type": "article",
+        },
+        "faq_items": [
+            {"pregunta": p, "respuesta": f"Explicación detallada y respuesta concisa sobre {p} para el usuario en {pais}."}
+            for p in preguntas_muestra
+        ],
+        "schema_faq_json": {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": p,
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": f"Información completa sobre {p}."
+                    }
+                }
+                for p in preguntas_muestra
+            ]
+        }
+    }
+    fallback["schema_faq_string"] = (
+        '<script type="application/ld+json">\n'
+        + json.dumps(fallback["schema_faq_json"], indent=2, ensure_ascii=False)
+        + "\n</script>"
+    )
+
+    if not GROQ_API_KEY:
+        return fallback
+
+    prompt = (
+        f"Eres un experto en SEO On-Page y Copywriting de Alto CTR para medios digitales en {pais}.\n"
+        f"A partir del término principal '{keyword_base}' y estas preguntas reales de usuarios:\n"
+        f"{json.dumps(preguntas_muestra, ensure_ascii=False)}\n\n"
+        "TAREA: Genera los Meta Tags optimizados para clics (CTR) y el marcado estructurado Schema FAQPage (JSON-LD).\n"
+        "REGLAS:\n"
+        "1. meta_title: Máximo 60 caracteres. Debe incluir la keyword principal y un gancho emocional o beneficio claro.\n"
+        "2. meta_titles_alternativos: Exactamente 2 títulos alternativos (uno en formato pregunta y otro con beneficio/año).\n"
+        "3. meta_description: Entre 120 y 155 caracteres con llamado a la acción (CTA) convincente.\n"
+        "4. slug_sugerido: URL amigable en minúsculas separada por guiones.\n"
+        "5. faq_items: Array con 3 a 5 preguntas reales y sus respuestas directas, profesionales y concisas (2 a 3 oraciones cada una).\n\n"
+        "Devuelve UNICAMENTE este JSON sin texto adicional:\n"
+        "{\n"
+        '  "meta_title": "Título SEO <= 60 caracteres",\n'
+        '  "meta_titles_alternativos": ["Título 2", "Título 3"],\n'
+        '  "meta_description": "Descripción persuasiva con CTA <= 155 caracteres",\n'
+        '  "slug_sugerido": "slug-url-amigable",\n'
+        '  "faq_items": [\n'
+        '    {"pregunta": "¿Pregunta exacta?", "respuesta": "Respuesta directa y clara."}\n'
+        "  ]\n"
+        "}"
+    )
+
+    try:
+        data = _post_groq_json(prompt, timeout=40)
+        if isinstance(data, dict) and "meta_title" in data:
+            faq_items = data.get("faq_items", fallback["faq_items"])
+            schema_json = {
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": item.get("pregunta", ""),
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": item.get("respuesta", "")
+                        }
+                    }
+                    for item in faq_items if isinstance(item, dict) and item.get("pregunta")
+                ]
+            }
+            schema_string = (
+                '<script type="application/ld+json">\n'
+                + json.dumps(schema_json, indent=2, ensure_ascii=False)
+                + "\n</script>"
+            )
+
+            return {
+                "meta_title": str(data.get("meta_title", fallback["meta_title"]))[:60],
+                "meta_titles_alternativos": [str(t)[:60] for t in data.get("meta_titles_alternativos", fallback["meta_titles_alternativos"])],
+                "meta_description": str(data.get("meta_description", fallback["meta_description"]))[:155],
+                "slug_sugerido": str(data.get("slug_sugerido", fallback["slug_sugerido"])),
+                "og_tags": {
+                    "og:title": str(data.get("meta_title", fallback["meta_title"]))[:60],
+                    "og:description": str(data.get("meta_description", fallback["meta_description"]))[:155],
+                    "og:type": "article",
+                },
+                "faq_items": faq_items,
+                "schema_faq_json": schema_json,
+                "schema_faq_string": schema_string,
+            }
+    except Exception as e:
+        logger.warning("Error en generar_schema_y_meta_tags: %s", e)
+
+    return fallback
+
+
+def generar_copywriting_ads_y_hooks(
+    keyword_base: str,
+    preguntas: list[str] = None,
+    intencion: str = "Informativa / Comercial",
+    pais: str = "Colombia",
+) -> dict:
+    """
+    Genera copies de alta conversión para Google Ads (PPC), Facebook/Instagram Ads
+    y ganchos (hooks) virales con guiones de 30s para TikTok / Reels / Shorts.
+    """
+    preguntas_muestra = [p for p in (preguntas or []) if p.strip()][:5]
+
+    kw_cap = keyword_base.title()
+    fallback = {
+        "google_ads": {
+            "titulos": [
+                f"{kw_cap} en {pais}"[:30],
+                f"Mejor {kw_cap} 2026"[:30],
+                "Precios y Ofertas Hoy"[:30],
+                "Guía Rápida y Fácil"[:30],
+                "Cotiza 100% Online"[:30],
+            ],
+            "descripciones": [
+                f"Descubre todo sobre {keyword_base} con asesoría experta. Calidad garantizada. ¡Entra ya!"[:90],
+                f"Aprende paso a paso cómo funciona {keyword_base}. Precios claros y transparentes."[:90],
+                f"¿Buscando {keyword_base}? Encuentra las mejores opciones en {pais}. ¡Haz clic aquí!"[:90],
+            ]
+        },
+        "social_ads": {
+            "hook_scroll_stopper": f"🚨 ¿Pensando en {keyword_base}? No cometas el error que el 90% hace...",
+            "copy_pas": f"Sabemos lo frustrante que es buscar información clara sobre {keyword_base} y solo encontrar términos confusos.\n\nPor eso creamos esta guía completa y práctica: para que conozcas precios reales, beneficios y el paso a paso exacto.\n\n👉 Toca el enlace abajo y descúbrelo en 2 minutos.",
+            "cta_boton": "Más Información"
+        },
+        "tiktok_reels_hooks": [
+            f"El error número 1 que estás cometiendo con {keyword_base} (y cómo evitarlo hoy)",
+            f"3 cosas que NADIE te dice sobre {keyword_base} antes de empezar...",
+            f"Si tuviera que empezar de cero con {keyword_base}, haría exactamente esto:",
+            f"Deja de perder tiempo: la forma correcta de hacer {keyword_base} en 2026",
+            f"¿Vale la pena {keyword_base}? Te digo la verdad sin filtros en 30 segundos 👇",
+        ],
+        "guion_video_30s": {
+            "segundos_0_3_gancho": f"¡Detén el scroll! Si buscas {keyword_base}, tienes que ver esto.",
+            "segundos_4_15_problema": f"La mayoría de personas comete el error de no comparar opciones y termina pagando de más o perdiendo tiempo.",
+            "segundos_16_25_solucion": "El truco está en seguir estos 3 pasos clave que te ahorrarán horas de investigación.",
+            "segundos_26_30_cta": "Guarda este video para no olvidarlo y sígueme para más consejos como este."
+        }
+    }
+
+    if not GROQ_API_KEY:
+        return fallback
+
+    prompt = (
+        f"Eres un Director Creativo de Performance Marketing y Copywriter de respuesta directa en {pais}.\n"
+        f"Crea una suite completa de anuncios y contenido viral para: '{keyword_base}'.\n"
+        f"Intención detectada: {intencion}.\n"
+        f"Dudas reales de los usuarios: {json.dumps(preguntas_muestra, ensure_ascii=False)}\n\n"
+        "REGLAS ESTRICTAS DE CARACTERES:\n"
+        "1. google_ads.titulos: Exactamente 5 títulos persuasivos, CADA UNO DE MÁXIMO 30 CARACTERES.\n"
+        "2. google_ads.descripciones: Exactamente 3 descripciones persuasivas con CTA, CADA UNA DE MÁXIMO 90 CARACTERES.\n"
+        "3. social_ads: Hook inicial de 1-2 líneas para detener el scroll + cuerpo persuasivo con fórmula PAS (Problema-Agitación-Solución).\n"
+        "4. tiktok_reels_hooks: 5 ganchos virales de alta retención para los primeros 3 segundos de un video.\n"
+        "5. guion_video_30s: Guion estructurado por bloques de tiempo (0-3s, 4-15s, 16-25s, 26-30s).\n\n"
+        "Devuelve UNICAMENTE este JSON sin markdown adicional:\n"
+        "{\n"
+        '  "google_ads": {\n'
+        '    "titulos": ["Título 1 <= 30 car", "Título 2 <= 30 car", "Título 3", "Título 4", "Título 5"],\n'
+        '    "descripciones": ["Desc 1 <= 90 caracteres con CTA", "Desc 2 <= 90 car", "Desc 3 <= 90 car"]\n'
+        "  },\n"
+        '  "social_ads": {\n'
+        '    "hook_scroll_stopper": "Gancho inicial impactante...",\n'
+        '    "copy_pas": "Cuerpo del anuncio con fórmula PAS...",\n'
+        '    "cta_boton": "Más Información | Registrarte | Comprar Ahora"\n'
+        "  },\n"
+        '  "tiktok_reels_hooks": [\n'
+        '    "Gancho 1...", "Gancho 2...", "Gancho 3...", "Gancho 4...", "Gancho 5..."\n'
+        "  ],\n"
+        '  "guion_video_30s": {\n'
+        '    "segundos_0_3_gancho": "Frase de apertura gancho...",\n'
+        '    "segundos_4_15_problema": "Problema o mito...",\n'
+        '    "segundos_16_25_solucion": "Solución o consejo...",\n'
+        '    "segundos_26_30_cta": "Llamado a la acción..."\n'
+        "  }\n"
+        "}"
+    )
+
+    try:
+        data = _post_groq_json(prompt, timeout=45)
+        if isinstance(data, dict) and "google_ads" in data:
+            g_ads = data.get("google_ads", {})
+            titulos = [str(t)[:30] for t in g_ads.get("titulos", fallback["google_ads"]["titulos"])][:5]
+            descripciones = [str(d)[:90] for d in g_ads.get("descripciones", fallback["google_ads"]["descripciones"])][:3]
+
+            return {
+                "google_ads": {
+                    "titulos": titulos,
+                    "descripciones": descripciones,
+                },
+                "social_ads": data.get("social_ads", fallback["social_ads"]),
+                "tiktok_reels_hooks": [str(h) for h in data.get("tiktok_reels_hooks", fallback["tiktok_reels_hooks"])][:5],
+                "guion_video_30s": data.get("guion_video_30s", fallback["guion_video_30s"]),
+            }
+    except Exception as e:
+        logger.warning("Error en generar_copywriting_ads_y_hooks: %s", e)
+
+    return fallback
+
+
+

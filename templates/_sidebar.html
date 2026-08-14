@@ -1,15 +1,17 @@
 {% set current_path = request.url.path %}
 <aside class="fixed left-0 top-0 h-full w-[240px] bg-surface border-r border-outline-variant flex flex-col py-md px-sm z-20">
   <div class="mb-xl px-md">
-    <h1 class="font-h2 text-h2 font-bold text-primary">KeySearch V 6.0</h1>
-    <p class="font-label-sm text-on-surface-variant">SEO Pipeline Engine</p>
+    <h1 class="font-h2 text-h2 font-bold text-primary">Key Search</h1>
+    <p class="font-label-sm text-secondary font-bold">V 10.0 Ultra</p>
   </div>
+
   <nav class="flex-grow space-y-xs">
     {% set links = [
       ("/", "hub", "Pipeline Hub"),
       ("/config", "input", "Data Input"),
-      ("/scraping", "database", "Scraping"),
-      ("/ia", "psychology", "IA Enrichment"),
+      ("/scraping", "database", "Scraping & SERP"),
+      ("/clusters", "bubble_chart", "Mapa de Clústeres"),
+      ("/ia", "auto_awesome", "SEO Schema & Ads"),
       ("/export", "download", "Export"),
       ("/historial", "history", "Historial")
     ] %}

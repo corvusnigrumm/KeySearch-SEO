@@ -16,10 +16,10 @@ from typing import Dict, List, Optional
 
 from config import (
     GOOGLE_ADS_CONFIG_PATH,
-    GOOGLE_ADS_CUSTOMER_ID,
     GOOGLE_ADS_FALLBACK_CONFIG_PATH,
     GOOGLE_ADS_GEO_TARGETS,
     GOOGLE_ADS_LANGUAGE_CODE,
+    get_dynamic_google_ads_customer_id,
 )
 
 try:
@@ -60,7 +60,8 @@ def get_google_ads_status() -> dict:
             "config_path": None,
         }
 
-    if not GOOGLE_ADS_CUSTOMER_ID:
+    customer_id = get_dynamic_google_ads_customer_id()
+    if not customer_id:
         return {
             "enabled": False,
             "reason": "Falta definir GOOGLE_ADS_CUSTOMER_ID",
@@ -71,6 +72,7 @@ def get_google_ads_status() -> dict:
         "enabled": True,
         "reason": "Google Ads listo",
         "config_path": config_path,
+        "customer_id": customer_id,
     }
 
 
@@ -175,7 +177,7 @@ def enrich_with_google_ads_metrics(metricas: Dict[str, dict], progress_callback=
         }
 
     config_path = status["config_path"]
-    customer_id = GOOGLE_ADS_CUSTOMER_ID
+    customer_id = status.get("customer_id")
     geo_targets = []
     for metrica in metricas.values():
         geo_targets = metrica.get("google_ads_geo_targets", [])

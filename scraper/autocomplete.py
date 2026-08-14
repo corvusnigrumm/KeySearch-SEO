@@ -167,18 +167,24 @@ def _fetch_suggestions(
 
 
 
+from scraper.multi_engine_suggest import fetch_multi_engine_suggestions
+
+
 def get_autocomplete_suggestions(
     keyword: str,
     expandir: bool = True,
     search_context: dict | None = None,
+    engines: list[str] | None = None,
 ) -> List[str]:
     """
-    Obtiene sugerencias de autocompletado para una palabra clave.
+    Obtiene sugerencias de autocompletado para una palabra clave consultando
+    múltiples motores en tiempo real (Google, YouTube, Amazon, Bing, DuckDuckGo).
 
     Args:
         keyword: Palabra clave a buscar.
-        expandir: Si True, también busca con prefijos de preguntas
-                  (qué, cómo, por qué, etc.) para obtener más resultados.
+        expandir: Si True, también busca con prefijos de preguntas y variaciones.
+        search_context: Idioma y país seleccionados.
+        engines: Lista opcional de motores a incluir.
 
     Returns:
         Lista de sugerencias únicas (sin duplicados).
@@ -186,6 +192,7 @@ def get_autocomplete_suggestions(
     todas = []
     vistas = set()
     session = requests.Session()
+    ctx = _resolver_contexto(search_context)
 
     def _agregar(sugerencias: List[str]):
         for s in sugerencias:
@@ -196,8 +203,22 @@ def get_autocomplete_suggestions(
                 vistas.add(key)
                 todas.append(s)
 
-    # Búsqueda base
-    _agregar(_fetch_suggestions(keyword, search_context, session=session))
+    # 1. Búsqueda Multi-Motor principal
+    try:
+        multi_res = fetch_multi_engine_suggestions(
+            keyword=keyword,
+            lang=ctx["language_code"],
+            country=ctx["country_code"],
+            engines=engines,
+        )
+        if multi_res:
+            _agregar(list(multi_res.keys()))
+    except Exception as e:
+        logger.debug("Error en fetch_multi_engine_suggestions: %s", e)
+
+    # Si por alguna razón no devolvió, asegurar Google directo
+    if not todas:
+        _agregar(_fetch_suggestions(keyword, search_context, session=session))
 
     if expandir:
         # Expandir con modificadores de preguntas
@@ -241,6 +262,7 @@ def get_autocomplete_suggestions(
             semillas = [s for s in nuevas[:limite * 3] if _es_semilla_valida(s, keyword)][:limite]
 
     return todas
+
 
 
 def get_question_suggestions(keyword: str, search_context: dict | None = None) -> List[str]:
