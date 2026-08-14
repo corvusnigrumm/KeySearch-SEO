@@ -575,8 +575,12 @@ function copiarSchemaCode() {
 
 function copiarMetaTagsHtml() {
   const box = document.getElementById("metaTagsHtmlBox");
-  navigator.clipboard.writeText(box.textContent);
-  alert("Meta tags HTML copiados al portapapeles.");
+  if (!box || !box.textContent.trim()) return;
+  navigator.clipboard.writeText(box.textContent).then(() => {
+    const btn = event.currentTarget;
+    const span = btn.querySelector("span:last-child");
+    if (span) { span.textContent = "¡Copiado!"; setTimeout(() => { span.textContent = "Copiar Tags"; }, 2500); }
+  }).catch(e => console.error(e));
 }
 
 function copiarGoogleAdsCopy() {

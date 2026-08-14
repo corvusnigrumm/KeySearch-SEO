@@ -415,11 +415,27 @@ async def api_set_groq_model(request: Request, user: User = Depends(get_current_
         logger.error("Error cambiando modelo Groq: %s", e)
         return JSONResponse({"error": str(e)}, status_code=500)
 
+@app.get("/api/clusters-data")
+async def api_clusters_data(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    """Devuelve los datos de la sesión actual para el Mapa de Clústeres."""
+    user_state = get_session(request)
+    if not user_state or not user_state.last_run_data:
+        return JSONResponse({"data": [], "has_data": False})
+    # Serializar sólo los campos necesarios para el grafo
+    items = []
+    for item in user_state.last_run_data:
+        items.append({
+            "keyword": item.get("keyword", ""),
+            "category": item.get("category", ""),
+            "suggestions": item.get("suggestions", []),
+            "paa": item.get("paa", []),
+            "related": item.get("related", []),
+            "ai_clusters": item.get("ai_clusters", []),
+            "content_brief": item.get("content_brief"),
+        })
+    return JSONResponse({"data": items, "has_data": True})
+
 @app.get("/download/history/{item_id}")
-
-
-
-
 async def download_history_excel(item_id: int, user: User = Depends(get_current_user_or_redirect), db: Session = Depends(get_db)):
     search = db.query(SearchHistory).filter(SearchHistory.id == item_id, SearchHistory.user_id == user.id).first()
     if not search:

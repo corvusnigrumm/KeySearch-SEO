@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="es"><head>
 <meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Key Search V 10.0 Ultra - Mapa Visual de Clústeres (AnswerThePublic Style)</title>
+<title>Key Search V 10.0 Ultra - Mapa de Clústeres & Guías Editoriales</title>
+<meta name="description" content="Visualiza la red semántica de tus keywords y genera guías editoriales (Content Briefs) profesionales con Key Search V 10.0 Ultra."/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -10,12 +11,21 @@
 <style>
 .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
 .pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}
-.node circle{cursor:pointer;transition:all .2s ease}
-.node circle:hover{filter:drop-shadow(0 0 8px rgba(0,103,127,0.6));stroke-width:3px}
-.node text{font-family:'Inter',sans-serif;font-size:11px;fill:#1e293b}
-.link{fill:none;stroke:#cbd5e1;stroke-opacity:0.6;stroke-width:1.5px}
+.node circle{cursor:pointer;transition:all .25s ease}
+.node circle:hover{filter:drop-shadow(0 0 10px rgba(0,103,127,0.7));stroke-width:3.5px}
+.node text{font-family:'Inter',sans-serif;font-size:11px;fill:#1e293b;pointer-events:none}
+.node text.root-label{font-size:13px;font-weight:700;fill:#0d1c32}
+.link{fill:none;stroke:#cbd5e1;stroke-opacity:0.55;stroke-width:1.5px}
 .code-scroll::-webkit-scrollbar{height:6px;width:6px}
 .code-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+.brief-tab-btn{transition:all .15s;border-bottom:3px solid transparent;padding-bottom:8px;font-size:12px;font-weight:600;color:#64748b}
+.brief-tab-btn.active{border-color:#00677f;color:#00677f}
+#briefLoadingState{display:none}
+#briefContent{display:block}
+.checklist-item{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:rgba(0,103,127,0.05);border-radius:6px;font-size:12px;color:#334155;line-height:1.4}
+.checklist-item .check-icon{color:#10b981;flex-shrink:0;font-size:14px;margin-top:1px}
+.keyword-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(0,103,127,0.1);color:#00677f;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;cursor:pointer;transition:background .15s}
+.keyword-tag:hover{background:rgba(0,103,127,0.2)}
 </style>
 </head>
 <body class="bg-background text-on-surface font-body-md">
@@ -28,66 +38,87 @@
     <div>
       <div class="flex items-center gap-xs text-secondary font-bold text-label-sm uppercase tracking-wider mb-xs">
         <span class="material-symbols-outlined text-sm">bubble_chart</span>
-        <span>Visualización Semántica & Content Briefs</span>
+        <span>Visualización Semántica & Guías Editoriales</span>
       </div>
-      <h2 class="font-h1 text-h1 text-primary">Mapa de Clústeres & Guías Editoriales</h2>
-      <p class="text-on-surface-variant mt-xs">Visualiza la red semántica ramificada estilo <strong>AnswerThePublic</strong> y genera guías editoriales (Content Briefs H1/H2/H3) para redactores.</p>
+      <h1 class="font-h1 text-h1 text-primary">Mapa de Clústeres & Content Briefs</h1>
+      <p class="text-on-surface-variant mt-xs">Red semántica estilo <strong>AnswerThePublic</strong> + guías de redacción H1/H2/H3 generadas con IA para entregárselas a tu redactor.</p>
     </div>
-    
-    <!-- Controles de Exportación Gráfica -->
-    <div class="flex items-center gap-xs">
-      <button onclick="exportarGraficoPng()" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface font-bold text-label-xs px-md py-sm rounded-lg flex items-center gap-xs transition-all shadow-xs">
+    <div class="flex items-center gap-xs shrink-0">
+      <button onclick="exportarGraficoPng()" id="btnExportPng" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface font-bold text-label-xs px-md py-sm rounded-lg flex items-center gap-xs transition-all shadow-xs">
         <span class="material-symbols-outlined text-xs">image</span>
-        <span>Descargar PNG</span>
+        <span>PNG</span>
       </button>
       <button onclick="exportarGraficoSvg()" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface font-bold text-label-xs px-md py-sm rounded-lg flex items-center gap-xs transition-all shadow-xs">
         <span class="material-symbols-outlined text-xs">download</span>
-        <span>Descargar SVG</span>
+        <span>SVG</span>
       </button>
     </div>
   </header>
 
-  <!-- Selector de Keyword Analizada -->
-  {% if state.last_run_data %}
-  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-sm">
-    <div class="flex items-center gap-xs text-body-sm text-primary font-bold">
-      <span class="material-symbols-outlined text-primary">hub</span>
-      <span>Seleccionar Tema Analizado:</span>
+  <!-- ════════════ BARRA DE CONTROL ════════════ -->
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-xs flex flex-col lg:flex-row lg:items-center gap-md">
+
+    <!-- Input standalone -->
+    <div class="flex items-center gap-xs flex-1">
+      <div class="bg-primary/10 text-primary p-xs rounded-lg flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-sm">manage_search</span>
+      </div>
+      <div class="flex-1">
+        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-0.5">Analizar Keyword:</label>
+        <div class="flex gap-xs">
+          <input id="standaloneKwInput" type="text" placeholder="Escribe cualquier keyword y genera el mapa..." 
+            class="flex-1 bg-surface border border-outline-variant text-on-surface rounded-lg text-body-sm px-sm py-xs focus:ring-2 focus:ring-primary focus:outline-none"
+            onkeydown="if(event.key==='Enter') analizarKeywordStandalone()"/>
+          <button onclick="analizarKeywordStandalone()" id="btnAnalizar" 
+            class="bg-primary hover:bg-primary/90 text-white font-bold text-label-sm px-md py-xs rounded-lg flex items-center gap-xs transition-all shadow-sm shrink-0">
+            <span class="material-symbols-outlined text-sm" id="btnAnalizarIcon">bolt</span>
+            <span id="btnAnalizarText">Generar Mapa</span>
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="w-full md:w-96">
-      <select id="keywordSelector" onchange="seleccionarKeyword(this.value)" class="w-full bg-surface border border-outline-variant text-on-surface rounded-lg text-body-sm p-sm focus:ring-2 focus:ring-primary">
-        {% for item in state.last_run_data %}
-        <option value="{{ loop.index0 }}">{{ item.keyword }} ({{ item.category }})</option>
-        {% endfor %}
-      </select>
+
+    <!-- Divider -->
+    <div class="hidden lg:block w-px h-10 bg-outline-variant"></div>
+
+    <!-- Selector de sesión si hay datos -->
+    {% if state.last_run_data %}
+    <div class="flex items-center gap-xs">
+      <div class="bg-secondary/10 text-secondary p-xs rounded-lg flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-sm">hub</span>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-0.5">O selecciona del análisis:</label>
+        <select id="keywordSelector" onchange="seleccionarKeywordDeSesion(this.value)" 
+          class="bg-surface border border-outline-variant text-on-surface rounded-lg text-body-sm px-sm py-xs focus:ring-2 focus:ring-primary w-56">
+          {% for item in state.last_run_data %}
+          <option value="{{ loop.index0 }}">{{ item.keyword }} ({{ item.category }})</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   <!-- ════════════════════════════════════════════════════════════════════════ -->
-  <!-- ESTUDIO VISUAL: GRAFO INTERACTIVO D3.JS + CONTENT BRIEF                -->
+  <!-- ÁREA PRINCIPAL: GRAFO + BRIEF                                           -->
   <!-- ════════════════════════════════════════════════════════════════════════ -->
   <div class="grid grid-cols-12 gap-gutter">
 
-    <!-- COLUMNA IZQUIERDA: LIENZO INTERACTIVO D3.JS (AnswerThePublic Style) -->
-    <div class="col-span-12 xl:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm relative overflow-hidden flex flex-col justify-between" style="min-height: 620px;">
+    <!-- COLUMNA IZQUIERDA: LIENZO D3.JS -->
+    <div class="col-span-12 xl:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm relative overflow-hidden flex flex-col" style="min-height:620px">
       
-      <!-- Barra de Herramientas del Grafo -->
-      <div class="flex items-center justify-between border-b border-outline-variant pb-xs mb-sm z-10">
-        <div class="flex items-center gap-xs text-body-xs text-on-surface-variant font-medium">
-          <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block"></span>
-          <span>¿Qué?</span>
-          <span class="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block ml-2"></span>
-          <span>¿Cómo?</span>
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block ml-2"></span>
-          <span>Dónde/Cuándo</span>
-          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block ml-2"></span>
-          <span>Comparativas</span>
-          <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block ml-2"></span>
-          <span>Precios/Compra</span>
+      <!-- Barra de herramientas del grafo -->
+      <div class="flex items-center justify-between border-b border-outline-variant pb-xs mb-sm z-10 flex-wrap gap-xs">
+        <div class="flex items-center gap-xs text-body-xs text-on-surface-variant font-medium flex-wrap">
+          <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block"></span><span>¿Qué?</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block ml-1"></span><span>¿Cómo?</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block ml-1"></span><span>Dónde/Cuándo</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block ml-1"></span><span>Comparativas</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block ml-1"></span><span>Precios</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-violet-500 inline-block ml-1"></span><span>Otras</span>
         </div>
-
-        <div class="flex items-center gap-xs">
+        <div class="flex items-center gap-1">
           <button onclick="zoomIn()" class="p-xs hover:bg-surface-container rounded" title="Acercar">
             <span class="material-symbols-outlined text-sm">zoom_in</span>
           </button>
@@ -100,67 +131,127 @@
         </div>
       </div>
 
-      <!-- Contenedor SVG de D3.js -->
-      <div id="d3GraphContainer" class="w-full flex-grow flex items-center justify-center relative cursor-grab active:cursor-grabbing">
+      <!-- Estado vacío -->
+      <div id="graphEmptyState" class="flex-1 flex flex-col items-center justify-center text-center gap-md py-xl">
+        <span class="material-symbols-outlined text-6xl text-outline-variant">bubble_chart</span>
+        <div>
+          <p class="font-bold text-on-surface-variant">Escribe una keyword arriba para generar el mapa</p>
+          <p class="text-body-xs text-on-surface-variant mt-xs">El grafo radial mostrará todos los clústeres semánticos y preguntas relacionadas</p>
+        </div>
+      </div>
+
+      <!-- Estado cargando grafo -->
+      <div id="graphLoadingState" class="flex-1 hidden flex-col items-center justify-center gap-md">
+        <div class="flex gap-1">
+          <span class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay:0s"></span>
+          <span class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay:.15s"></span>
+          <span class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay:.3s"></span>
+        </div>
+        <p class="text-body-sm text-on-surface-variant font-medium">Generando red semántica...</p>
+      </div>
+
+      <!-- Contenedor SVG -->
+      <div id="d3GraphContainer" class="flex-1 hidden w-full flex items-center justify-center relative cursor-grab active:cursor-grabbing">
         <svg id="clusterSvg" class="w-full h-full"></svg>
       </div>
 
       <!-- Leyenda inferior -->
-      <div class="pt-xs border-t border-outline-variant flex items-center justify-between text-[11px] text-on-surface-variant z-10">
-        <span>💡 Puedes hacer zoom con la rueda del ratón y arrastrar los nodos.</span>
+      <div id="graphFooter" class="hidden pt-xs border-t border-outline-variant flex items-center justify-between text-[11px] text-on-surface-variant z-10">
+        <span>💡 Zoom con rueda del ratón · Arrastra los nodos · Clic en nodo para generar brief</span>
         <span id="nodesCountBadge" class="bg-surface-container px-sm py-0.5 rounded font-bold">0 Nodos</span>
       </div>
     </div>
 
-    <!-- COLUMNA DERECHA: CONTENT BRIEF EDITORIAL (H1/H2/H3 PARA REDACTORES) -->
-    <div class="col-span-12 xl:col-span-4 space-y-md">
-      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col justify-between h-full space-y-md">
-        <div>
-          <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
-            <div class="flex items-center gap-xs font-bold text-body-md text-primary">
-              <span class="material-symbols-outlined text-secondary">description</span>
-              <span>Content Brief para Redactores</span>
+    <!-- COLUMNA DERECHA: CONTENT BRIEF EDITORIAL -->
+    <div class="col-span-12 xl:col-span-4">
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col gap-md h-full" style="min-height:620px">
+        
+        <!-- Cabecera del brief -->
+        <div class="flex items-center justify-between border-b border-outline-variant pb-sm">
+          <div class="flex items-center gap-xs font-bold text-body-md text-primary">
+            <span class="material-symbols-outlined text-secondary">description</span>
+            <span>Content Brief</span>
+          </div>
+          <button onclick="copiarBriefMarkdown()" id="btnCopyBrief" 
+            class="bg-secondary hover:bg-secondary/90 text-white font-bold text-label-xs px-md py-xs rounded-lg flex items-center gap-xs transition-all shadow-xs">
+            <span class="material-symbols-outlined text-xs">content_copy</span>
+            <span id="btnCopyBriefText">Copiar Brief</span>
+          </button>
+        </div>
+
+        <!-- Estado cargando brief -->
+        <div id="briefLoadingState" class="flex flex-col items-center justify-center gap-md py-xl flex-1">
+          <div class="flex gap-1">
+            <span class="w-2 h-2 bg-secondary rounded-full animate-bounce" style="animation-delay:0s"></span>
+            <span class="w-2 h-2 bg-secondary rounded-full animate-bounce" style="animation-delay:.15s"></span>
+            <span class="w-2 h-2 bg-secondary rounded-full animate-bounce" style="animation-delay:.3s"></span>
+          </div>
+          <p class="text-body-xs text-on-surface-variant">Generando guía editorial con IA...</p>
+        </div>
+
+        <!-- Estado vacío brief -->
+        <div id="briefEmptyState" class="flex flex-col items-center justify-center gap-sm py-xl flex-1 text-center">
+          <span class="material-symbols-outlined text-5xl text-outline-variant">edit_document</span>
+          <p class="text-body-xs text-on-surface-variant">El Content Brief aparecerá aquí al analizar una keyword</p>
+        </div>
+
+        <!-- Contenido del brief -->
+        <div id="briefContent" class="hidden flex-col gap-md flex-1 overflow-y-auto code-scroll">
+          
+          <!-- Metadatos -->
+          <div class="bg-surface-container p-sm rounded-lg grid grid-cols-2 gap-xs text-body-xs">
+            <div>
+              <span class="text-on-surface-variant block">Longitud sugerida:</span>
+              <span id="briefWordCount" class="font-bold text-primary">—</span>
             </div>
-            <button onclick="copiarBriefMarkdown()" id="btnCopyBrief" class="bg-secondary hover:bg-secondary/90 text-white font-bold text-label-xs px-md py-xs rounded-lg flex items-center gap-xs transition-all shadow-xs">
-              <span class="material-symbols-outlined text-xs">content_copy</span>
-              <span id="btnCopyBriefText">Copiar Brief</span>
+            <div>
+              <span class="text-on-surface-variant block">Formato:</span>
+              <span id="briefFormat" class="font-bold text-secondary">—</span>
+            </div>
+          </div>
+
+          <!-- H1 -->
+          <div>
+            <label class="block text-label-xs font-bold text-on-surface-variant uppercase mb-xs">Título H1 Principal:</label>
+            <div id="briefH1" class="font-bold text-body-sm text-primary p-xs bg-primary/5 rounded border border-primary/20"></div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="border-b border-outline-variant flex items-center gap-md">
+            <button onclick="switchBriefTab('headings')" id="tabBriefHeadings" class="brief-tab-btn active">
+              Estructura H2/H3
+            </button>
+            <button onclick="switchBriefTab('terms')" id="tabBriefTerms" class="brief-tab-btn">
+              Términos SEO
+            </button>
+            <button onclick="switchBriefTab('checklist')" id="tabBriefChecklist" class="brief-tab-btn">
+              ✅ Checklist
             </button>
           </div>
 
-          <!-- Metadatos Rápidos del Brief -->
-          <div class="bg-surface-container p-sm rounded-lg space-y-xs text-body-xs mb-md">
-            <div class="flex justify-between">
-              <span class="text-on-surface-variant">Longitud sugerida:</span>
-              <span id="briefWordCount" class="font-bold text-primary">1,500 - 2,000 palabras</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-on-surface-variant">Formato:</span>
-              <span id="briefFormat" class="font-bold text-secondary">Guía Definitiva</span>
-            </div>
+          <!-- Panel: Estructura H2/H3 -->
+          <div id="panelHeadings" class="space-y-xs max-h-72 overflow-y-auto code-scroll pr-1">
+            <div id="briefHeadingsList"></div>
           </div>
 
-          <!-- H1 Sugerido -->
-          <div class="mb-md">
-            <label class="block text-label-xs font-bold text-on-surface-variant uppercase mb-xs">Título H1 Principal:</label>
-            <div id="briefH1" class="font-bold text-body-sm text-primary p-xs bg-surface-container/60 rounded"></div>
-          </div>
-
-          <!-- Estructura de H2 / H3 Recomendados -->
-          <div class="mb-md">
-            <label class="block text-label-xs font-bold text-on-surface-variant uppercase mb-xs">Estructura H2 / H3 Recomendada:</label>
-            <div id="briefHeadingsList" class="space-y-xs max-h-56 overflow-y-auto code-scroll pr-1"></div>
-          </div>
-
-          <!-- Términos Semánticos Obligatorios -->
-          <div>
-            <label class="block text-label-xs font-bold text-on-surface-variant uppercase mb-xs">Términos Secundarios Clave:</label>
+          <!-- Panel: Términos SEO -->
+          <div id="panelTerms" class="hidden">
             <div id="briefTermsList" class="flex flex-wrap gap-xs"></div>
+            <div id="briefQuestions" class="mt-sm space-y-xs"></div>
           </div>
+
+          <!-- Panel: Checklist redactor -->
+          <div id="panelChecklist" class="hidden space-y-xs">
+            <div id="briefChecklistItems"></div>
+          </div>
+
         </div>
 
-        <div class="pt-sm border-t border-outline-variant text-[11px] text-on-surface-variant">
-          Entrega este brief a tu redactor o cópialo para redactar con ChatGPT/Claude.
+        <!-- Footer brief -->
+        <div id="briefFooter" class="hidden pt-sm border-t border-outline-variant text-[11px] text-on-surface-variant">
+          Entrega este brief a tu redactor o pégalo en ChatGPT/Claude para redactar el artículo completo.
         </div>
+
       </div>
     </div>
 
@@ -170,261 +261,528 @@
 </main>
 
 <script>
-const runData = {{ state.last_run_data | tojson | default("[]") }};
+// ═══════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════
+const SESSION_DATA = {{ state.last_run_data | tojson | default("[]") }};
 let currentBriefMarkdown = "";
 let currentTreeData = null;
 let svg, g, zoomHandler;
+let activeBriefTab = "headings";
 
-function inicializar() {
-  if (runData && runData.length > 0) {
-    seleccionarKeyword(0);
+// ═══════════════════════════════════════════════════════
+// INICIALIZACIÓN
+// ═══════════════════════════════════════════════════════
+async function inicializar() {
+  if (SESSION_DATA && SESSION_DATA.length > 0) {
+    // Hay datos de sesión: precargar el primero
+    seleccionarKeywordDeSesion(0);
   } else {
-    // Ejemplo por defecto
-    const mockTree = generarMockTree("inteligencia artificial");
-    renderizarGrafoD3(mockTree);
-    cargarBriefApi("inteligencia artificial");
+    // Intentar cargar datos frescos via API
+    try {
+      const resp = await fetch("/api/clusters-data");
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json.has_data && json.data.length > 0) {
+          construirYRenderizar(json.data[0]);
+          cargarBriefDesdeItem(json.data[0]);
+          return;
+        }
+      }
+    } catch(e) {}
+    // Nada disponible: mostrar estado vacío
+    mostrarEstadoVacio();
   }
 }
 
-function seleccionarKeyword(index) {
-  const item = runData[index];
+// ═══════════════════════════════════════════════════════
+// CONTROLES DE ESTADO DE LA UI
+// ═══════════════════════════════════════════════════════
+function mostrarEstadoVacio() {
+  document.getElementById("graphEmptyState").classList.remove("hidden");
+  document.getElementById("graphLoadingState").classList.add("hidden");
+  document.getElementById("d3GraphContainer").classList.add("hidden");
+  document.getElementById("graphFooter").classList.add("hidden");
+  document.getElementById("briefEmptyState").classList.remove("hidden");
+  document.getElementById("briefLoadingState").style.display = "none";
+  document.getElementById("briefContent").classList.add("hidden");
+  document.getElementById("briefFooter").classList.add("hidden");
+}
+
+function mostrarCargando() {
+  document.getElementById("graphEmptyState").classList.add("hidden");
+  document.getElementById("graphLoadingState").classList.remove("hidden");
+  document.getElementById("graphLoadingState").style.display = "flex";
+  document.getElementById("d3GraphContainer").classList.add("hidden");
+  document.getElementById("graphFooter").classList.add("hidden");
+  document.getElementById("briefEmptyState").classList.add("hidden");
+  document.getElementById("briefLoadingState").style.display = "flex";
+  document.getElementById("briefContent").classList.add("hidden");
+  document.getElementById("briefFooter").classList.add("hidden");
+}
+
+function mostrarGrafo() {
+  document.getElementById("graphLoadingState").style.display = "none";
+  document.getElementById("graphLoadingState").classList.add("hidden");
+  document.getElementById("d3GraphContainer").classList.remove("hidden");
+  document.getElementById("graphFooter").classList.remove("hidden");
+}
+
+function mostrarBrief() {
+  document.getElementById("briefLoadingState").style.display = "none";
+  document.getElementById("briefContent").classList.remove("hidden");
+  document.getElementById("briefContent").style.display = "flex";
+  document.getElementById("briefFooter").classList.remove("hidden");
+}
+
+// ═══════════════════════════════════════════════════════
+// ANÁLISIS STANDALONE (keyword manual)
+// ═══════════════════════════════════════════════════════
+async function analizarKeywordStandalone() {
+  const input = document.getElementById("standaloneKwInput");
+  const kw = input.value.trim();
+  if (!kw) {
+    input.focus();
+    input.classList.add("ring-2", "ring-red-400");
+    setTimeout(() => input.classList.remove("ring-2", "ring-red-400"), 1500);
+    return;
+  }
+
+  const btn = document.getElementById("btnAnalizar");
+  const icon = document.getElementById("btnAnalizarIcon");
+  const text = document.getElementById("btnAnalizarText");
+  btn.disabled = true;
+  icon.classList.add("animate-spin");
+  text.textContent = "Generando...";
+
+  mostrarCargando();
+
+  try {
+    // Generar el mapa heurístico inmediatamente con datos vacíos
+    const mockItem = { keyword: kw, suggestions: [], paa: [], related: [] };
+    construirYRenderizar(mockItem);
+    mostrarGrafo();
+
+    // Luego cargar el brief desde la API en paralelo
+    cargarBriefDesdeApi(kw, []);
+  } catch(e) {
+    console.error(e);
+    mostrarEstadoVacio();
+  } finally {
+    btn.disabled = false;
+    icon.classList.remove("animate-spin");
+    text.textContent = "Generar Mapa";
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// SELECTOR DESDE SESIÓN ACTIVA
+// ═══════════════════════════════════════════════════════
+function seleccionarKeywordDeSesion(index) {
+  const item = SESSION_DATA[parseInt(index)];
   if (!item) return;
 
+  // Poner la keyword en el input
+  document.getElementById("standaloneKwInput").value = item.keyword;
+
+  mostrarCargando();
+
+  // Construir el grafo con datos reales
+  construirYRenderizar(item);
+  mostrarGrafo();
+
+  // Cargar el brief (de sesión o de API)
+  if (item.content_brief && item.content_brief.meta_h1) {
+    renderizarBrief(item.content_brief);
+    mostrarBrief();
+  } else {
+    const pool = (item.suggestions || []).concat(item.paa || []);
+    cargarBriefDesdeApi(item.keyword, pool);
+  }
+}
+
+function cargarBriefDesdeItem(item) {
+  if (item.content_brief && item.content_brief.meta_h1) {
+    renderizarBrief(item.content_brief);
+    mostrarBrief();
+  } else {
+    cargarBriefDesdeApi(item.keyword, (item.suggestions||[]).concat(item.paa||[]));
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// CONSTRUCCIÓN DEL ÁRBOL D3.JS
+// ═══════════════════════════════════════════════════════
+function construirYRenderizar(item) {
   const treeData = construirTreeData(item);
   renderizarGrafoD3(treeData);
-  cargarBriefApi(item.keyword, (item.suggestions || []).concat(item.paa || []));
 }
 
 function construirTreeData(item) {
+  const BRANCHES = [
+    { name: "¿Qué es?",       color: "#4f46e5", tests: q => q.startsWith("que") || q.includes("que es") || q.includes("significa") || q.includes("definicion") },
+    { name: "¿Cómo hacer?",   color: "#0284c7", tests: q => q.startsWith("como") || q.includes("funciona") || q.includes("hacer") || q.includes("paso") },
+    { name: "Dónde / Cuándo", color: "#10b981", tests: q => q.startsWith("donde") || q.startsWith("cuando") || q.includes("lugar") },
+    { name: "Comparativas",   color: "#f59e0b", tests: q => q.includes("vs") || q.includes("mejor") || q.includes("diferencia") || q.includes("comparar") },
+    { name: "Precios / Compra",color: "#f43f5e", tests: q => q.includes("precio") || q.includes("costo") || q.includes("comprar") || q.includes("cuanto") || q.includes("gratis") },
+    { name: "Otras",          color: "#8b5cf6", tests: () => true },
+  ];
+
   const root = {
     name: item.keyword,
     color: "#00677f",
-    children: [
-      { name: "¿Qué es?", color: "#4f46e5", children: [] },
-      { name: "¿Cómo hacer?", color: "#0284c7", children: [] },
-      { name: "Dónde / Cuándo", color: "#10b981", children: [] },
-      { name: "Comparativas & Vs", color: "#f59e0b", children: [] },
-      { name: "Precios & Compra", color: "#f43f5e", children: [] },
-      { name: "Otras Preguntas", color: "#8b5cf6", children: [] },
-    ]
+    children: BRANCHES.map(b => ({ name: b.name, color: b.color, children: [] }))
   };
 
-  const pool = (item.suggestions || []).concat(item.paa || []).concat(item.related || []);
-  let count = 0;
+  const pool = [...new Set(
+    (item.suggestions || []).concat(item.paa || []).concat(item.related || [])
+  )].filter(q => q && q.trim().length > 2);
 
+  let placed = 0;
   pool.forEach(q => {
-    const ql = q.toLowerCase();
-    let targetBranch = 5; // Otras
-
-    if (ql.startsWith("que") || ql.includes("que es") || ql.includes("significa")) targetBranch = 0;
-    else if (ql.startsWith("como") || ql.includes("funciona") || ql.includes("hacer")) targetBranch = 1;
-    else if (ql.startsWith("donde") || ql.startsWith("cuando")) targetBranch = 2;
-    else if (ql.includes("vs") || ql.includes("mejor") || ql.includes("diferencia")) targetBranch = 3;
-    else if (ql.includes("precio") || ql.includes("costo") || ql.includes("comprar") || ql.includes("cuanto")) targetBranch = 4;
-
-    if (root.children[targetBranch].children.length < 8) {
-      root.children[targetBranch].children.push({ name: q, value: 1 });
-      count++;
+    const ql = q.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+    for (let i = 0; i < BRANCHES.length - 1; i++) {
+      if (BRANCHES[i].tests(ql) && root.children[i].children.length < 9) {
+        root.children[i].children.push({ name: q.length > 45 ? q.slice(0, 44) + "…" : q, value: 1 });
+        placed++;
+        return;
+      }
+    }
+    // Otras
+    if (root.children[5].children.length < 9) {
+      root.children[5].children.push({ name: q.length > 45 ? q.slice(0, 44) + "…" : q, value: 1 });
+      placed++;
     }
   });
 
+  // Si hay muy pocos datos, añadir sugerencias heurísticas
+  if (placed < 4) {
+    const kw = item.keyword;
+    const heur = [
+      { branch: 0, texts: [`¿Qué es ${kw}?`, `${kw} significado`, `¿Para qué sirve ${kw}?`] },
+      { branch: 1, texts: [`Cómo usar ${kw}`, `Cómo funciona ${kw}`, `Tutorial ${kw} paso a paso`] },
+      { branch: 3, texts: [`${kw} vs alternativas`, `Mejores opciones de ${kw}`] },
+      { branch: 4, texts: [`Precio de ${kw}`, `${kw} gratis`] },
+    ];
+    heur.forEach(({ branch, texts }) => {
+      texts.forEach(t => {
+        if (root.children[branch].children.length < 5)
+          root.children[branch].children.push({ name: t, value: 1, isHeuristic: true });
+      });
+    });
+  }
+
   // Limpiar ramas vacías
   root.children = root.children.filter(c => c.children.length > 0);
-  document.getElementById("nodesCountBadge").textContent = `${count + root.children.length + 1} Nodos`;
+  const total = root.children.reduce((s, c) => s + c.children.length, 0);
+  document.getElementById("nodesCountBadge").textContent = `${total + root.children.length + 1} Nodos`;
   return root;
 }
 
-function generarMockTree(kw) {
-  return {
-    name: kw,
-    color: "#00677f",
-    children: [
-      {
-        name: "¿Qué es?", color: "#4f46e5",
-        children: [{ name: "¿Qué es la inteligencia artificial?" }, { name: "¿Qué significa IA generativa?" }, { name: "Tipos de IA" }]
-      },
-      {
-        name: "¿Cómo hacer?", color: "#0284c7",
-        children: [{ name: "Cómo funciona la IA" }, { name: "Cómo aprender IA desde cero" }, { name: "Cómo crear un bot con IA" }]
-      },
-      {
-        name: "Comparativas", color: "#f59e0b",
-        children: [{ name: "IA vs Aprendizaje Automático" }, { name: "Mejores herramientas de IA 2026" }]
-      },
-      {
-        name: "Precios & Cursos", color: "#f43f5e",
-        children: [{ name: "Cuánto cuesta un curso de IA" }, { name: "Herramientas de IA gratis" }]
-      }
-    ]
-  };
-}
-
+// ═══════════════════════════════════════════════════════
+// RENDER D3.JS
+// ═══════════════════════════════════════════════════════
 function renderizarGrafoD3(data) {
   currentTreeData = data;
   const container = document.getElementById("d3GraphContainer");
-  const width = container.clientWidth || 750;
-  const height = 540;
-  const radius = width / 2;
+  const width = Math.max(container.clientWidth || 700, 500);
+  const height = Math.max(container.clientHeight || 540, 400);
 
   d3.select("#clusterSvg").selectAll("*").remove();
 
   svg = d3.select("#clusterSvg")
     .attr("viewBox", [-width / 2, -height / 2, width, height])
     .attr("width", width)
-    .attr("height", height);
+    .attr("height", height)
+    .style("font", "11px Inter, sans-serif");
 
-  zoomHandler = d3.zoom().scaleExtent([0.5, 3]).on("zoom", (event) => {
-    g.attr("transform", event.transform);
-  });
+  zoomHandler = d3.zoom()
+    .scaleExtent([0.3, 4])
+    .on("zoom", (event) => { g.attr("transform", event.transform); });
   svg.call(zoomHandler);
 
   g = svg.append("g");
 
   const tree = d3.tree()
-    .size([2 * Math.PI, Math.min(width, height) / 2 - 110])
-    .separation((a, b) => (a.parent == b.parent ? 1 : 2) / a.depth);
+    .size([2 * Math.PI, Math.min(width, height) / 2 - 120])
+    .separation((a, b) => (a.parent === b.parent ? 1 : 2) / a.depth);
 
   const hierarchy = d3.hierarchy(data);
   const root = tree(hierarchy);
 
-  // Enlaces
+  // Links
   g.append("g")
     .selectAll("path")
     .data(root.links())
     .join("path")
     .attr("class", "link")
-    .attr("d", d3.linkRadial()
-      .angle(d => d.x)
-      .radius(d => d.y));
+    .attr("d", d3.linkRadial().angle(d => d.x).radius(d => d.y));
 
-  // Nodos
+  // Nodes
   const node = g.append("g")
     .selectAll("g")
     .data(root.descendants())
     .join("g")
     .attr("class", "node")
-    .attr("transform", d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`);
+    .attr("transform", d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`)
+    .style("cursor", d => d.depth === 1 ? "pointer" : "default")
+    .on("click", (event, d) => {
+      if (d.depth === 1) {
+        event.stopPropagation();
+        const kw = d.data.name;
+        document.getElementById("standaloneKwInput").value = kw;
+        document.getElementById("briefLoadingState").style.display = "flex";
+        document.getElementById("briefContent").classList.add("hidden");
+        cargarBriefDesdeApi(kw, []);
+      }
+    });
 
   node.append("circle")
-    .attr("r", d => d.depth === 0 ? 10 : (d.depth === 1 ? 7 : 4))
+    .attr("r", d => d.depth === 0 ? 11 : (d.depth === 1 ? 7 : 4))
     .attr("fill", d => d.data.color || (d.parent && d.parent.data.color) || "#00677f")
     .attr("stroke", "#fff")
-    .attr("stroke-width", 2);
+    .attr("stroke-width", d => d.depth === 0 ? 3 : 2)
+    .attr("opacity", d => d.data.isHeuristic ? 0.6 : 1);
 
   node.append("text")
+    .attr("class", d => d.depth === 0 ? "root-label" : "")
     .attr("dy", "0.31em")
-    .attr("x", d => d.x < Math.PI === !d.children ? 8 : -8)
+    .attr("x", d => d.x < Math.PI === !d.children ? 10 : -10)
     .attr("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
     .attr("transform", d => d.x >= Math.PI ? "rotate(180)" : null)
+    .attr("fill", d => d.data.isHeuristic ? "#94a3b8" : (d.depth === 0 ? "#0d1c32" : "#334155"))
     .text(d => d.data.name)
     .clone(true).lower()
     .attr("stroke", "white")
-    .attr("stroke-width", 3);
+    .attr("stroke-width", 3)
+    .attr("stroke-linejoin", "round");
 }
 
-function zoomIn() { svg.transition().call(zoomHandler.scaleBy, 1.3); }
-function zoomOut() { svg.transition().call(zoomHandler.scaleBy, 0.7); }
-function resetZoom() { svg.transition().call(zoomHandler.transform, d3.zoomIdentity); }
+// ═══════════════════════════════════════════════════════
+// CONTROLES DE ZOOM
+// ═══════════════════════════════════════════════════════
+function zoomIn()   { if(svg) svg.transition().duration(300).call(zoomHandler.scaleBy, 1.35); }
+function zoomOut()  { if(svg) svg.transition().duration(300).call(zoomHandler.scaleBy, 0.75); }
+function resetZoom(){ if(svg) svg.transition().duration(400).call(zoomHandler.transform, d3.zoomIdentity); }
 
-async function cargarBriefApi(kw, pool) {
+// ═══════════════════════════════════════════════════════
+// CARGA DEL CONTENT BRIEF
+// ═══════════════════════════════════════════════════════
+async function cargarBriefDesdeApi(kw, pool) {
+  document.getElementById("briefEmptyState").classList.add("hidden");
+  document.getElementById("briefLoadingState").style.display = "flex";
+  document.getElementById("briefContent").classList.add("hidden");
+  document.getElementById("briefFooter").classList.add("hidden");
+
   try {
     const resp = await fetch("/api/generate-brief", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword: kw, questions: pool || [] })
+      body: JSON.stringify({ keyword: kw, questions: (pool || []).slice(0, 12) })
     });
     if (resp.ok) {
       const data = await resp.json();
+      if (data.error) throw new Error(data.error);
       renderizarBrief(data);
+      mostrarBrief();
+    } else {
+      throw new Error("API error " + resp.status);
     }
-  } catch (e) { console.error(e); }
+  } catch(e) {
+    console.error("Error generando brief:", e);
+    document.getElementById("briefLoadingState").style.display = "none";
+    document.getElementById("briefEmptyState").classList.remove("hidden");
+    document.getElementById("briefEmptyState").innerHTML = `
+      <span class="material-symbols-outlined text-5xl text-red-300">error</span>
+      <p class="text-body-xs text-red-600 font-bold">Error generando el Brief</p>
+      <p class="text-body-xs text-on-surface-variant">${e.message}</p>
+    `;
+  }
 }
 
+// ═══════════════════════════════════════════════════════
+// RENDER DEL BRIEF EN EL PANEL
+// ═══════════════════════════════════════════════════════
 function renderizarBrief(data) {
   document.getElementById("briefWordCount").textContent = data.longitud_recomendada_palabras || "1,500 palabras";
   document.getElementById("briefFormat").textContent = data.formato_sugerido || "Guía Editorial";
-  document.getElementById("briefH1").textContent = data.meta_h1 || `${data.keyword_principal}`;
+  document.getElementById("briefH1").textContent = data.meta_h1 || data.keyword_principal || "—";
 
+  // ── H2/H3
   const hList = document.getElementById("briefHeadingsList");
   hList.innerHTML = "";
   (data.secciones_h2 || []).forEach(sec => {
-    const div = document.createElement("div");
-    div.className = "bg-surface-container/60 p-xs rounded border border-outline-variant/50 text-body-xs";
-    let subHtml = "";
-    (sec.h3_subsecciones || []).forEach(h3 => {
-      subHtml += `<div class="text-[11px] text-slate-600 pl-3">↳ H3: ${h3}</div>`;
-    });
-    div.innerHTML = `<div class="font-bold text-primary">H2: ${sec.h2}</div>${subHtml}`;
-    hList.appendChild(div);
+    const wrap = document.createElement("div");
+    wrap.className = "bg-surface-container/60 p-xs rounded border border-outline-variant/50 text-body-xs mb-xs";
+    const h3Html = (sec.h3_subsecciones || []).map(h3 =>
+      `<div class="text-[11px] text-slate-600 pl-3 mt-0.5">↳ <em>${h3}</em></div>`
+    ).join("");
+    const puntos = sec.puntos_clave ? `<div class="text-[10px] text-amber-700 bg-amber-50 rounded px-1 py-0.5 mt-1">💡 ${sec.puntos_clave}</div>` : "";
+    wrap.innerHTML = `<div class="font-bold text-primary">H2: ${sec.h2}</div>${h3Html}${puntos}`;
+    hList.appendChild(wrap);
   });
 
+  // ── Términos semánticos
   const tList = document.getElementById("briefTermsList");
   tList.innerHTML = "";
   (data.terminos_semanticos_obligatorios || []).forEach(term => {
     const span = document.createElement("span");
-    span.className = "bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded";
-    span.textContent = term;
+    span.className = "keyword-tag";
+    span.innerHTML = `<span class="material-symbols-outlined" style="font-size:10px">tag</span>${term}`;
+    span.title = "Clic para analizar este término";
+    span.onclick = () => {
+      document.getElementById("standaloneKwInput").value = term;
+      analizarKeywordStandalone();
+    };
     tList.appendChild(span);
   });
 
-  // Construir Markdown para copiar
-  let md = `# 📋 Content Brief SEO: ${data.meta_h1}\n\n`;
-  md += `**Keyword:** ${data.keyword_principal} | **Longitud:** ${data.longitud_recomendada_palabras}\n\n`;
-  md += `## 📐 Estructura H2 / H3:\n`;
+  // ── Preguntas obligatorias
+  const qList = document.getElementById("briefQuestions");
+  qList.innerHTML = "";
+  const preguntas = data.preguntas_obligatorias_responder || [];
+  if (preguntas.length > 0) {
+    const label = document.createElement("p");
+    label.className = "text-label-xs font-bold text-on-surface-variant uppercase mt-sm mb-xs";
+    label.textContent = "Preguntas obligatorias a responder:";
+    qList.appendChild(label);
+    preguntas.forEach(q => {
+      const div = document.createElement("div");
+      div.className = "text-body-xs text-on-surface bg-surface-container/60 rounded p-xs border-l-2 border-secondary";
+      div.textContent = "❓ " + q;
+      qList.appendChild(div);
+    });
+  }
+
+  // ── Checklist redactor
+  const ckList = document.getElementById("briefChecklistItems");
+  ckList.innerHTML = "";
+  (data.checklist_redactor || []).forEach(item => {
+    const div = document.createElement("div");
+    div.className = "checklist-item";
+    div.innerHTML = `<span class="material-symbols-outlined check-icon">check_circle</span><span>${item}</span>`;
+    ckList.appendChild(div);
+  });
+
+  // ── Construir Markdown completo
+  let md = `# 📋 Content Brief SEO: ${data.meta_h1 || ""}\n\n`;
+  md += `**Keyword:** ${data.keyword_principal || ""} | **País:** ${data.pais_objetivo || ""}\n`;
+  md += `**Longitud:** ${data.longitud_recomendada_palabras || ""} | **Formato:** ${data.formato_sugerido || ""}\n\n`;
+  md += `---\n## 📐 Estructura H2 / H3\n`;
   (data.secciones_h2 || []).forEach(s => {
     md += `\n### H2: ${s.h2}\n`;
+    if (s.puntos_clave) md += `> 💡 ${s.puntos_clave}\n`;
     (s.h3_subsecciones || []).forEach(h3 => { md += `- **H3:** ${h3}\n`; });
   });
-  md += `\n## 🔑 Términos Obligatorios:\n`;
-  (data.terminos_semanticos_obligatorios || []).forEach(t => { md += `- [ ] ${t}\n`; });
+  md += `\n---\n## 🔑 Términos Semánticos Obligatorios\n`;
+  (data.terminos_semanticos_obligatorios || []).forEach(t => { md += `- [ ] \`${t}\`\n`; });
+  md += `\n---\n## ❓ Preguntas a Responder Obligatoriamente\n`;
+  (data.preguntas_obligatorias_responder || []).forEach(q => { md += `- **${q}**\n`; });
+  md += `\n---\n## ✅ Checklist On-Page para el Redactor\n`;
+  (data.checklist_redactor || []).forEach(c => { md += `- [ ] ${c}\n`; });
+
   currentBriefMarkdown = md;
 }
 
-function copiarBriefMarkdown() {
-  if (!currentBriefMarkdown) return;
-  navigator.clipboard.writeText(currentBriefMarkdown);
-  const btn = document.getElementById("btnCopyBriefText");
-  btn.textContent = "¡Copiado!";
-  setTimeout(() => { btn.textContent = "Copiar Brief"; }, 2500);
+// ═══════════════════════════════════════════════════════
+// TABS DEL BRIEF
+// ═══════════════════════════════════════════════════════
+function switchBriefTab(tab) {
+  activeBriefTab = tab;
+  ["headings","terms","checklist"].forEach(t => {
+    document.getElementById("panel" + t.charAt(0).toUpperCase() + t.slice(1)).classList.add("hidden");
+    document.getElementById("tabBrief" + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove("active");
+  });
+  document.getElementById("panel" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove("hidden");
+  document.getElementById("tabBrief" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
 }
 
+// ═══════════════════════════════════════════════════════
+// COPIAR BRIEF
+// ═══════════════════════════════════════════════════════
+async function copiarBriefMarkdown() {
+  if (!currentBriefMarkdown) return;
+  try {
+    await navigator.clipboard.writeText(currentBriefMarkdown);
+    const btn = document.getElementById("btnCopyBriefText");
+    btn.textContent = "¡Copiado!";
+    setTimeout(() => { btn.textContent = "Copiar Brief"; }, 2500);
+  } catch(e) {
+    console.error("Clipboard error:", e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORTAR SVG
+// ═══════════════════════════════════════════════════════
 function exportarGraficoSvg() {
+  if (!currentTreeData) { alert("Genera un mapa primero."); return; }
   const svgEl = document.getElementById("clusterSvg");
+  // Inyectar la declaración de fuente para que el SVG sea autocontenido
+  const fontDecl = `<defs><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;display=swap');</style></defs>`;
   const serializer = new XMLSerializer();
-  const source = serializer.serializeToString(svgEl);
+  let source = serializer.serializeToString(svgEl);
+  source = source.replace("<svg", `<svg xmlns="http://www.w3.org/2000/svg"`).replace(/<defs>/, fontDecl + "<defs>");
   const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
+  a.href = URL.createObjectURL(blob);
   a.download = `cluster_map_${Date.now()}.svg`;
   a.click();
 }
 
+// ═══════════════════════════════════════════════════════
+// EXPORTAR PNG
+// ═══════════════════════════════════════════════════════
 function exportarGraficoPng() {
+  if (!currentTreeData) { alert("Genera un mapa primero."); return; }
+  const btn = document.getElementById("btnExportPng");
+  btn.disabled = true;
+  btn.textContent = "Exportando...";
+
   const svgEl = document.getElementById("clusterSvg");
+  const svgWidth = svgEl.clientWidth || 900;
+  const svgHeight = svgEl.clientHeight || 600;
+  const scale = 2;
+
   const serializer = new XMLSerializer();
   const svgString = serializer.serializeToString(svgEl);
-  const img = new Image();
-  const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(svgBlob);
+  const svgData = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
 
+  const canvas = document.createElement("canvas");
+  canvas.width = svgWidth * scale;
+  canvas.height = svgHeight * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(0, 0, svgWidth, svgHeight);
+
+  const img = new Image();
   img.onload = function() {
-    const canvas = document.createElement("canvas");
-    canvas.width = svgEl.clientWidth * 2 || 1600;
-    canvas.height = svgEl.clientHeight * 2 || 1200;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const pngUrl = canvas.toDataURL("image/png");
+    ctx.drawImage(img, 0, 0, svgWidth, svgHeight);
     const a = document.createElement("a");
-    a.href = pngUrl;
+    a.href = canvas.toDataURL("image/png");
     a.download = `cluster_map_${Date.now()}.png`;
     a.click();
+    btn.disabled = false;
+    btn.innerHTML = `<span class="material-symbols-outlined text-xs">image</span><span>PNG</span>`;
   };
-  img.src = url;
+  img.onerror = function() {
+    // Fallback cuando CORS bloquea la imagen
+    canvas.toBlob(blob => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `cluster_map_${Date.now()}.png`;
+      a.click();
+    });
+    btn.disabled = false;
+    btn.innerHTML = `<span class="material-symbols-outlined text-xs">image</span><span>PNG</span>`;
+  };
+  img.src = svgData;
 }
 
+// ═══════════════════════════════════════════════════════
+// ARRANQUE
+// ═══════════════════════════════════════════════════════
 document.addEventListener("DOMContentLoaded", inicializar);
 </script>
 </body></html>
