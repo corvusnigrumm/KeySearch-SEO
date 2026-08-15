@@ -131,25 +131,23 @@
       <div class="mt-md font-label-sm text-on-surface-variant font-label-md">Tipo: <code class="bg-surface-container p-xs rounded">Tendencia & Estacionalidad</code></div>
     </div>
 
-    <!-- Groq IA -->
+    <!-- Groq IA / Cadena de IA -->
     <div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
       <div class="flex items-center justify-between mb-md">
         <div class="flex items-center gap-md">
           <span class="material-symbols-outlined text-secondary">psychology</span>
           <div>
-            <h3 class="font-h3 text-h3">Groq LLM Engine</h3>
-            <span class="text-label-xs text-secondary font-bold">{{ groq_model }}</span>
+            <h3 class="font-h3 text-h3">Cadena de IA & LLMs</h3>
+            <span class="text-label-xs text-secondary font-bold">{{ ai_chain.level1 }}</span>
           </div>
         </div>
-        {% if groq_active %}
-        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Configurado (Groq SDK)</span>
+        {% if groq_active or ai_chain.openai_active %}
+        <span class="bg-emerald-100 text-emerald-800 px-sm py-xs rounded font-label-sm font-bold">✅ Motor Activo</span>
         {% else %}
         <span class="bg-error-container text-on-error-container px-sm py-xs rounded font-label-sm font-bold">❌ Sin API Key</span>
         {% endif %}
       </div>
-        <code class="bg-error-container text-on-error-container p-xs rounded font-label-md">No configurada</code>
-        {% endif %}
-      </div>
+      <p class="text-body-sm text-on-surface-variant">Enriquecimiento semántico con fallback automático: {{ ai_chain.level1 }} → {{ ai_chain.level2 }} → {{ ai_chain.level3 }}.</p>
     </div>
 
     <!-- Google SERP -->

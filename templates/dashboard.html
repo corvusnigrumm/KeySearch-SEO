@@ -69,7 +69,15 @@
       <div class="flex justify-between items-start">
         <div>
           <p class="font-label-md text-on-surface-variant">Efectividad de Extracción</p>
-          <h2 class="font-display text-display text-primary mt-xs">99.8%</h2>
+          {% if state.last_run_data %}
+            {% set total_kws = state.last_run_data|length %}
+            {% set err_kws = 0 %}
+            {% for item in state.last_run_data %}{% if item.error %}{% set err_kws = err_kws + 1 %}{% endif %}{% endfor %}
+            {% set pct_real = 100.0 if total_kws == 0 else (((total_kws - err_kws) / total_kws) * 100)|round(1) %}
+            <h2 class="font-display text-display text-primary mt-xs">{{ pct_real }}%</h2>
+          {% else %}
+            <h2 class="font-display text-display text-primary mt-xs">100%</h2>
+          {% endif %}
         </div>
         <div class="bg-tertiary-container/20 text-tertiary p-sm rounded-lg">
           <span class="material-symbols-outlined">data_exploration</span>
@@ -85,7 +93,7 @@
           <div class="flex-1 bg-secondary-container rounded-t-sm h-full"></div>
           <div class="flex-1 bg-secondary-container rounded-t-sm h-3/4"></div>
         </div>
-        <p class="font-label-sm text-on-surface-variant mt-xs">Estadísticas de sesión actual</p>
+        <p class="font-label-sm text-on-surface-variant mt-xs">{% if state.last_run_data %}{{ state.last_run_data|length }} keyword(s) procesadas en sesión{% else %}Listo para procesar{% endif %}</p>
       </div>
     </div>
   </div>
@@ -296,6 +304,49 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  // Datos reales inyectados desde la sesión
+  const rawRunData = {% if state.last_run_data %}{{ state.last_run_data|tojson }}{% else %}[]{% endif %};
+
+  let intentCounts = { 'Informacional': 0, 'Transaccional': 0, 'Comparativa': 0, 'Navegacional': 0 };
+  let catCounts = {};
+  let sourceCounts = { 'Autocompletado A-Z': 0, 'People Also Ask': 0, 'Google Trends': 0, 'Google Ads': 0 };
+
+  if (rawRunData && rawRunData.length > 0) {
+    rawRunData.forEach(item => {
+      // Categoría
+      const cat = item.category || 'General';
+      catCounts[cat] = (catCounts[cat] || 0) + 1;
+
+      // Fuentes
+      sourceCounts['Autocompletado A-Z'] += (item.suggestions_count || (item.suggestions ? item.suggestions.length : 0));
+      sourceCounts['People Also Ask'] += (item.paa_count || (item.paa ? item.paa.length : 0));
+      if (item.editorial_tags) sourceCounts['Google Trends'] += 15;
+      if (item.google_ads && item.google_ads.enabled) sourceCounts['Google Ads'] += 10;
+
+      // Intención
+      const sugs = item.suggestions || [];
+      const paa = item.paa || [];
+      const allTexts = [item.keyword, ...sugs, ...paa].map(s => String(s).toLowerCase());
+      
+      allTexts.forEach(t => {
+        if (t.includes('comprar') || t.includes('precio') || t.includes('costo') || t.includes('oferta') || t.includes('barato')) {
+          intentCounts['Transaccional']++;
+        } else if (t.includes('vs') || t.includes('mejor') || t.includes('diferencia') || t.includes('comparativa')) {
+          intentCounts['Comparativa']++;
+        } else if (t.includes('claro') || t.includes('bancolombia') || t.includes('movistar') || t.includes('tigo') || t.includes('amazon')) {
+          intentCounts['Navegacional']++;
+        } else {
+          intentCounts['Informacional']++;
+        }
+      });
+    });
+  } else {
+    // Si la sesión está vacía, se muestran ceros o gráfico limpio preparado
+    intentCounts = { 'Informacional': 0, 'Transaccional': 0, 'Comparativa': 0, 'Navegacional': 0 };
+    catCounts = { 'Sin datos de sesión': 0 };
+    sourceCounts = { 'Autocompletado A-Z': 0, 'People Also Ask': 0, 'Google Trends': 0, 'Google Ads': 0 };
+  }
+
   // Gráfico 1: Intención de Búsqueda (Donut)
   const ctxIntent = document.getElementById('intentChart').getContext('2d');
   new Chart(ctxIntent, {
@@ -303,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     data: {
       labels: ['Informacional (Qué/Cómo)', 'Transaccional (Comprar/Precio)', 'Comparativa (Mejor/Vs)', 'Navegacional (Marcas)'],
       datasets: [{
-        data: [45, 25, 20, 10],
+        data: [intentCounts['Informacional'], intentCounts['Transaccional'], intentCounts['Comparativa'], intentCounts['Navegacional']],
         backgroundColor: ['#00677f', '#34a853', '#fbbc04', '#ea4335'],
         borderWidth: 2,
         borderColor: '#ffffff'
@@ -320,14 +371,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Gráfico 2: Top Categorías (Bar Chart)
+  const catLabels = Object.keys(catCounts);
+  const catData = Object.values(catCounts);
   const ctxCat = document.getElementById('categoryChart').getContext('2d');
   new Chart(ctxCat, {
     type: 'bar',
     data: {
-      labels: ['General', 'Guías/Tutoriales', 'Precios/Ofertas', 'Herramientas', 'Marcas'],
+      labels: catLabels,
       datasets: [{
         label: 'Keywords',
-        data: [18, 12, 8, 6, 4],
+        data: catData,
         backgroundColor: '#00677f',
         borderRadius: 6
       }]
@@ -345,14 +398,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Gráfico 3: Fuentes (Polar Area / Doughnut)
+  // Gráfico 3: Fuentes (Polar Area)
   const ctxSource = document.getElementById('sourceChart').getContext('2d');
   new Chart(ctxSource, {
     type: 'polarArea',
     data: {
       labels: ['Autocompletado A-Z', 'People Also Ask', 'Google Trends', 'Google Ads'],
       datasets: [{
-        data: [50, 30, 15, 5],
+        data: [sourceCounts['Autocompletado A-Z'], sourceCounts['People Also Ask'], sourceCounts['Google Trends'], sourceCounts['Google Ads']],
         backgroundColor: [
           'rgba(0, 103, 127, 0.85)',
           'rgba(52, 168, 83, 0.85)',
