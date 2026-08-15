@@ -221,31 +221,49 @@ def get_autocomplete_suggestions(
         _agregar(_fetch_suggestions(keyword, search_context, session=session))
 
     if expandir:
-        # Expandir con modificadores de preguntas
-        for mod in QUESTION_MODIFIERS:
-            _agregar(_fetch_suggestions(f"{mod}{keyword}", search_context, session=session))
-            time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
+        # 2. Expansión por modificadores de preguntas y comparativas multi-motor
+        modificadores_clave = QUESTION_MODIFIERS + [" vs ", " precio ", " opiniones ", " comprar ", " mejor "]
+        for mod in modificadores_clave[:12 if _perfil_extremo(search_context) else 6]:
+            q_mod = f"{mod}{keyword}" if not mod.startswith(" ") else f"{keyword}{mod}"
+            try:
+                m_res = fetch_multi_engine_suggestions(q_mod, lang=ctx["language_code"], country=ctx["country_code"], engines=engines)
+                if m_res:
+                    _agregar(list(m_res.keys()))
+            except Exception:
+                pass
+            _agregar(_fetch_suggestions(q_mod, search_context, session=session))
 
-        # Expandir con sufijos
-        for suf in SEARCH_SUFFIXES:
-            _agregar(_fetch_suggestions(f"{keyword}{suf}", search_context, session=session))
-            time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
+        # 3. Expansión Alfabética (a-z) multi-motor
+        limite_alfabeto = len(ALPHABET_EXPANSION) if _perfil_extremo(search_context) else AUTOCOMPLETE_ALPHABET_LIMIT
+        for letra in ALPHABET_EXPANSION[:limite_alfabeto]:
+            q_letra = f"{keyword} {letra}"
+            try:
+                m_res = fetch_multi_engine_suggestions(q_letra, lang=ctx["language_code"], country=ctx["country_code"], engines=engines)
+                if m_res:
+                    _agregar(list(m_res.keys()))
+            except Exception:
+                pass
+            _agregar(_fetch_suggestions(q_letra, search_context, session=session))
 
-        for letra in ALPHABET_EXPANSION[:max(0, AUTOCOMPLETE_ALPHABET_LIMIT)]:
-            _agregar(_fetch_suggestions(f"{keyword} {letra}", search_context, session=session))
-            time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
-
-    # En modo extremo: rondas recursivas sobre las mejores sugerencias encontradas
-    # SOLO se usan como semillas sugerencias que NO introduzcan marcas comerciales
+    # 4. Modo Extremo Ultra-Profundo: rondas recursivas multi-motor sobre las mejores semillas
     if _perfil_extremo(search_context) and todas:
-        factor = 2
-        profundidad = max(1, int(AUTOCOMPLETE_PAA_RECURSIVE_DEPTH)) * factor
-        limite = max(1, int(AUTOCOMPLETE_DEEP_EXPANSION_LIMIT)) * factor
-        # Filtrar semillas: solo las que no son contaminacion de marca
-        semillas = [s for s in todas[:limite * 3] if _es_semilla_valida(s, keyword)][:limite]
-        for _ in range(profundidad):
+        factor = 2.5
+        profundidad = max(2, int(AUTOCOMPLETE_PAA_RECURSIVE_DEPTH * factor))
+        limite = max(10, int(AUTOCOMPLETE_DEEP_EXPANSION_LIMIT * factor))
+        semillas = [s for s in todas if _es_semilla_valida(s, keyword)][:limite]
+
+        for r_idx in range(profundidad):
             nuevas = []
             for semilla in semillas:
+                # Consultar multi-motor para cada semilla
+                try:
+                    m_res = fetch_multi_engine_suggestions(semilla, lang=ctx["language_code"], country=ctx["country_code"], engines=engines)
+                    if m_res:
+                        _agregar(list(m_res.keys()))
+                        nuevas.extend(list(m_res.keys()))
+                except Exception:
+                    pass
+
                 sugerencias_extra = _fetch_suggestions(semilla, search_context, session=session)
                 for s in sugerencias_extra:
                     if not es_relevante_riguroso(keyword, s):
@@ -255,11 +273,10 @@ def get_autocomplete_suggestions(
                         vistas.add(key)
                         todas.append(s)
                         nuevas.append(s)
-                time.sleep(random.uniform(AUTOCOMPLETE_DEEP_MIN_DELAY, AUTOCOMPLETE_DEEP_MAX_DELAY))
+
             if not nuevas:
                 break
-            # Solo semillas limpias de marcas para el siguiente ciclo
-            semillas = [s for s in nuevas[:limite * 3] if _es_semilla_valida(s, keyword)][:limite]
+            semillas = [s for s in nuevas if _es_semilla_valida(s, keyword)][:limite]
 
     return todas
 

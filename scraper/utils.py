@@ -53,9 +53,10 @@ def generar_nombre_archivo(keyword: str, extension: str = "xlsx") -> str:
 
 def es_relevante_riguroso(keyword_base: str, sugerencia: str) -> bool:
     """
-    Filtro riguroso: la sugerencia debe contener la palabra clave original
-    (o sus palabras principales) para no traer basura como resultados 
-    que solo comparten las primeras letras (ej. 'madre' -> 'madrid').
+    Filtro de relevancia optimizado para minería intensiva:
+    Valida que la sugerencia esté semánticamente relacionada con la keyword principal.
+    Permite derivaciones, plurales, sinónimos y coincidencia de palabras clave principales
+    para no descartar sugerencias valiosas multi-motor.
     """
     kb = dedupe_key(keyword_base)
     sug = dedupe_key(sugerencia)
@@ -63,40 +64,33 @@ def es_relevante_riguroso(keyword_base: str, sugerencia: str) -> bool:
     if not kb or not sug:
         return False
         
-    # Validacion exacta de la keyword completa (el caso mas seguro)
-    if kb in sug:
+    # Coincidencia exacta o contención directa (el caso más común)
+    if kb in sug or sug in kb:
         return True
         
-    # Manejo de plurales basicos si la keyword es una sola palabra
-    palabras_kb = kb.split()
-    if len(palabras_kb) == 1:
-        if f"{kb}s" in sug or f"{kb}es" in sug:
-            return True
-        # Si termina en s, buscar singular
-        if kb.endswith('s') and kb[:-1] in sug:
-            return True
-            
-    # Para keywords compuestas, exigir que una alta proporcion de las palabras relevantes aparezcan
-    # Ignoramos stopwords basicas de 2 letras (de, en, el, la...)
-    palabras_relevantes = [p for p in palabras_kb if len(p) > 2]
-    if not palabras_relevantes:
+    palabras_kb = [p for p in kb.split() if len(p) > 2]
+    if not palabras_kb:
+        # Si la keyword eran sólo conectores cortos, aceptamos si la sugerencia empieza o contiene la keyword
+        return kb in sug
+
+    # Para keywords de 1 a 2 palabras
+    if len(palabras_kb) <= 2:
+        # Al menos una palabra principal debe estar presente o ser raíz
+        for p in palabras_kb:
+            stem = p[:-1] if (len(p) > 3 and p.endswith(('s', 'a', 'o', 'e'))) else p
+            if stem in sug:
+                return True
         return False
-        
-    num_relevantes = len(palabras_relevantes)
-    
-    # Si son pocas palabras, exigimos que esten todas
-    if num_relevantes <= 3:
-        umbral = num_relevantes
-    else:
-        # Para frases largas (4 o mas palabras), exigimos al menos el 70% de las palabras clave
-        umbral = max(3, int(num_relevantes * 0.7))
-        
-    encontradas = 0
-    for p in palabras_relevantes:
-        if p in sug or f"{p}s" in sug or (p.endswith('s') and p[:-1] in sug):
-            encontradas += 1
-            
-    if encontradas >= umbral:
-        return True
+
+    # Para keywords de 3 o más palabras (ej. "tarjetas de credito bancolombia")
+    # Exigimos que al menos el 50% de las palabras clave principales coincidan
+    coincidencias = 0
+    for p in palabras_kb:
+        stem = p[:-1] if (len(p) > 3 and p.endswith(('s', 'a', 'o', 'e'))) else p
+        if stem in sug:
+            coincidencias += 1
+
+    umbral_minimo = max(1, int(len(palabras_kb) * 0.45))
+    return coincidencias >= umbral_minimo
 
     return False

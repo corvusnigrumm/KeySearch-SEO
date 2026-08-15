@@ -668,11 +668,14 @@ async def download_history_excel(item_id: int, user: User = Depends(get_current_
             "preguntas_paa": item.get("paa", []),
             "preguntas_autocompletado": item.get("preguntas_autocompletado", []),
             "busquedas_relacionadas": item.get("related", []),
-            "country_name": item.get("country_name", ""),
-            "country_code": item.get("country_code", ""),
+            "country_name": item.get("country_name", search.country.title()),
+            "country_code": item.get("country_code", search.country.upper()),
             "category_name": item.get("category", ""),
             "subcategory_name": item.get("subcategory", ""),
             "google_ads": item.get("google_ads", {}),
+            "editorial_tags": item.get("editorial_tags", {}),
+            "editorial_ideas": item.get("editorial_ideas", []),
+            "editorial_nota": item.get("editorial_nota", {}),
         }
         
         ruta_archivo = exportar_excel(search.keyword, datos)
@@ -707,11 +710,14 @@ async def download_excel(request: Request, user: User = Depends(get_current_user
             "preguntas_paa": item.get("paa", []),
             "preguntas_autocompletado": item.get("preguntas_autocompletado", []),
             "busquedas_relacionadas": item.get("related", []),
-            "country_name": item.get("country_name", ""),
-            "country_code": item.get("country_code", ""),
+            "country_name": item.get("country_name", user_state.country.title()),
+            "country_code": item.get("country_code", user_state.country.upper()),
             "category_name": item.get("category", ""),
             "subcategory_name": item.get("subcategory", ""),
             "google_ads": item.get("google_ads", {}),
+            "editorial_tags": item.get("editorial_tags", {}),
+            "editorial_ideas": item.get("editorial_ideas", []),
+            "editorial_nota": item.get("editorial_nota", {}),
         }
         try:
             ruta_archivo = exportar_excel(item["keyword"], datos)
@@ -1125,6 +1131,8 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
             user_state.progress = base_prog + step_size
             all_results.append({
                 "keyword": kw,
+                "country_name": c_name,
+                "country_code": ctx.get("country_code", "CO").upper(),
                 "category": cat,
                 "subcategory": sub,
                 "metrics": vol,
