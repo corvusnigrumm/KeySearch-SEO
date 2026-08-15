@@ -3,95 +3,363 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - KeySearch</title>
+    <title>KeySearch V10 Ultra - Iniciar Sesión</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
     <style>
-        .glass-panel {
-            background: rgba(17, 24, 39, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        * { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+        /* Fondo Aurora Animado */
+        body {
+            background-color: #030712;
+            overflow-x: hidden;
+        }
+
+        .aurora-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .aurora-blob {
+            position: absolute;
+            filter: blur(90px);
+            opacity: 0.45;
+            border-radius: 50%;
+            animation: floatAurora 18s ease-in-out infinite alternate;
+        }
+
+        .blob-1 {
+            top: -10%;
+            left: -10%;
+            width: 55vw;
+            height: 55vw;
+            background: radial-gradient(circle, #00f2fe 0%, #4facfe 100%);
+            animation-duration: 22s;
+        }
+
+        .blob-2 {
+            bottom: -15%;
+            right: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, #7f00ff 0%, #e100ff 100%);
+            animation-duration: 26s;
+            animation-delay: -5s;
+        }
+
+        .blob-3 {
+            top: 40%;
+            left: 30%;
+            width: 40vw;
+            height: 40vw;
+            background: radial-gradient(circle, #00c6ff 0%, #0072ff 100%);
+            animation-duration: 20s;
+            animation-delay: -10s;
+        }
+
+        @keyframes floatAurora {
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+            33% { transform: translate(5%, 10%) scale(1.1) rotate(120deg); }
+            66% { transform: translate(-8%, 5%) scale(0.9) rotate(240deg); }
+            100% { transform: translate(0, 0) scale(1) rotate(360deg); }
+        }
+
+        /* Glassmorphism Panel */
+        .glass-card {
+            background: rgba(13, 22, 41, 0.65);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6),
+                        0 0 40px rgba(0, 242, 254, 0.12);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Input Glow */
+        .input-glow {
+            background: rgba(17, 27, 49, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .input-glow:focus-within {
+            border-color: #00f2fe;
+            box-shadow: 0 0 16px rgba(0, 242, 254, 0.35);
+            background: rgba(17, 27, 49, 0.95);
+        }
+
+        /* Glowing Button */
+        .btn-glow-primary {
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+            box-shadow: 0 4px 20px rgba(0, 198, 255, 0.35);
+            transition: all 0.25s ease;
+        }
+        .btn-glow-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 28px rgba(0, 198, 255, 0.55);
+        }
+
+        .btn-glow-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
+            transition: all 0.25s ease;
+        }
+        .btn-glow-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 28px rgba(16, 185, 129, 0.55);
+        }
+
+        /* Canvas z-index */
+        #neuralCanvas {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
         }
     </style>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
-    
-    <div class="glass-panel p-8 rounded-2xl shadow-2xl w-full max-w-md">
+<body class="text-slate-100 min-h-screen flex items-center justify-center p-4 relative">
+
+    <!-- Fondo Animado (Aurora Gradient Blobs) -->
+    <div class="aurora-bg">
+        <div class="aurora-blob blob-1"></div>
+        <div class="aurora-blob blob-2"></div>
+        <div class="aurora-blob blob-3"></div>
+    </div>
+
+    <!-- Canvas de Partículas Constelación Inteligente -->
+    <canvas id="neuralCanvas"></canvas>
+
+    <!-- Tarjeta Principal de Login -->
+    <div class="glass-card p-8 md:p-10 rounded-3xl w-full max-w-md transition-all duration-300">
+        
+        <!-- Header & Logo -->
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">KeySearch V10 Ultra</h1>
-            <p class="text-gray-400 mt-2">Inicia sesión en tu perfil o crea uno nuevo</p>
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/30 mb-4 animate-bounce">
+                <span class="material-symbols-outlined text-3xl text-white">auto_awesome</span>
+            </div>
+            <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-400 bg-clip-text text-transparent">
+                KeySearch V10 Ultra
+            </h1>
+            <p class="text-slate-400 text-xs font-medium mt-2 max-w-xs mx-auto">
+                Inteligencia SEO, Mapeo de Tendencias & Copywriting IA
+            </p>
         </div>
 
+        <!-- Mensajes de Alerta -->
         {% if error %}
-        <div class="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded mb-6 text-sm">
-            {{ error }}
+        <div class="bg-rose-500/15 border border-rose-500/40 text-rose-300 px-4 py-3 rounded-xl mb-6 text-xs flex items-start gap-2 backdrop-blur-md">
+            <span class="material-symbols-outlined text-sm shrink-0 text-rose-400 mt-0.5">error</span>
+            <span>{{ error }}</span>
         </div>
         {% endif %}
         
         {% if msg %}
-        <div class="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded mb-6 text-sm">
-            {{ msg }}
+        <div class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded-xl mb-6 text-xs flex items-start gap-2 backdrop-blur-md">
+            <span class="material-symbols-outlined text-sm shrink-0 text-emerald-400 mt-0.5">check_circle</span>
+            <span>{{ msg }}</span>
         </div>
         {% endif %}
 
-        <!-- Pestañas -->
-        <div class="flex border-b border-gray-700 mb-6">
-            <button id="tab-login" class="flex-1 py-2 text-center border-b-2 border-indigo-500 font-medium text-indigo-400 transition-colors" onclick="switchTab('login')">Ingresar</button>
-            <button id="tab-register" class="flex-1 py-2 text-center border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-300 transition-colors" onclick="switchTab('register')">Crear Perfil</button>
+        <!-- Pestañas de Navegación -->
+        <div class="flex bg-slate-900/60 p-1 rounded-xl border border-slate-800 mb-6 backdrop-blur">
+            <button id="tab-login" onclick="switchTab('login')"
+                class="flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md">
+                <span class="material-symbols-outlined text-sm">login</span>
+                <span>Ingresar</span>
+            </button>
+            <button id="tab-register" onclick="switchTab('register')"
+                class="flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200">
+                <span class="material-symbols-outlined text-sm">person_add</span>
+                <span>Crear Perfil</span>
+            </button>
         </div>
 
-        <!-- Formulario Login -->
+        <!-- Formulario Iniciar Sesión -->
         <form id="form-login" action="/login" method="POST" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">Nombre de Perfil</label>
-                <input type="text" name="username" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition-colors">
+                <label class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Nombre de Perfil</label>
+                <div class="input-glow rounded-xl flex items-center px-3.5 py-2.5">
+                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5">account_circle</span>
+                    <input type="text" name="username" required placeholder="Tu usuario..."
+                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none"/>
+                </div>
             </div>
+
             <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
-                <input type="password" name="password" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition-colors">
+                <label class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Contraseña</label>
+                <div class="input-glow rounded-xl flex items-center px-3.5 py-2.5">
+                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5">lock</span>
+                    <input type="password" name="password" required placeholder="••••••••"
+                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none"/>
+                </div>
             </div>
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition-colors mt-4">
-                Entrar
+
+            <button type="submit" class="btn-glow-primary w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mt-6">
+                <span>Entrar al Hub</span>
+                <span class="material-symbols-outlined text-base">arrow_forward</span>
             </button>
         </form>
 
-        <!-- Formulario Registro -->
+        <!-- Formulario Crear Perfil -->
         <form id="form-register" action="/register" method="POST" class="space-y-4 hidden">
             <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">Nuevo Nombre de Perfil</label>
-                <input type="text" name="username" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition-colors">
+                <label class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Nuevo Nombre de Perfil</label>
+                <div class="input-glow rounded-xl flex items-center px-3.5 py-2.5">
+                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5">badge</span>
+                    <input type="text" name="username" required placeholder="Ej: Carlos SEO"
+                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none"/>
+                </div>
             </div>
+
             <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
-                <input type="password" name="password" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition-colors">
+                <label class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Contraseña de Acceso</label>
+                <div class="input-glow rounded-xl flex items-center px-3.5 py-2.5">
+                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5">key</span>
+                    <input type="password" name="password" required placeholder="Mínimo 4 caracteres"
+                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none"/>
+                </div>
             </div>
-            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 rounded-lg transition-colors mt-4">
-                Crear e Ingresar
+
+            <button type="submit" class="btn-glow-success w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mt-6">
+                <span>Crear Perfil e Ingresar</span>
+                <span class="material-symbols-outlined text-base">bolt</span>
             </button>
         </form>
+
+        <!-- Footer Info -->
+        <div class="mt-8 pt-6 border-t border-slate-800/80 text-center">
+            <p class="text-[11px] text-slate-500 font-mono">
+                KeySearch V10.0 Ultra · Servidor Seguro Activo
+            </p>
+        </div>
     </div>
 
+    <!-- Script de Pestañas y Canvas de Partículas Neurales -->
     <script>
         function switchTab(tab) {
+            const btnLogin = document.getElementById('tab-login');
+            const btnReg = document.getElementById('tab-register');
+            const formLogin = document.getElementById('form-login');
+            const formReg = document.getElementById('form-register');
+
+            const activeClass = 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md';
+            const inactiveClass = 'text-slate-400 hover:text-slate-200';
+
             if(tab === 'login') {
-                document.getElementById('form-login').classList.remove('hidden');
-                document.getElementById('form-register').classList.add('hidden');
-                document.getElementById('tab-login').classList.add('border-indigo-500', 'text-indigo-400');
-                document.getElementById('tab-login').classList.remove('border-transparent', 'text-gray-500');
-                document.getElementById('tab-register').classList.remove('border-indigo-500', 'text-indigo-400');
-                document.getElementById('tab-register').classList.add('border-transparent', 'text-gray-500');
+                formLogin.classList.remove('hidden');
+                formReg.classList.add('hidden');
+                btnLogin.className = `flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${activeClass}`;
+                btnReg.className = `flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${inactiveClass}`;
             } else {
-                document.getElementById('form-register').classList.remove('hidden');
-                document.getElementById('form-login').classList.add('hidden');
-                document.getElementById('tab-register').classList.add('border-indigo-500', 'text-indigo-400');
-                document.getElementById('tab-register').classList.remove('border-transparent', 'text-gray-500');
-                document.getElementById('tab-login').classList.remove('border-indigo-500', 'text-indigo-400');
-                document.getElementById('tab-login').classList.add('border-transparent', 'text-gray-500');
+                formReg.classList.remove('hidden');
+                formLogin.classList.add('hidden');
+                btnReg.className = `flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${activeClass}`;
+                btnLogin.className = `flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${inactiveClass}`;
             }
         }
+
         {% if show_register %}
         switchTab('register');
         {% endif %}
+
+        // ─── Canvas de Partículas Interactivas (Constelación Neural) ─────────
+        (function() {
+            const canvas = document.getElementById('neuralCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+            let mouse = { x: null, y: null, radius: 140 };
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+
+            window.addEventListener('resize', resize);
+            window.addEventListener('mousemove', (e) => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+            window.addEventListener('mouseleave', () => {
+                mouse.x = null;
+                mouse.y = null;
+            });
+
+            resize();
+
+            const particleCount = Math.min(80, Math.floor(window.innerWidth / 18));
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 0.7,
+                    vy: (Math.random() - 0.5) * 0.7,
+                    radius: Math.random() * 2 + 1,
+                    color: Math.random() > 0.5 ? '#00f2fe' : '#7f00ff'
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+
+                for (let i = 0; i < particles.length; i++) {
+                    let p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < 0 || p.x > width) p.vx *= -1;
+                    if (p.y < 0 || p.y > height) p.vy *= -1;
+
+                    // Interacción Mouse
+                    if (mouse.x !== null) {
+                        let dx = mouse.x - p.x;
+                        let dy = mouse.y - p.y;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < mouse.radius) {
+                            let force = (mouse.radius - dist) / mouse.radius;
+                            p.x -= (dx / dist) * force * 3;
+                            p.y -= (dy / dist) * force * 3;
+                        }
+                    }
+
+                    // Dibujar Partícula
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = p.color;
+                    ctx.fill();
+
+                    // Conexiones de Constelación
+                    for (let j = i + 1; j < particles.length; j++) {
+                        let p2 = particles[j];
+                        let dx = p.x - p2.x;
+                        let dy = p.y - p2.y;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 120) {
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.strokeStyle = `rgba(0, 242, 254, ${1 - dist / 120 * 0.8})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.shadowBlur = 0;
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+        })();
     </script>
 </body>
 </html>
