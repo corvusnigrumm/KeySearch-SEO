@@ -104,24 +104,63 @@ def _llamar_groq_modelo(prompt: str, model_id: str, timeout: int = 45):
 
 def _llamar_openai_modelo(prompt: str, timeout: int = 45):
     """Invoca ChatGPT real via OpenAI API si hay OPENAI_API_KEY. Retorna JSON o None."""
-    if not OPENAI_API_KEY or not _openai_client:
+    if not OPENAI_API_KEY:
         return None
+    
+    # 1. Probar con SDK de OpenAI si está inicializado
+    if _openai_client:
+        try:
+            completion = _openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.2,
+                max_tokens=2048,
+                timeout=timeout,
+            )
+            raw = completion.choices[0].message.content or ""
+            clean = _limpiar_respuesta_json(raw)
+            return json.loads(clean) if clean else None
+        except Exception as e:
+            err_str = str(e)
+            if "billing_not_active" in err_str:
+                logger.warning("OpenAI Key presente pero sin saldo activo en platform.openai.com (billing_not_active). Usando fallback GPT-OSS...")
+            else:
+                logger.warning("OpenAI [gpt-4o-mini SDK] fallo: %s", e)
+
+    # 2. Fallback HTTP directo con requests si el SDK falla o hay problema de certificados en Windows
     try:
-        completion = _openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
                 {"role": "system", "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra."},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.2,
-            max_tokens=2048,
-            timeout=timeout,
-        )
-        raw = completion.choices[0].message.content or ""
-        clean = _limpiar_respuesta_json(raw)
-        return json.loads(clean) if clean else None
+            "temperature": 0.2,
+            "max_tokens": 2048,
+        }
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        if resp.status_code == 200:
+            data = resp.json()
+            raw = data["choices"][0]["message"]["content"] or ""
+            clean = _limpiar_respuesta_json(raw)
+            return json.loads(clean) if clean else None
+        else:
+            err_msg = resp.json().get("error", {}).get("message", resp.text)
+            if "billing_not_active" in str(err_msg):
+                logger.warning("OpenAI Key sin saldo activo en platform.openai.com (billing_not_active). Escalando a GPT-OSS 120B...")
+            else:
+                logger.warning("OpenAI REST API HTTP %s: %s", resp.status_code, err_msg)
+            return None
     except Exception as e:
-        logger.warning("OpenAI [gpt-4o-mini] fallo: %s", e)
+        logger.warning("OpenAI REST API fallo: %s", e)
         return None
 
 
