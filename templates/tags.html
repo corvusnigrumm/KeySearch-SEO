@@ -176,18 +176,52 @@ function renderTags(idx) {
   renderTagsGrid(tags, paa, suggestions, related, item.keyword);
 }
 
+function getTagsData(item) {
+  if (!item) return { rising: [], top: [], paa: [], related: [] };
+  const tags = item.editorial_tags || {};
+  const paa = item.paa || [];
+  const suggestions = item.suggestions || [];
+  const related = item.related || [];
+
+  // Extraer Rising (Tendencias en aumento o Breakouts)
+  let rising = (tags.detalles_trends && tags.detalles_trends.rising && tags.detalles_trends.rising.length > 0)
+    ? tags.detalles_trends.rising
+    : ((tags.tags_clasificados && tags.tags_clasificados.tendencias_breakout && tags.tags_clasificados.tendencias_breakout.length > 0)
+        ? tags.tags_clasificados.tendencias_breakout
+        : (tags.rising_queries || []));
+
+  // Extraer Top (Búsquedas más consultadas)
+  let top = (tags.detalles_trends && tags.detalles_trends.top && tags.detalles_trends.top.length > 0)
+    ? tags.detalles_trends.top
+    : ((tags.tags_clasificados && tags.tags_clasificados.alto_volumen_top && tags.tags_clasificados.alto_volumen_top.length > 0)
+        ? tags.tags_clasificados.alto_volumen_top
+        : (tags.top_queries || []));
+
+  // Fallbacks de seguridad si Google Trends no devuelve datos de tendencias específicas
+  if ((!rising || rising.length === 0) && paa.length > 0) {
+    rising = paa.slice(0, 8);
+  }
+  if ((!top || top.length === 0) && suggestions.length > 0) {
+    top = suggestions.slice(0, 8);
+  }
+
+  return {
+    rising: rising || [],
+    top: top || [],
+    paa: paa || [],
+    related: related || []
+  };
+}
+
 function renderTagsGrid(tags, paa, suggestions, related, keyword) {
   const grid = document.getElementById('tagsGrid');
-  const rising = tags.rising_queries || [];
-  const top = tags.top_queries || [];
-  const topics = tags.related_topics || [];
-  const autocomplete = tags.autocomplete_tags || suggestions.slice(0, 20) || [];
+  const data = getTagsData({ editorial_tags: tags, paa, suggestions, related, keyword });
 
   grid.innerHTML = `
-    ${buildColumn('Tags en Tendencia (Rising)', 'trending_up', 'rising-badge', rising, '#7c3aed')}
-    ${buildColumn('Tags Más Buscados (Top)', 'bar_chart', 'top-badge', top, '#0284c7')}
-    ${buildColumn('Preguntas Clave (PAA)', 'help', 'paa-badge', paa.slice(0, 25), '#059669')}
-    ${buildColumn('Búsquedas Relacionadas', 'search', 'related-badge', related.slice(0, 25), '#d97706')}
+    ${buildColumn('Tags en Tendencia (Rising)', 'trending_up', 'rising-badge', data.rising, '#7c3aed')}
+    ${buildColumn('Tags Más Buscados (Top)', 'bar_chart', 'top-badge', data.top, '#0284c7')}
+    ${buildColumn('Preguntas Clave (PAA)', 'help', 'paa-badge', data.paa.slice(0, 25), '#059669')}
+    ${buildColumn('Búsquedas Relacionadas', 'search', 'related-badge', data.related.slice(0, 25), '#d97706')}
   `;
 }
 
@@ -204,7 +238,7 @@ function buildColumn(title, icon, badgeClass, items, color) {
 
   const chips = items.map((tag, i) => {
     const score = Math.max(20, 100 - i * 4);
-    const tagText = typeof tag === 'string' ? tag : (tag.query || tag.title || tag.topic_title || String(tag));
+    const tagText = typeof tag === 'string' ? tag : (tag.tag || tag.query || tag.title || tag.topic_title || String(tag));
     if (!tagText) return '';
     const tagEsc = tagText.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     return `
@@ -290,14 +324,13 @@ function copiarTag(text, btn) {
 function copiarTodosLosTags() {
   const item = allTagsData[currentKwIndex];
   if (!item) return;
-  const tags = item.editorial_tags || {};
+  const data = getTagsData(item);
   const all = [
-    ...(tags.rising_queries || []),
-    ...(tags.top_queries || []),
-    ...(tags.autocomplete_tags || item.suggestions || []),
-    ...(item.paa || []),
-    ...(item.related || []),
-  ].map(t => typeof t === 'string' ? t : (t.query || t.title || t.topic_title || '')).filter(Boolean);
+    ...data.rising,
+    ...data.top,
+    ...data.paa,
+    ...data.related,
+  ].map(t => typeof t === 'string' ? t : (t.tag || t.query || t.title || t.topic_title || '')).filter(Boolean);
   const unique = [...new Set(all)];
   navigator.clipboard.writeText(unique.join('\n')).then(() => {
     showToast(`${unique.length} tags copiados al portapapeles`);
@@ -307,18 +340,17 @@ function copiarTodosLosTags() {
 function exportarCSV() {
   const item = allTagsData[currentKwIndex];
   if (!item) return;
-  const tags = item.editorial_tags || {};
+  const data = getTagsData(item);
   const rows = [['Keyword Base', 'Tag', 'Tipo']];
   const kw = item.keyword;
   const add = (list, tipo) => list.forEach(t => {
-    const val = typeof t === 'string' ? t : (t.query || t.title || t.topic_title || '');
+    const val = typeof t === 'string' ? t : (t.tag || t.query || t.title || t.topic_title || '');
     if (val) rows.push([kw, val, tipo]);
   });
-  add(tags.rising_queries || [], 'Rising (Tendencia)');
-  add(tags.top_queries || [], 'Top (Más Buscado)');
-  add(tags.autocomplete_tags || item.suggestions || [], 'Autocomplete');
-  add(item.paa || [], 'PAA (Pregunta)');
-  add(item.related || [], 'Relacionada');
+  add(data.rising, 'Rising (Tendencia)');
+  add(data.top, 'Top (Más Buscado)');
+  add(data.paa, 'PAA (Pregunta)');
+  add(data.related, 'Relacionada');
 
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8'});

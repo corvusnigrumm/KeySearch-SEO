@@ -1,639 +1,716 @@
 <!DOCTYPE html>
-<html lang="es"><head>
-<meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Key Search V 10.0 Ultra - SEO Snippets, Schema & Ads Copywriter</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-{% include "_tailwind_config.html" %}
-<style>
-.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
-.pipeline-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 100%)}
-.ads-gradient{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 50%,#06b6d4 100%)}
-.serp-card{box-shadow:0 1px 6px rgba(32,33,36,.18)}
-.code-scroll::-webkit-scrollbar{height:6px;width:6px}
-.code-scroll::-webkit-scrollbar-thumb{background:#334155;border-radius:4px}
-.tab-btn.active{border-bottom:3px solid #00677f;color:#00677f;font-weight:700}
-</style>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Key Search V 10.0 Ultra - SEO Snippets, Schema & Ads Copywriter</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  {% include "_tailwind_config.html" %}
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24
+    }
+
+    .pipeline-gradient {
+      background: linear-gradient(135deg, #0d1c32 0%, #00677f 100%)
+    }
+
+    .ads-gradient {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)
+    }
+
+    .serp-card {
+      box-shadow: 0 1px 6px rgba(32, 33, 36, .18)
+    }
+
+    .code-scroll::-webkit-scrollbar {
+      height: 6px;
+      width: 6px
+    }
+
+    .code-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px
+    }
+
+    .tab-btn.active {
+      border-bottom: 3px solid #00677f;
+      color: #00677f;
+      font-weight: 700
+    }
+  </style>
 </head>
+
 <body class="bg-background text-on-surface font-body-md">
-{% include "_sidebar.html" %}
-{% include "_topbar.html" %}
-<main class="ml-[240px] mt-16 p-lg">
-<div class="max-w-container-max mx-auto space-y-lg">
+  {% include "_sidebar.html" %}
+  {% include "_topbar.html" %}
+  <main class="ml-[240px] mt-16 p-lg">
+    <div class="max-w-container-max mx-auto space-y-lg">
 
-  <header class="flex flex-col md:flex-row md:items-center justify-between gap-md mb-md">
-    <div>
-      <div class="flex items-center gap-xs text-primary font-bold text-label-sm uppercase tracking-wider mb-xs">
-        <span class="material-symbols-outlined text-sm">auto_awesome</span>
-        <span>Marketing Digital & Optimización de Conversión</span>
-      </div>
-      <h2 class="font-h1 text-h1 text-primary">SEO Snippet, Schema & Ads Studio</h2>
-      <p class="text-on-surface-variant mt-xs">Crea en segundos <strong>Marcado Schema (JSON-LD)</strong>, Meta Tags de alto CTR, <strong>Anuncios de Google/Meta Ads</strong> y ganchos virales para TikTok/Reels.</p>
-    </div>
-    
-    <!-- Generador Rápido -->
-    <div class="flex items-center gap-sm bg-surface-container-lowest border border-outline-variant p-xs rounded-xl shadow-sm">
-      <input id="quickKwInput" type="text" placeholder="Ingresa una keyword..." class="bg-transparent border-0 focus:ring-0 text-body-sm px-sm py-xs w-48 md:w-64"/>
-      <button onclick="generarTodoBajoDemanda()" id="btnGenerarOnDemand" class="bg-primary hover:bg-primary/90 text-white font-bold text-label-sm px-md py-sm rounded-lg flex items-center gap-xs transition-all shadow-sm">
-        <span class="material-symbols-outlined text-sm">bolt</span>
-        <span>Generar</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Pestañas de Navegación del Estudio -->
-  <div class="flex items-center gap-md border-b border-outline-variant">
-    <button onclick="cambiarPestana('seo')" id="tabBtnSeo" class="tab-btn active pb-sm px-sm font-label-md flex items-center gap-xs transition-all">
-      <span class="material-symbols-outlined text-sm">code_blocks</span>
-      <span>1. SEO Snippet & Schema JSON-LD</span>
-    </button>
-    <button onclick="cambiarPestana('ads')" id="tabBtnAds" class="tab-btn pb-sm px-sm font-label-md text-on-surface-variant hover:text-primary flex items-center gap-xs transition-all">
-      <span class="material-symbols-outlined text-sm">campaign</span>
-      <span>2. Copywriter de Ads & Hooks Redes Sociales</span>
-    </button>
-  </div>
-
-  <!-- Indicador de Cadena de IA Activa y Keyword Analizada -->
-  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-md">
-    <div class="flex items-center gap-sm">
-      <div class="bg-secondary/10 text-secondary p-xs rounded-lg flex items-center justify-center">
-        <span class="material-symbols-outlined text-sm">psychology</span>
-      </div>
-      <div>
-        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Cadena de IA Activa (Fallback Automático):</label>
-        <div class="flex items-center gap-xs mt-xs flex-wrap">
-          <span class="inline-flex items-center gap-xs px-sm py-[3px] rounded-full text-[11px] font-bold" style="background:#0d1c32;color:#38bdf8">
-            <span class="material-symbols-outlined text-xs">auto_awesome</span>
-            {% if ai_chain.openai_active %}ChatGPT (gpt-4o-mini){% else %}GPT-OSS 120B (Groq){% endif %}
-          </span>
-          <span class="text-on-surface-variant text-xs">→</span>
-          <span class="inline-flex items-center gap-xs px-sm py-[3px] rounded-full text-[11px] font-bold" style="background:#1a1333;color:#c084fc">Qwen QwQ 32B</span>
-          <span class="text-on-surface-variant text-xs">→</span>
-          <span class="inline-flex items-center gap-xs px-sm py-[3px] rounded-full text-[11px] font-bold" style="background:#0f1f0f;color:#34d399">Llama 3.3 70B</span>
-          {% if ai_chain.openai_active %}
-          <span class="text-[10px] text-emerald-500 font-bold ml-xs">✓ OpenAI Key activa</span>
-          {% else %}
-          <span class="text-[10px] text-on-surface-variant ml-xs opacity-60">Agrega OPENAI_API_KEY en .env para usar ChatGPT real</span>
-          {% endif %}
+      <header class="flex flex-col md:flex-row md:items-center justify-between gap-md mb-md">
+        <div>
+          <div class="flex items-center gap-xs text-primary font-bold text-label-sm uppercase tracking-wider mb-xs">
+            <span class="material-symbols-outlined text-sm">auto_awesome</span>
+            <span>Marketing Digital & Optimización de Conversión</span>
+          </div>
+          <h2 class="font-h1 text-h1 text-primary">SEO Snippet, Schema & Ads Studio</h2>
+          <p class="text-on-surface-variant mt-xs">Crea en segundos <strong>Marcado Schema (JSON-LD)</strong>, Meta Tags
+            de alto CTR, <strong>Anuncios de Google/Meta Ads</strong> y ganchos virales para TikTok/Reels.</p>
         </div>
-      </div>
-    </div>
 
-    {% if state.last_run_data %}
-    <div class="flex items-center gap-sm">
-      <div class="bg-primary/10 text-primary p-xs rounded-lg flex items-center justify-center">
-        <span class="material-symbols-outlined text-sm">database</span>
-      </div>
-      <div>
-        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Keyword Analizada:</label>
-        <select id="keywordSelector" onchange="seleccionarKeyword(this.value)" class="bg-surface border border-outline-variant text-on-surface rounded-lg text-body-xs font-medium py-1 px-2 focus:ring-2 focus:ring-primary w-64 md:w-80">
-          {% for item in state.last_run_data %}
-          <option value="{{ loop.index0 }}">{{ item.keyword }} ({{ item.category }})</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-    {% endif %}
-  </div>
-
-
-  <!-- ════════════════════════════════════════════════════════════════════════ -->
-  <!-- PESTAÑA 1: SEO SNIPPETS & SCHEMA JSON-LD                               -->
-  <!-- ════════════════════════════════════════════════════════════════════════ -->
-  <div id="panelSeo" class="space-y-lg">
-    <div class="grid grid-cols-12 gap-gutter">
-
-      <!-- COLUMNA IZQUIERDA: VISTA PREVIA SERP GOOGLE -->
-      <div class="col-span-12 lg:col-span-6 space-y-md">
-        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
-          <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
-            <div class="flex items-center gap-xs font-bold text-body-md text-primary">
-              <span class="material-symbols-outlined text-amber-600">visibility</span>
-              <span>Simulador SERP de Google</span>
-            </div>
-            <div class="flex items-center gap-xs bg-surface-container p-xs rounded-lg text-label-xs">
-              <button id="btnViewDesktop" onclick="setSerpDevice('desktop')" class="px-sm py-xs bg-white rounded shadow-xs font-bold text-primary">🖥️ Desktop</button>
-              <button id="btnViewMobile" onclick="setSerpDevice('mobile')" class="px-sm py-xs text-on-surface-variant font-medium">📱 Móvil</button>
-            </div>
-          </div>
-
-          <!-- Google SERP Card Container -->
-          <div id="serpContainer" class="bg-white border border-slate-200 rounded-xl p-md md:p-lg serp-card transition-all max-w-full">
-            <div class="flex items-center gap-xs text-xs text-slate-700 mb-1">
-              <img src="https://www.google.com/favicon.ico" class="w-4 h-4 rounded-full" alt="Site icon"/>
-              <span class="font-medium">tusitio.com</span>
-              <span class="text-slate-400">›</span>
-              <span id="serpSlugBreadcrumb" class="text-slate-600 truncate">guia › ejemplo-keyword</span>
-            </div>
-
-            <h3 id="serpTitlePreview" class="text-lg md:text-xl font-medium text-[#1a0dab] hover:underline cursor-pointer leading-snug">
-              Cargando título optimizado...
-            </h3>
-
-            <p id="serpDescPreview" class="text-sm text-[#4d5156] mt-1 leading-relaxed">
-              Cargando meta descripción persuasiva...
-            </p>
-
-            <div id="serpFaqAccordion" class="mt-3 pt-2 border-t border-slate-100 space-y-1.5">
-              <!-- FAQs se inyectan dinámicamente -->
-            </div>
-          </div>
-
-          <!-- Contadores de Caracteres -->
-          <div class="grid grid-cols-2 gap-sm mt-md">
-            <div class="bg-surface-container p-sm rounded-lg flex items-center justify-between text-body-xs">
-              <span class="text-on-surface-variant font-medium">Meta Título:</span>
-              <span id="titleCharCount" class="font-bold text-emerald-700 bg-emerald-100 px-sm py-xs rounded">0 / 60</span>
-            </div>
-            <div class="bg-surface-container p-sm rounded-lg flex items-center justify-between text-body-xs">
-              <span class="text-on-surface-variant font-medium">Meta Descripción:</span>
-              <span id="descCharCount" class="font-bold text-emerald-700 bg-emerald-100 px-sm py-xs rounded">0 / 155</span>
-            </div>
-          </div>
-
-          <!-- Títulos Alternativos -->
-          <div class="mt-md pt-md border-t border-outline-variant">
-            <h4 class="text-label-sm font-bold uppercase tracking-wider text-on-surface-variant mb-xs flex items-center gap-xs">
-              <span class="material-symbols-outlined text-xs">tune</span>
-              Variantes de Título de Alto CTR:
-            </h4>
-            <div id="altTitlesContainer" class="space-y-xs"></div>
-          </div>
+        <!-- Generador Rápido -->
+        <div
+          class="flex items-center gap-sm bg-surface-container-lowest border border-outline-variant p-xs rounded-xl shadow-sm">
+          <input id="quickKwInput" type="text" placeholder="Ingresa una keyword..."
+            class="bg-transparent border-0 focus:ring-0 text-body-sm px-sm py-xs w-48 md:w-64" />
+          <button onclick="generarTodoBajoDemanda()" id="btnGenerarOnDemand"
+            class="bg-primary hover:bg-primary/90 text-white font-bold text-label-sm px-md py-sm rounded-lg flex items-center gap-xs transition-all shadow-sm">
+            <span class="material-symbols-outlined text-sm">bolt</span>
+            <span>Generar</span>
+          </button>
         </div>
-      </div>
+      </header>
 
-      <!-- COLUMNA DERECHA: SCHEMA JSON-LD -->
-      <div class="col-span-12 lg:col-span-6 space-y-md">
-        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col justify-between h-full">
-          <div>
-            <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
-              <div class="flex items-center gap-xs font-bold text-body-md text-primary">
-                <span class="material-symbols-outlined text-emerald-600">code_blocks</span>
-                <span>Código Schema FAQPage (JSON-LD)</span>
-              </div>
-              <button onclick="copiarSchemaCode()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-label-xs px-md py-xs rounded-lg flex items-center gap-xs transition-all shadow-xs">
-                <span class="material-symbols-outlined text-xs">content_copy</span>
-                <span id="btnCopySchemaText">Copiar JSON-LD</span>
-              </button>
-            </div>
-
-            <p class="text-body-xs text-on-surface-variant mb-sm">
-              Pégalo en la sección <code class="bg-surface-container p-xs rounded font-bold">&lt;head&gt;</code> de tu página o en tu plugin SEO (Yoast, RankMath).
-            </p>
-
-            <div class="relative bg-slate-900 rounded-xl p-md text-emerald-400 font-mono text-body-xs overflow-x-auto code-scroll max-h-[380px] border border-slate-800 shadow-inner">
-              <pre id="schemaCodeBox" class="whitespace-pre"><code>// Generando código Schema...</code></pre>
-            </div>
-          </div>
-
-          <div class="mt-md pt-md border-t border-outline-variant">
-            <div class="flex items-center justify-between mb-xs">
-              <span class="text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">Meta Tags HTML:</span>
-              <button onclick="copiarMetaTagsHtml()" class="text-primary hover:underline text-label-xs font-bold flex items-center gap-xs">
-                <span class="material-symbols-outlined text-xs">content_copy</span>
-                <span>Copiar Tags</span>
-              </button>
-            </div>
-            <div class="bg-slate-900 rounded-lg p-sm text-slate-300 font-mono text-body-xs overflow-x-auto code-scroll border border-slate-800">
-              <pre id="metaTagsHtmlBox" class="whitespace-pre"><code><!-- Generando meta tags... --></code></pre>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ════════════════════════════════════════════════════════════════════════ -->
-  <!-- PESTAÑA 2: ADS COPYWRITING & GANCHOS VIRALES                           -->
-  <!-- ════════════════════════════════════════════════════════════════════════ -->
-  <div id="panelAds" class="hidden space-y-lg">
-    
-    <!-- SUB-PANEL 1: GOOGLE SEARCH ADS (PPC) -->
-    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
-      <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
-        <div class="flex items-center gap-sm">
-          <img src="https://www.google.com/favicon.ico" class="w-5 h-5" alt="Google"/>
-          <div>
-            <h3 class="font-h3 text-h3 text-primary">Google Search Ads (PPC)</h3>
-            <p class="text-body-xs text-on-surface-variant">5 Títulos (≤30 caracteres) y 3 Descripciones (≤90 caracteres) optimizados para costo por clic (CPC)</p>
-          </div>
-        </div>
-        <button onclick="copiarGoogleAdsCopy()" class="bg-primary hover:bg-primary/90 text-white font-bold text-label-xs px-md py-xs rounded-lg flex items-center gap-xs shadow-xs">
-          <span class="material-symbols-outlined text-xs">content_copy</span>
-          <span id="btnCopyGAdsText">Copiar Anuncio</span>
+      <!-- Pestañas de Navegación del Estudio -->
+      <div class="flex items-center gap-md border-b border-outline-variant">
+        <button onclick="cambiarPestana('seo')" id="tabBtnSeo"
+          class="tab-btn active pb-sm px-sm font-label-md flex items-center gap-xs transition-all">
+          <span class="material-symbols-outlined text-sm">code_blocks</span>
+          <span>1. SEO Snippet & Schema JSON-LD</span>
+        </button>
+        <button onclick="cambiarPestana('ads')" id="tabBtnAds"
+          class="tab-btn pb-sm px-sm font-label-md text-on-surface-variant hover:text-primary flex items-center gap-xs transition-all">
+          <span class="material-symbols-outlined text-sm">campaign</span>
+          <span>2. Copywriter de Ads & Hooks Redes Sociales</span>
         </button>
       </div>
 
-      <!-- Simulador de Anuncio Patrocinado de Google -->
-      <div class="bg-white border border-slate-200 rounded-xl p-md serp-card mb-md max-w-2xl">
-        <div class="flex items-center gap-xs mb-1">
-          <span class="bg-slate-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">Patrocinado</span>
-          <span class="text-xs text-slate-700">https://tusitio.com › oficial</span>
-        </div>
-        <h4 id="gadsPreviewTitle" class="text-base md:text-lg font-medium text-[#1a0dab] leading-snug">
-          Título 1 | Título 2 | Título 3
-        </h4>
-        <p id="gadsPreviewDesc" class="text-xs md:text-sm text-[#4d5156] mt-1">
-          Descripción optimizada para Google Ads con llamado a la acción claro y conciso.
-        </p>
-      </div>
-
-      <!-- Grid de Títulos y Descripciones con Conteo de Caracteres -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
-        <div>
-          <label class="block text-label-sm font-bold text-on-surface-variant uppercase mb-xs">5 Títulos (Máx 30 car c/u):</label>
-          <div id="gadsHeadlinesList" class="space-y-xs"></div>
-        </div>
-        <div>
-          <label class="block text-label-sm font-bold text-on-surface-variant uppercase mb-xs">3 Descripciones (Máx 90 car c/u):</label>
-          <div id="gadsDescriptionsList" class="space-y-xs"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SUB-PANEL 2: FACEBOOK / INSTAGRAM ADS & TIKTOK REELS HOOKS -->
-    <div class="grid grid-cols-12 gap-gutter">
-      
-      <!-- FACEBOOK / INSTAGRAM ADS -->
-      <div class="col-span-12 lg:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
-            <div class="flex items-center gap-xs">
-              <span class="material-symbols-outlined text-blue-600">feed</span>
-              <h3 class="font-h3 text-h3 text-primary">Facebook / Instagram Ads (Fórmula PAS)</h3>
-            </div>
-            <button onclick="copiarSocialAdCopy()" class="text-primary hover:underline text-label-xs font-bold flex items-center gap-xs">
-              <span class="material-symbols-outlined text-xs">content_copy</span>
-              <span>Copiar Copy</span>
-            </button>
+      <!-- Indicador de Cadena de IA Activa y Keyword Analizada -->
+      <div
+        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-md">
+        <div class="flex items-center gap-sm">
+          <div class="bg-secondary/10 text-secondary p-xs rounded-lg flex items-center justify-center">
+            <span class="material-symbols-outlined text-sm">psychology</span>
           </div>
-
-          <div class="space-y-sm">
-            <div>
-              <span class="text-label-xs font-bold text-amber-800 bg-amber-100 px-sm py-xs rounded">Gancho Scroll-Stopper:</span>
-              <p id="socialHook" class="font-bold text-body-sm text-primary mt-xs"></p>
-            </div>
-
-            <div>
-              <span class="text-label-xs font-bold text-slate-700 bg-slate-100 px-sm py-xs rounded">Cuerpo del Anuncio (Problema - Agitación - Solución):</span>
-              <div id="socialBody" class="bg-surface-container/60 p-sm rounded-lg text-body-sm text-on-surface whitespace-pre-line mt-xs"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-md pt-sm border-t border-outline-variant flex items-center justify-between text-body-xs">
-          <span class="text-on-surface-variant">Botón Recomendado:</span>
-          <span id="socialCtaBtn" class="bg-blue-600 text-white font-bold px-md py-xs rounded-md shadow-xs">Más Información</span>
-        </div>
-      </div>
-
-      <!-- TIKTOK / REELS / SHORTS GANCHOS Y GUION 30s -->
-      <div class="col-span-12 lg:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
-            <div class="flex items-center gap-xs">
-              <span class="material-symbols-outlined text-pink-600">video_camera_front</span>
-              <h3 class="font-h3 text-h3 text-primary">TikTok / Reels Viral Hooks & Guion 30s</h3>
-            </div>
-            <button onclick="copiarVideoScript()" class="text-primary hover:underline text-label-xs font-bold flex items-center gap-xs">
-              <span class="material-symbols-outlined text-xs">content_copy</span>
-              <span>Copiar Guion</span>
-            </button>
-          </div>
-
-          <!-- 5 Ganchos Virales de 3 Segundos -->
-          <div class="mb-md">
-            <label class="block text-label-xs font-bold text-on-surface-variant uppercase mb-xs">5 Ganchos Virales (Primeros 3 Segundos):</label>
-            <div id="tiktokHooksList" class="space-y-xs"></div>
-          </div>
-
-          <!-- Estructura de Guion 30s -->
           <div>
-            <label class="block text-label-xs font-bold text-on-surface-variant uppercase mb-xs">Estructura Guion de Retención (30s):</label>
-            <div id="videoScriptBox" class="bg-slate-900 text-slate-200 p-sm rounded-lg font-mono text-body-xs space-y-xs"></div>
+            <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Cadena de IA
+              Activa (Fallback Automático):</label>
+            <div class="flex items-center gap-xs mt-xs flex-wrap">
+              <span class="inline-flex items-center gap-xs px-sm py-[3px] rounded-full text-[11px] font-bold"
+                style="background:#0d1c32;color:#38bdf8">
+                <span class="material-symbols-outlined text-xs">auto_awesome</span>
+                {% if ai_chain.openai_active %}ChatGPT (gpt-4o-mini){% else %}GPT-OSS 120B (Groq){% endif %}
+              </span>
+              <span class="text-on-surface-variant text-xs">→</span>
+              <span class="inline-flex items-center gap-xs px-sm py-[3px] rounded-full text-[11px] font-bold"
+                style="background:#1a1333;color:#c084fc">Qwen QwQ 32B</span>
+              <span class="text-on-surface-variant text-xs">→</span>
+              <span class="inline-flex items-center gap-xs px-sm py-[3px] rounded-full text-[11px] font-bold"
+                style="background:#0f1f0f;color:#34d399">Llama 3.3 70B</span>
+              {% if ai_chain.openai_active %}
+              <span class="text-[10px] text-emerald-500 font-bold ml-xs">✓ OpenAI Key activa</span>
+              {% else %}
+              <span class="text-[10px] text-on-surface-variant ml-xs opacity-60">Agrega OPENAI_API_KEY en .env para usar
+                ChatGPT real</span>
+              {% endif %}
+            </div>
           </div>
+        </div>
+
+        {% if state.last_run_data %}
+        <div class="flex items-center gap-sm">
+          <div class="bg-primary/10 text-primary p-xs rounded-lg flex items-center justify-center">
+            <span class="material-symbols-outlined text-sm">database</span>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Keyword
+              Analizada:</label>
+            <select id="keywordSelector" onchange="seleccionarKeyword(this.value)"
+              class="bg-surface border border-outline-variant text-on-surface rounded-lg text-body-xs font-medium py-1 px-2 focus:ring-2 focus:ring-primary w-64 md:w-80">
+              {% for item in state.last_run_data %}
+              <option value="{{ loop.index0 }}">{{ item.keyword }} ({{ item.category }})</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+
+      <!-- ════════════════════════════════════════════════════════════════════════ -->
+      <!-- PESTAÑA 1: SEO SNIPPETS & SCHEMA JSON-LD                               -->
+      <!-- ════════════════════════════════════════════════════════════════════════ -->
+      <div id="panelSeo" class="space-y-lg">
+        <div class="grid grid-cols-12 gap-gutter">
+
+          <!-- COLUMNA IZQUIERDA: VISTA PREVIA SERP GOOGLE -->
+          <div class="col-span-12 lg:col-span-6 space-y-md">
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+              <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
+                <div class="flex items-center gap-xs font-bold text-body-md text-primary">
+                  <span class="material-symbols-outlined text-amber-600">visibility</span>
+                  <span>Simulador SERP de Google</span>
+                </div>
+                <div class="flex items-center gap-xs bg-surface-container p-xs rounded-lg text-label-xs">
+                  <button id="btnViewDesktop" onclick="setSerpDevice('desktop')"
+                    class="px-sm py-xs bg-white rounded shadow-xs font-bold text-primary">🖥️ Desktop</button>
+                  <button id="btnViewMobile" onclick="setSerpDevice('mobile')"
+                    class="px-sm py-xs text-on-surface-variant font-medium">📱 Móvil</button>
+                </div>
+              </div>
+
+              <!-- Google SERP Card Container -->
+              <div id="serpContainer"
+                class="bg-white border border-slate-200 rounded-xl p-md md:p-lg serp-card transition-all max-w-full">
+                <div class="flex items-center gap-xs text-xs text-slate-700 mb-1">
+                  <img src="https://www.google.com/favicon.ico" class="w-4 h-4 rounded-full" alt="Site icon" />
+                  <span class="font-medium">tusitio.com</span>
+                  <span class="text-slate-400">›</span>
+                  <span id="serpSlugBreadcrumb" class="text-slate-600 truncate">guia › ejemplo-keyword</span>
+                </div>
+
+                <h3 id="serpTitlePreview"
+                  class="text-lg md:text-xl font-medium text-[#1a0dab] hover:underline cursor-pointer leading-snug">
+                  Cargando título optimizado...
+                </h3>
+
+                <p id="serpDescPreview" class="text-sm text-[#4d5156] mt-1 leading-relaxed">
+                  Cargando meta descripción persuasiva...
+                </p>
+
+                <div id="serpFaqAccordion" class="mt-3 pt-2 border-t border-slate-100 space-y-1.5">
+                  <!-- FAQs se inyectan dinámicamente -->
+                </div>
+              </div>
+
+              <!-- Contadores de Caracteres -->
+              <div class="grid grid-cols-2 gap-sm mt-md">
+                <div class="bg-surface-container p-sm rounded-lg flex items-center justify-between text-body-xs">
+                  <span class="text-on-surface-variant font-medium">Meta Título:</span>
+                  <span id="titleCharCount" class="font-bold text-emerald-700 bg-emerald-100 px-sm py-xs rounded">0 /
+                    60</span>
+                </div>
+                <div class="bg-surface-container p-sm rounded-lg flex items-center justify-between text-body-xs">
+                  <span class="text-on-surface-variant font-medium">Meta Descripción:</span>
+                  <span id="descCharCount" class="font-bold text-emerald-700 bg-emerald-100 px-sm py-xs rounded">0 /
+                    155</span>
+                </div>
+              </div>
+
+              <!-- Títulos Alternativos -->
+              <div class="mt-md pt-md border-t border-outline-variant">
+                <h4
+                  class="text-label-sm font-bold uppercase tracking-wider text-on-surface-variant mb-xs flex items-center gap-xs">
+                  <span class="material-symbols-outlined text-xs">tune</span>
+                  Variantes de Título de Alto CTR:
+                </h4>
+                <div id="altTitlesContainer" class="space-y-xs"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUMNA DERECHA: SCHEMA JSON-LD -->
+          <div class="col-span-12 lg:col-span-6 space-y-md">
+            <div
+              class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col justify-between h-full">
+              <div>
+                <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
+                  <div class="flex items-center gap-xs font-bold text-body-md text-primary">
+                    <span class="material-symbols-outlined text-emerald-600">code_blocks</span>
+                    <span>Código Schema FAQPage (JSON-LD)</span>
+                  </div>
+                  <button onclick="copiarSchemaCode()"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-label-xs px-md py-xs rounded-lg flex items-center gap-xs transition-all shadow-xs">
+                    <span class="material-symbols-outlined text-xs">content_copy</span>
+                    <span id="btnCopySchemaText">Copiar JSON-LD</span>
+                  </button>
+                </div>
+
+                <p class="text-body-xs text-on-surface-variant mb-sm">
+                  Pégalo en la sección <code class="bg-surface-container p-xs rounded font-bold">&lt;head&gt;</code> de
+                  tu página o en tu plugin SEO (Yoast, RankMath).
+                </p>
+
+                <div
+                  class="relative bg-slate-900 rounded-xl p-md text-emerald-400 font-mono text-body-xs overflow-x-auto code-scroll max-h-[380px] border border-slate-800 shadow-inner">
+                  <pre id="schemaCodeBox" class="whitespace-pre"><code>// Generando código Schema...</code></pre>
+                </div>
+              </div>
+
+              <div class="mt-md pt-md border-t border-outline-variant">
+                <div class="flex items-center justify-between mb-xs">
+                  <span class="text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">Meta Tags
+                    HTML:</span>
+                  <button onclick="copiarMetaTagsHtml()"
+                    class="text-primary hover:underline text-label-xs font-bold flex items-center gap-xs">
+                    <span class="material-symbols-outlined text-xs">content_copy</span>
+                    <span>Copiar Tags</span>
+                  </button>
+                </div>
+                <div
+                  class="bg-slate-900 rounded-lg p-sm text-slate-300 font-mono text-body-xs overflow-x-auto code-scroll border border-slate-800">
+                  <pre id="metaTagsHtmlBox" class="whitespace-pre"><code><!-- Generando meta tags... --></code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
+      <!-- ════════════════════════════════════════════════════════════════════════ -->
+      <!-- PESTAÑA 2: ADS COPYWRITING & GANCHOS VIRALES                           -->
+      <!-- ════════════════════════════════════════════════════════════════════════ -->
+      <div id="panelAds" class="hidden space-y-lg">
+
+        <!-- SUB-PANEL 1: GOOGLE SEARCH ADS (PPC) -->
+        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+          <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
+            <div class="flex items-center gap-sm">
+              <img src="https://www.google.com/favicon.ico" class="w-5 h-5" alt="Google" />
+              <div>
+                <h3 class="font-h3 text-h3 text-primary">Google Search Ads (PPC)</h3>
+                <p class="text-body-xs text-on-surface-variant">5 Títulos (≤30 caracteres) y 3 Descripciones (≤90
+                  caracteres) optimizados para costo por clic (CPC)</p>
+              </div>
+            </div>
+            <button onclick="copiarGoogleAdsCopy()"
+              class="bg-primary hover:bg-primary/90 text-white font-bold text-label-xs px-md py-xs rounded-lg flex items-center gap-xs shadow-xs">
+              <span class="material-symbols-outlined text-xs">content_copy</span>
+              <span id="btnCopyGAdsText">Copiar Anuncio</span>
+            </button>
+          </div>
+
+          <!-- Simulador de Anuncio Patrocinado de Google -->
+          <div class="bg-white border border-slate-200 rounded-xl p-md serp-card mb-md max-w-2xl">
+            <div class="flex items-center gap-xs mb-1">
+              <span class="bg-slate-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">Patrocinado</span>
+              <span class="text-xs text-slate-700">https://tusitio.com › oficial</span>
+            </div>
+            <h4 id="gadsPreviewTitle" class="text-base md:text-lg font-medium text-[#1a0dab] leading-snug">
+              Título 1 | Título 2 | Título 3
+            </h4>
+            <p id="gadsPreviewDesc" class="text-xs md:text-sm text-[#4d5156] mt-1">
+              Descripción optimizada para Google Ads con llamado a la acción claro y conciso.
+            </p>
+          </div>
+
+          <!-- Grid de Títulos y Descripciones con Conteo de Caracteres -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+            <div>
+              <label class="block text-label-sm font-bold text-on-surface-variant uppercase mb-xs">5 Títulos (Máx 30 car
+                c/u):</label>
+              <div id="gadsHeadlinesList" class="space-y-xs"></div>
+            </div>
+            <div>
+              <label class="block text-label-sm font-bold text-on-surface-variant uppercase mb-xs">3 Descripciones (Máx
+                90 car c/u):</label>
+              <div id="gadsDescriptionsList" class="space-y-xs"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 2: FACEBOOK / INSTAGRAM ADS & TIKTOK REELS HOOKS -->
+        <div class="grid grid-cols-12 gap-gutter">
+
+          <!-- FACEBOOK / INSTAGRAM ADS -->
+          <div
+            class="col-span-12 lg:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
+                <div class="flex items-center gap-xs">
+                  <span class="material-symbols-outlined text-blue-600">feed</span>
+                  <h3 class="font-h3 text-h3 text-primary">Facebook / Instagram Ads (Fórmula PAS)</h3>
+                </div>
+                <button onclick="copiarSocialAdCopy()"
+                  class="text-primary hover:underline text-label-xs font-bold flex items-center gap-xs">
+                  <span class="material-symbols-outlined text-xs">content_copy</span>
+                  <span>Copiar Copy</span>
+                </button>
+              </div>
+
+              <div class="space-y-sm">
+                <div>
+                  <span class="text-label-xs font-bold text-amber-800 bg-amber-100 px-sm py-xs rounded">Gancho
+                    Scroll-Stopper:</span>
+                  <p id="socialHook" class="font-bold text-body-sm text-primary mt-xs"></p>
+                </div>
+
+                <div>
+                  <span class="text-label-xs font-bold text-slate-700 bg-slate-100 px-sm py-xs rounded">Cuerpo del
+                    Anuncio (Problema - Agitación - Solución):</span>
+                  <div id="socialBody"
+                    class="bg-surface-container/60 p-sm rounded-lg text-body-sm text-on-surface whitespace-pre-line mt-xs">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-md pt-sm border-t border-outline-variant flex items-center justify-between text-body-xs">
+              <span class="text-on-surface-variant">Botón Recomendado:</span>
+              <span id="socialCtaBtn" class="bg-blue-600 text-white font-bold px-md py-xs rounded-md shadow-xs">Más
+                Información</span>
+            </div>
+          </div>
+
+          <!-- TIKTOK / REELS / SHORTS GANCHOS Y GUION 30s -->
+          <div
+            class="col-span-12 lg:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between border-b border-outline-variant pb-sm mb-md">
+                <div class="flex items-center gap-xs">
+                  <span class="material-symbols-outlined text-pink-600">video_camera_front</span>
+                  <h3 class="font-h3 text-h3 text-primary">TikTok / Reels Viral Hooks & Guion 30s</h3>
+                </div>
+                <button onclick="copiarVideoScript()"
+                  class="text-primary hover:underline text-label-xs font-bold flex items-center gap-xs">
+                  <span class="material-symbols-outlined text-xs">content_copy</span>
+                  <span>Copiar Guion</span>
+                </button>
+              </div>
+
+              <!-- 5 Ganchos Virales de 3 Segundos -->
+              <div class="mb-md">
+                <label class="block text-label-xs font-bold text-on-surface-variant uppercase mb-xs">5 Ganchos Virales
+                  (Primeros 3 Segundos):</label>
+                <div id="tiktokHooksList" class="space-y-xs"></div>
+              </div>
+
+              <!-- Estructura de Guion 30s -->
+              <div>
+                <label class="block text-label-xs font-bold text-on-surface-variant uppercase mb-xs">Estructura Guion de
+                  Retención (30s):</label>
+                <div id="videoScriptBox"
+                  class="bg-slate-900 text-slate-200 p-sm rounded-lg font-mono text-body-xs space-y-xs"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
+  </main>
 
-  </div>
+  <script>
+    const runData = {{ state.last_run_data | tojson | default ("[]") }};
+    let currentSchemaData = null;
+    let currentAdsData = null;
+    let currentKeyword = "inteligencia artificial";
 
-</div>
-</main>
+    function cambiarPestana(tab) {
+      const btnSeo = document.getElementById("tabBtnSeo");
+      const btnAds = document.getElementById("tabBtnAds");
+      const panelSeo = document.getElementById("panelSeo");
+      const panelAds = document.getElementById("panelAds");
 
-<script>
-const runData = {{ state.last_run_data | tojson | default("[]") }};
-let currentSchemaData = null;
-let currentAdsData = null;
-let currentKeyword = "inteligencia artificial";
-
-function cambiarPestana(tab) {
-  const btnSeo = document.getElementById("tabBtnSeo");
-  const btnAds = document.getElementById("tabBtnAds");
-  const panelSeo = document.getElementById("panelSeo");
-  const panelAds = document.getElementById("panelAds");
-
-  if (tab === 'seo') {
-    btnSeo.classList.add("active");
-    btnAds.classList.remove("active");
-    panelSeo.classList.remove("hidden");
-    panelAds.classList.add("hidden");
-  } else {
-    btnAds.classList.add("active");
-    btnSeo.classList.remove("active");
-    panelAds.classList.remove("hidden");
-    panelSeo.classList.add("hidden");
-  }
-}
-
-function inicializar() {
-  if (runData && runData.length > 0) {
-    seleccionarKeyword(0);
-  } else {
-    // Datos demo
-    generarTodoBajoDemanda("inteligencia artificial");
-  }
-}
-
-function seleccionarKeyword(index) {
-  const item = runData[index];
-  if (!item) return;
-  currentKeyword = item.keyword;
-
-  if (item.seo_schema) {
-    renderizarSeoData(item.seo_schema, item.keyword);
-  } else {
-    cargarSeoApi(item.keyword);
-  }
-
-  if (item.ads_copy) {
-    renderizarAdsData(item.ads_copy, item.keyword);
-  } else {
-    cargarAdsApi(item.keyword);
-  }
-}
-
-async function cargarSeoApi(kw) {
-  try {
-    const resp = await fetch("/api/generate-schema", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword: kw, questions: [] })
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      renderizarSeoData(data, kw);
+      if (tab === 'seo') {
+        btnSeo.classList.add("active");
+        btnAds.classList.remove("active");
+        panelSeo.classList.remove("hidden");
+        panelAds.classList.add("hidden");
+      } else {
+        btnAds.classList.add("active");
+        btnSeo.classList.remove("active");
+        panelAds.classList.remove("hidden");
+        panelSeo.classList.add("hidden");
+      }
     }
-  } catch (e) { console.error(e); }
-}
 
-async function cargarAdsApi(kw) {
-  try {
-    const resp = await fetch("/api/generate-ads-copy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword: kw, questions: [] })
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      renderizarAdsData(data, kw);
+    function inicializar() {
+      if (runData && runData.length > 0) {
+        seleccionarKeyword(0);
+      } else {
+        // Datos demo
+        generarTodoBajoDemanda("inteligencia artificial");
+      }
     }
-  } catch (e) { console.error(e); }
-}
 
-function renderizarSeoData(schemaData, keyword) {
-  currentSchemaData = schemaData;
-  const title = schemaData.meta_title || `${keyword} - Guía Completa`;
-  const desc = schemaData.meta_description || `Aprende todo sobre ${keyword}.`;
-  const slug = schemaData.slug_sugerido || keyword.toLowerCase().replace(/\\s+/g, '-');
+    function seleccionarKeyword(index) {
+      const item = runData[index];
+      if (!item) return;
+      currentKeyword = item.keyword;
 
-  document.getElementById("serpTitlePreview").textContent = title;
-  document.getElementById("serpDescPreview").textContent = desc;
-  document.getElementById("serpSlugBreadcrumb").textContent = `guia › ${slug}`;
+      if (item.seo_schema) {
+        renderizarSeoData(item.seo_schema, item.keyword);
+      } else {
+        cargarSeoApi(item.keyword);
+      }
 
-  const tCount = title.length;
-  const dCount = desc.length;
-  
-  const tBadge = document.getElementById("titleCharCount");
-  tBadge.textContent = `${tCount} / 60`;
-  tBadge.className = tCount <= 60 ? "font-bold text-emerald-700 bg-emerald-100 px-sm py-xs rounded" : "font-bold text-amber-700 bg-amber-100 px-sm py-xs rounded";
+      if (item.ads_copy) {
+        renderizarAdsData(item.ads_copy, item.keyword);
+      } else {
+        cargarAdsApi(item.keyword);
+      }
+    }
 
-  const dBadge = document.getElementById("descCharCount");
-  dBadge.textContent = `${dCount} / 155`;
-  dBadge.className = dCount <= 155 ? "font-bold text-emerald-700 bg-emerald-100 px-sm py-xs rounded" : "font-bold text-amber-700 bg-amber-100 px-sm py-xs rounded";
+    async function cargarSeoApi(kw) {
+      try {
+        const resp = await fetch("/api/generate-schema", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword: kw, questions: [] })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          renderizarSeoData(data, kw);
+        }
+      } catch (e) { console.error(e); }
+    }
 
-  const faqAccordion = document.getElementById("serpFaqAccordion");
-  faqAccordion.innerHTML = "";
-  if (schemaData.faq_items && schemaData.faq_items.length > 0) {
-    schemaData.faq_items.slice(0, 4).forEach((faq) => {
-      const details = document.createElement("details");
-      details.className = "group text-xs text-slate-800 cursor-pointer border-b border-slate-100 pb-1";
-      details.innerHTML = `
+    async function cargarAdsApi(kw) {
+      try {
+        const resp = await fetch("/api/generate-ads-copy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword: kw, questions: [] })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          renderizarAdsData(data, kw);
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    function renderizarSeoData(schemaData, keyword) {
+      currentSchemaData = schemaData;
+      const title = schemaData.meta_title || `${keyword} - Guía Completa`;
+      const desc = schemaData.meta_description || `Aprende todo sobre ${keyword}.`;
+      const slug = schemaData.slug_sugerido || keyword.toLowerCase().replace(/\\s+/g, '-');
+
+      document.getElementById("serpTitlePreview").textContent = title;
+      document.getElementById("serpDescPreview").textContent = desc;
+      document.getElementById("serpSlugBreadcrumb").textContent = `guia › ${slug}`;
+
+      const tCount = title.length;
+      const dCount = desc.length;
+
+      const tBadge = document.getElementById("titleCharCount");
+      tBadge.textContent = `${tCount} / 60`;
+      tBadge.className = tCount <= 60 ? "font-bold text-emerald-700 bg-emerald-100 px-sm py-xs rounded" : "font-bold text-amber-700 bg-amber-100 px-sm py-xs rounded";
+
+      const dBadge = document.getElementById("descCharCount");
+      dBadge.textContent = `${dCount} / 155`;
+      dBadge.className = dCount <= 155 ? "font-bold text-emerald-700 bg-emerald-100 px-sm py-xs rounded" : "font-bold text-amber-700 bg-amber-100 px-sm py-xs rounded";
+
+      const faqAccordion = document.getElementById("serpFaqAccordion");
+      faqAccordion.innerHTML = "";
+      if (schemaData.faq_items && schemaData.faq_items.length > 0) {
+        schemaData.faq_items.slice(0, 4).forEach((faq) => {
+          const details = document.createElement("details");
+          details.className = "group text-xs text-slate-800 cursor-pointer border-b border-slate-100 pb-1";
+          details.innerHTML = `
         <summary class="flex items-center justify-between font-medium text-[#1a0dab] hover:underline py-1 list-none">
           <span>${faq.pregunta}</span>
           <span class="material-symbols-outlined text-xs group-open:rotate-180 transition-transform">expand_more</span>
         </summary>
         <p class="text-slate-600 mt-1 pl-2 text-xs border-l-2 border-slate-300">${faq.respuesta}</p>
       `;
-      faqAccordion.appendChild(details);
-    });
-  }
+          faqAccordion.appendChild(details);
+        });
+      }
 
-  const altContainer = document.getElementById("altTitlesContainer");
-  altContainer.innerHTML = "";
-  if (schemaData.meta_titles_alternativos && schemaData.meta_titles_alternativos.length > 0) {
-    schemaData.meta_titles_alternativos.forEach((altTitle) => {
-      const div = document.createElement("div");
-      div.className = "flex items-center justify-between bg-surface-container/60 hover:bg-surface-container p-xs rounded-lg text-body-xs transition-colors";
-      div.innerHTML = `
+      const altContainer = document.getElementById("altTitlesContainer");
+      altContainer.innerHTML = "";
+      if (schemaData.meta_titles_alternativos && schemaData.meta_titles_alternativos.length > 0) {
+        schemaData.meta_titles_alternativos.forEach((altTitle) => {
+          const div = document.createElement("div");
+          div.className = "flex items-center justify-between bg-surface-container/60 hover:bg-surface-container p-xs rounded-lg text-body-xs transition-colors";
+          div.innerHTML = `
         <span class="text-on-surface truncate pr-2">${altTitle}</span>
         <button onclick="usarTituloAlternativo('${altTitle.replace(/'/g, "\\'")}')" class="text-primary hover:underline font-bold text-label-xs shrink-0">Usar Este</button>
       `;
-      altContainer.appendChild(div);
-    });
-  }
+          altContainer.appendChild(div);
+        });
+      }
 
-  document.getElementById("schemaCodeBox").textContent = schemaData.schema_faq_string || "// No generado";
-  const metaHtml = `<title>${title}</title>\n<meta name="description" content="${desc}" />\n<link rel="canonical" href="https://tusitio.com/${slug}" />\n<meta property="og:title" content="${title}" />\n<meta property="og:description" content="${desc}" />\n<meta property="og:type" content="article" />`;
-  document.getElementById("metaTagsHtmlBox").textContent = metaHtml;
-}
+      document.getElementById("schemaCodeBox").textContent = schemaData.schema_faq_string || "// No generado";
+      const metaHtml = `<title>${title}</title>\n<meta name="description" content="${desc}" />\n<link rel="canonical" href="https://tusitio.com/${slug}" />\n<meta property="og:title" content="${title}" />\n<meta property="og:description" content="${desc}" />\n<meta property="og:type" content="article" />`;
+      document.getElementById("metaTagsHtmlBox").textContent = metaHtml;
+    }
 
-function renderizarAdsData(adsData, keyword) {
-  currentAdsData = adsData;
-  const gAds = adsData.google_ads || {};
-  const titulos = gAds.titulos || [];
-  const descripciones = gAds.descripciones || [];
+    function renderizarAdsData(adsData, keyword) {
+      currentAdsData = adsData;
+      const gAds = adsData.google_ads || {};
+      const titulos = gAds.titulos || [];
+      const descripciones = gAds.descripciones || [];
 
-  // Google Ads Preview
-  document.getElementById("gadsPreviewTitle").textContent = titulos.slice(0, 3).join(" | ") || `${keyword.toUpperCase()} - Oficial`;
-  document.getElementById("gadsPreviewDesc").textContent = descripciones[0] || `Encuentra las mejores opciones sobre ${keyword}.`;
+      // Google Ads Preview
+      document.getElementById("gadsPreviewTitle").textContent = titulos.slice(0, 3).join(" | ") || `${keyword.toUpperCase()} - Oficial`;
+      document.getElementById("gadsPreviewDesc").textContent = descripciones[0] || `Encuentra las mejores opciones sobre ${keyword}.`;
 
-  // Headlines List
-  const hList = document.getElementById("gadsHeadlinesList");
-  hList.innerHTML = "";
-  titulos.forEach((t, i) => {
-    const len = t.length;
-    const badgeCls = len <= 30 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800";
-    const div = document.createElement("div");
-    div.className = "flex items-center justify-between p-xs bg-surface-container rounded text-body-xs";
-    div.innerHTML = `
-      <span class="font-medium truncate mr-2">${i+1}. ${t}</span>
+      // Headlines List
+      const hList = document.getElementById("gadsHeadlinesList");
+      hList.innerHTML = "";
+      titulos.forEach((t, i) => {
+        const len = t.length;
+        const badgeCls = len <= 30 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800";
+        const div = document.createElement("div");
+        div.className = "flex items-center justify-between p-xs bg-surface-container rounded text-body-xs";
+        div.innerHTML = `
+      <span class="font-medium truncate mr-2">${i + 1}. ${t}</span>
       <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeCls}">${len}/30</span>
     `;
-    hList.appendChild(div);
-  });
+        hList.appendChild(div);
+      });
 
-  // Descriptions List
-  const dList = document.getElementById("gadsDescriptionsList");
-  dList.innerHTML = "";
-  descripciones.forEach((d, i) => {
-    const len = d.length;
-    const badgeCls = len <= 90 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800";
-    const div = document.createElement("div");
-    div.className = "flex items-start justify-between p-xs bg-surface-container rounded text-body-xs";
-    div.innerHTML = `
-      <span class="font-medium mr-2">${i+1}. ${d}</span>
+      // Descriptions List
+      const dList = document.getElementById("gadsDescriptionsList");
+      dList.innerHTML = "";
+      descripciones.forEach((d, i) => {
+        const len = d.length;
+        const badgeCls = len <= 90 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800";
+        const div = document.createElement("div");
+        div.className = "flex items-start justify-between p-xs bg-surface-container rounded text-body-xs";
+        div.innerHTML = `
+      <span class="font-medium mr-2">${i + 1}. ${d}</span>
       <span class="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${badgeCls}">${len}/90</span>
     `;
-    dList.appendChild(div);
-  });
+        dList.appendChild(div);
+      });
 
-  // Social Ads
-  const sAds = adsData.social_ads || {};
-  document.getElementById("socialHook").textContent = sAds.hook_scroll_stopper || `¿Buscando ${keyword}?`;
-  document.getElementById("socialBody").textContent = sAds.copy_pas || `Conoce todos los detalles sobre ${keyword}.`;
-  document.getElementById("socialCtaBtn").textContent = sAds.cta_boton || "Más Información";
+      // Social Ads
+      const sAds = adsData.social_ads || {};
+      document.getElementById("socialHook").textContent = sAds.hook_scroll_stopper || `¿Buscando ${keyword}?`;
+      document.getElementById("socialBody").textContent = sAds.copy_pas || `Conoce todos los detalles sobre ${keyword}.`;
+      document.getElementById("socialCtaBtn").textContent = sAds.cta_boton || "Más Información";
 
-  // TikTok Hooks List
-  const tList = document.getElementById("tiktokHooksList");
-  tList.innerHTML = "";
-  (adsData.tiktok_reels_hooks || []).forEach((hook, idx) => {
-    const div = document.createElement("div");
-    div.className = "flex items-center justify-between p-xs bg-pink-50 border border-pink-100 rounded text-body-xs";
-    div.innerHTML = `
-      <span class="text-pink-900 font-medium truncate mr-2">🔥 ${idx+1}. ${hook}</span>
+      // TikTok Hooks List
+      const tList = document.getElementById("tiktokHooksList");
+      tList.innerHTML = "";
+      (adsData.tiktok_reels_hooks || []).forEach((hook, idx) => {
+        const div = document.createElement("div");
+        div.className = "flex items-center justify-between p-xs bg-pink-50 border border-pink-100 rounded text-body-xs";
+        div.innerHTML = `
+      <span class="text-pink-900 font-medium truncate mr-2">🔥 ${idx + 1}. ${hook}</span>
       <button onclick="navigator.clipboard.writeText('${hook.replace(/'/g, "\\'")}'); alert('Gancho copiado!');" class="text-pink-700 hover:underline font-bold text-[11px] shrink-0">Copiar</button>
     `;
-    tList.appendChild(div);
-  });
+        tList.appendChild(div);
+      });
 
-  // Guion Video 30s
-  const vScript = adsData.guion_video_30s || {};
-  const vBox = document.getElementById("videoScriptBox");
-  vBox.innerHTML = `
+      // Guion Video 30s
+      const vScript = adsData.guion_video_30s || {};
+      const vBox = document.getElementById("videoScriptBox");
+      vBox.innerHTML = `
     <div><span class="text-pink-400 font-bold">[0-3s Gancho]:</span> ${vScript.segundos_0_3_gancho || ''}</div>
     <div><span class="text-amber-400 font-bold">[4-15s Problema]:</span> ${vScript.segundos_4_15_problema || ''}</div>
     <div><span class="text-emerald-400 font-bold">[16-25s Solución]:</span> ${vScript.segundos_16_25_solucion || ''}</div>
     <div><span class="text-blue-400 font-bold">[26-30s CTA]:</span> ${vScript.segundos_26_30_cta || ''}</div>
   `;
-}
-
-function usarTituloAlternativo(nuevoTitulo) {
-  if (!currentSchemaData) return;
-  currentSchemaData.meta_title = nuevoTitulo;
-  renderizarSeoData(currentSchemaData, nuevoTitulo);
-}
-
-function setSerpDevice(device) {
-  const container = document.getElementById("serpContainer");
-  const btnD = document.getElementById("btnViewDesktop");
-  const btnM = document.getElementById("btnViewMobile");
-
-  if (device === 'mobile') {
-    container.classList.add("max-w-sm", "mx-auto");
-    btnM.className = "px-sm py-xs bg-white rounded shadow-xs font-bold text-primary";
-    btnD.className = "px-sm py-xs text-on-surface-variant font-medium";
-  } else {
-    container.classList.remove("max-w-sm", "mx-auto");
-    btnD.className = "px-sm py-xs bg-white rounded shadow-xs font-bold text-primary";
-    btnM.className = "px-sm py-xs text-on-surface-variant font-medium";
-  }
-}
-
-async function generarTodoBajoDemanda(kwOverride) {
-  const input = document.getElementById("quickKwInput");
-  const kw = kwOverride || input.value.trim();
-  if (!kw) {
-    alert("Por favor ingresa una keyword.");
-    return;
-  }
-  const btn = document.getElementById("btnGenerarOnDemand");
-  btn.disabled = true;
-  btn.innerHTML = `<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Generando...</span>`;
-
-  try {
-    await Promise.all([cargarSeoApi(kw), cargarAdsApi(kw)]);
-  } catch (e) {
-    console.error(e);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<span class="material-symbols-outlined text-sm">bolt</span><span>Generar</span>`;
-  }
-}
-
-function copiarSchemaCode() {
-  if (!currentSchemaData || !currentSchemaData.schema_faq_string) return;
-  navigator.clipboard.writeText(currentSchemaData.schema_faq_string);
-  const btnText = document.getElementById("btnCopySchemaText");
-  btnText.textContent = "¡Copiado!";
-  setTimeout(() => { btnText.textContent = "Copiar JSON-LD"; }, 2500);
-}
-
-function copiarMetaTagsHtml() {
-  const box = document.getElementById("metaTagsHtmlBox");
-  if (!box || !box.textContent.trim()) return;
-  navigator.clipboard.writeText(box.textContent).then(() => {
-    const btn = event.currentTarget;
-    const span = btn.querySelector("span:last-child");
-    if (span) { span.textContent = "¡Copiado!"; setTimeout(() => { span.textContent = "Copiar Tags"; }, 2500); }
-  }).catch(e => console.error(e));
-}
-
-function copiarGoogleAdsCopy() {
-  if (!currentAdsData || !currentAdsData.google_ads) return;
-  const g = currentAdsData.google_ads;
-  const text = `TÍTULOS GOOGLE ADS:\n${(g.titulos || []).join('\n')}\n\nDESCRIPCIONES:\n${(g.descripciones || []).join('\n')}`;
-  navigator.clipboard.writeText(text);
-  const btn = document.getElementById("btnCopyGAdsText");
-  btn.textContent = "¡Copiado!";
-  setTimeout(() => { btn.textContent = "Copiar Anuncio"; }, 2500);
-}
-
-function copiarSocialAdCopy() {
-  if (!currentAdsData || !currentAdsData.social_ads) return;
-  const s = currentAdsData.social_ads;
-  const text = `${s.hook_scroll_stopper || ''}\n\n${s.copy_pas || ''}\n\nCTA: ${s.cta_boton || 'Más Información'}`;
-  navigator.clipboard.writeText(text);
-  alert("Copy de Facebook/Instagram copiado al portapapeles.");
-}
-
-function copiarVideoScript() {
-  if (!currentAdsData || !currentAdsData.guion_video_30s) return;
-  const v = currentAdsData.guion_video_30s;
-  const text = `GUION TIKTOK / REELS (30s):\n\n[0-3s Gancho]: ${v.segundos_0_3_gancho || ''}\n[4-15s Problema]: ${v.segundos_4_15_problema || ''}\n[16-25s Solución]: ${v.segundos_16_25_solucion || ''}\n[26-30s CTA]: ${v.segundos_26_30_cta || ''}`;
-  navigator.clipboard.writeText(text);
-  alert("Guion de video copiado al portapapeles.");
-}
-
-async function cambiarModeloGroq(modelId) {
-  try {
-    const resp = await fetch("/api/set-groq-model", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: modelId })
-    });
-    if (resp.ok) {
-      console.log("Modelo Groq cambiado exitosamente a:", modelId);
     }
-  } catch (e) {
-    console.error("Error al cambiar modelo Groq:", e);
-  }
-}
 
-document.addEventListener("DOMContentLoaded", inicializar);
+    function usarTituloAlternativo(nuevoTitulo) {
+      if (!currentSchemaData) return;
+      currentSchemaData.meta_title = nuevoTitulo;
+      renderizarSeoData(currentSchemaData, nuevoTitulo);
+    }
 
-</script>
-</body></html>
+    function setSerpDevice(device) {
+      const container = document.getElementById("serpContainer");
+      const btnD = document.getElementById("btnViewDesktop");
+      const btnM = document.getElementById("btnViewMobile");
+
+      if (device === 'mobile') {
+        container.classList.add("max-w-sm", "mx-auto");
+        btnM.className = "px-sm py-xs bg-white rounded shadow-xs font-bold text-primary";
+        btnD.className = "px-sm py-xs text-on-surface-variant font-medium";
+      } else {
+        container.classList.remove("max-w-sm", "mx-auto");
+        btnD.className = "px-sm py-xs bg-white rounded shadow-xs font-bold text-primary";
+        btnM.className = "px-sm py-xs text-on-surface-variant font-medium";
+      }
+    }
+
+    async function generarTodoBajoDemanda(kwOverride) {
+      const input = document.getElementById("quickKwInput");
+      const kw = kwOverride || input.value.trim();
+      if (!kw) {
+        alert("Por favor ingresa una keyword.");
+        return;
+      }
+      const btn = document.getElementById("btnGenerarOnDemand");
+      btn.disabled = true;
+      btn.innerHTML = `<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Generando...</span>`;
+
+      try {
+        await Promise.all([cargarSeoApi(kw), cargarAdsApi(kw)]);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span class="material-symbols-outlined text-sm">bolt</span><span>Generar</span>`;
+      }
+    }
+
+    function copiarSchemaCode() {
+      if (!currentSchemaData || !currentSchemaData.schema_faq_string) return;
+      navigator.clipboard.writeText(currentSchemaData.schema_faq_string);
+      const btnText = document.getElementById("btnCopySchemaText");
+      btnText.textContent = "¡Copiado!";
+      setTimeout(() => { btnText.textContent = "Copiar JSON-LD"; }, 2500);
+    }
+
+    function copiarMetaTagsHtml() {
+      const box = document.getElementById("metaTagsHtmlBox");
+      if (!box || !box.textContent.trim()) return;
+      navigator.clipboard.writeText(box.textContent).then(() => {
+        const btn = event.currentTarget;
+        const span = btn.querySelector("span:last-child");
+        if (span) { span.textContent = "¡Copiado!"; setTimeout(() => { span.textContent = "Copiar Tags"; }, 2500); }
+      }).catch(e => console.error(e));
+    }
+
+    function copiarGoogleAdsCopy() {
+      if (!currentAdsData || !currentAdsData.google_ads) return;
+      const g = currentAdsData.google_ads;
+      const text = `TÍTULOS GOOGLE ADS:\n${(g.titulos || []).join('\n')}\n\nDESCRIPCIONES:\n${(g.descripciones || []).join('\n')}`;
+      navigator.clipboard.writeText(text);
+      const btn = document.getElementById("btnCopyGAdsText");
+      btn.textContent = "¡Copiado!";
+      setTimeout(() => { btn.textContent = "Copiar Anuncio"; }, 2500);
+    }
+
+    function copiarSocialAdCopy() {
+      if (!currentAdsData || !currentAdsData.social_ads) return;
+      const s = currentAdsData.social_ads;
+      const text = `${s.hook_scroll_stopper || ''}\n\n${s.copy_pas || ''}\n\nCTA: ${s.cta_boton || 'Más Información'}`;
+      navigator.clipboard.writeText(text);
+      alert("Copy de Facebook/Instagram copiado al portapapeles.");
+    }
+
+    function copiarVideoScript() {
+      if (!currentAdsData || !currentAdsData.guion_video_30s) return;
+      const v = currentAdsData.guion_video_30s;
+      const text = `GUION TIKTOK / REELS (30s):\n\n[0-3s Gancho]: ${v.segundos_0_3_gancho || ''}\n[4-15s Problema]: ${v.segundos_4_15_problema || ''}\n[16-25s Solución]: ${v.segundos_16_25_solucion || ''}\n[26-30s CTA]: ${v.segundos_26_30_cta || ''}`;
+      navigator.clipboard.writeText(text);
+      alert("Guion de video copiado al portapapeles.");
+    }
+
+    async function cambiarModeloGroq(modelId) {
+      try {
+        const resp = await fetch("/api/set-groq-model", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: modelId })
+        });
+        if (resp.ok) {
+          console.log("Modelo Groq cambiado exitosamente a:", modelId);
+        }
+      } catch (e) {
+        console.error("Error al cambiar modelo Groq:", e);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", inicializar);
+
+  </script>
+</body>
+
+</html>
