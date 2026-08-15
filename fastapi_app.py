@@ -204,37 +204,100 @@ def _base_ctx(request: Request, user: User = None) -> dict:
 async def login_page(request: Request):
     return templates.TemplateResponse(request=request, name="login.html", context={"request": request})
 
+
 @app.post("/register")
-async def register(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
-    if user:
-        return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": "El perfil ya existe."})
-    
-    new_user = User(username=username, password_hash=get_password_hash(password))
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    
-    token = create_access_token({"sub": str(new_user.id)})
-    response = RedirectResponse(url="/", status_code=303)
-    response.set_cookie(key="access_token", value=token, httponly=True)
-    return response
+async def register(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        username = username.strip()
+        if not username or not password:
+            return templates.TemplateResponse(
+                request=request, name="login.html",
+                context={"request": request, "error": "Usuario y contraseña requeridos.", "show_register": True}
+            )
+        if len(password) < 4:
+            return templates.TemplateResponse(
+                request=request, name="login.html",
+                context={"request": request, "error": "La contraseña debe tener al menos 4 caracteres.", "show_register": True}
+            )
+
+        existing = db.query(User).filter(User.username == username).first()
+        if existing:
+            return templates.TemplateResponse(
+                request=request, name="login.html",
+                context={"request": request, "error": f"El perfil '{username}' ya existe. Intenta ingresar.", "show_register": True}
+            )
+
+        new_user = User(username=username, password_hash=get_password_hash(password))
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        logger.info("Nuevo usuario registrado: %s (id=%s)", username, new_user.id)
+
+        token = create_access_token({"sub": str(new_user.id)})
+        response = RedirectResponse(url="/", status_code=303)
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,
+            samesite="lax",
+            max_age=60 * 60 * 24 * 7,  # 7 días
+        )
+        return response
+
+    except Exception as exc:
+        logger.error("Error en /register: %s", exc)
+        db.rollback()
+        return templates.TemplateResponse(
+            request=request, name="login.html",
+            context={"request": request, "error": f"Error al crear la cuenta: {exc}", "show_register": True}
+        )
+
 
 @app.post("/login")
-async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
-    if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": "Contraseña o usuario incorrecto."})
-    
-    token = create_access_token({"sub": str(user.id)})
-    response = RedirectResponse(url="/", status_code=303)
-    response.set_cookie(key="access_token", value=token, httponly=True)
-    return response
+async def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        username = username.strip()
+        user = db.query(User).filter(User.username == username).first()
+        if not user or not verify_password(password, user.password_hash):
+            return templates.TemplateResponse(
+                request=request, name="login.html",
+                context={"request": request, "error": "Usuario o contraseña incorrectos."}
+            )
+
+        token = create_access_token({"sub": str(user.id)})
+        response = RedirectResponse(url="/", status_code=303)
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,
+            samesite="lax",
+            max_age=60 * 60 * 24 * 7,  # 7 días
+        )
+        logger.info("Login exitoso: %s (id=%s)", user.username, user.id)
+        return response
+
+    except Exception as exc:
+        logger.error("Error en /login: %s", exc)
+        return templates.TemplateResponse(
+            request=request, name="login.html",
+            context={"request": request, "error": f"Error al iniciar sesión: {exc}"}
+        )
+
 
 @app.post("/api/logout")
 async def logout():
     response = RedirectResponse(url="/login", status_code=303)
-    response.delete_cookie("access_token")
+    response.delete_cookie("access_token", samesite="lax")
     return response
 
 
