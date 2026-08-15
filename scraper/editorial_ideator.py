@@ -170,6 +170,222 @@ def obtener_tags_reales_google(
     }
 
 
+def _detectar_categoria_contextual(keyword: str, sugerencias: List[str] = None, preguntas_paa: List[str] = None) -> str:
+    """Clasifica la keyword en su dominio temático real para evitar titulares disparatados."""
+    full_text = " ".join([str(keyword)] + (sugerencias or []) + (preguntas_paa or [])).lower()
+    
+    if any(k in full_text for k in ["terremoto", "sismo", "temblor", "epicentro", "magnitud", "replica", "sismologico", "desastre", "tsunami", "volcan", "inundacion", "lluvias", "huracan", "emergencia", "muertos", "heridos", "alerta"]):
+        return "noticias_sismos"
+    if any(k in full_text for k in ["banco", "tarjeta", "credito", "debito", "cuenta", "ahorros", "prestamo", "hipoteca", "interes", "subsidio", "impuesto", "dolar", "tasa", "nequi", "daviplata", "bancolombia", "davivienda", "bbva", "finanzas"]):
+        return "finanzas_banca"
+    if any(k in full_text for k in ["iphone", "samsung", "xiaomi", "huawei", "whatsapp", "android", "ios", "windows", "laptop", "procesador", "inteligencia artificial", "chatgpt", "app", "consola", "playstation"]):
+        return "tecnologia"
+    if any(k in full_text for k in ["receta", "cocinar", "ingredientes", "como preparar", "comida", "postre", "almuerzo", "cena", "plato", "gastronomia", "sabor", "cocina"]):
+        return "recetas"
+    if any(k in full_text for k in ["salud", "enfermedad", "sintomas", "remedio", "beneficios", "propiedades", "medico", "doctor", "dolor", "curcuma", "colageno", "vitamina", "dieta", "organismo"]):
+        return "salud_bienestar"
+    if any(k in full_text for k in ["partido", "futbol", "gol", "seleccion", "champions", "mundial", "liga", "marcador", "resultado", "pelicula", "serie", "estreno", "actor"]):
+        return "deportes_entretenimiento"
+    
+    return "general"
+
+
+def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) -> List[dict]:
+    kw_l = keyword_base.lower()
+    cat = _detectar_categoria_contextual(keyword_base)
+
+    if cat == "noticias_sismos":
+        return [
+            {
+                "id": "cobertura_vivo",
+                "angulo": "Último Reporte & Cobertura en Vivo",
+                "icono": "newspaper",
+                "titular_h1": f"Último reporte sobre {kw_l}: epicentro, magnitud y municipios donde se sintió",
+                "titular_discover": f"Sismo en Colombia hoy: informe oficial de magnitud y zonas donde fue percibido",
+                "bajada": f"El Servicio Sismológico y las autoridades de gestión del riesgo emiten el balance oficial tras el reciente temblor.",
+                "interlink_sugerido": f"¿Qué hacer tras un sismo en Colombia? Pasos clave para verificar estructuras en casa",
+                "tesis_editorial": f"Reportar datos oficiales de magnitud, profundidad, mapa de afectación y declaraciones institucionales.",
+                "longitud_sugerida": "800 - 1.200 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "prevencion_emergencia",
+                "angulo": "Prevención & Protocolos de Emergencia",
+                "icono": "warning",
+                "titular_h1": f"¿Qué debe contener el kit de emergencia ante un sismo y cómo actuar durante el temblor?",
+                "titular_discover": f"El protocolo de seguridad definitivo ante sismos en Colombia: lo que no puede faltar en su hogar",
+                "bajada": f"Recomendaciones de los organismos de socorro para proteger a su familia y mascotas ante eventos telúricos.",
+                "interlink_sugerido": f"¿Cómo preparar a niños y adultos mayores durante una alerta de sismo?",
+                "tesis_editorial": f"Guía práctica con elementos del maletín de vida, puntos de encuentro y recomendaciones en edificios o vía pública.",
+                "longitud_sugerida": "900 - 1.300 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "explicativo_geologico",
+                "angulo": "Explicación Científica & Geológica",
+                "icono": "public",
+                "titular_h1": f"¿Por qué tiembla tanto en Colombia y cuáles son las zonas de mayor actividad sísmica?",
+                "titular_discover": f"La razón científica por la que ocurren constantes temblores en Colombia explicada por geólogos",
+                "bajada": f"Especialistas analizan la interacción de las placas tectónicas en el territorio nacional.",
+                "interlink_sugerido": f"Conozca la falla geológica de la Mesa de los Santos y su impacto en la sismicidad del país",
+                "tesis_editorial": f"Explicar con datos sencillos la tectónica de placas en Colombia y los antecedentes históricos.",
+                "longitud_sugerida": "1.000 - 1.400 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "lineas_atencion",
+                "angulo": "Líneas de Atención & Reporte de Daños",
+                "icono": "phone_in_talk",
+                "titular_h1": f"Números de emergencia y canales para reportar afectaciones tras sismo en Colombia",
+                "titular_discover": f"¿Dónde reportar grietas o emergencias tras el sismo? Lista completa de canales oficiales",
+                "bajada": f"Directorio nacional de Cruz Roja, Defensa Civil, Bomberos y consejos para evaluar daños en edificaciones.",
+                "interlink_sugerido": f"Cómo solicitar una inspección técnica de riesgo en su municipio",
+                "tesis_editorial": f"Directorio completo de contactos de emergencia, recomendaciones de evaluación visual de daños y números de socorro.",
+                "longitud_sugerida": "700 - 1.000 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "mitos_alarmas",
+                "angulo": "Verificación de Datos & Falsas Alarmas",
+                "icono": "fact_check",
+                "titular_h1": f"¿Se pueden predecir los sismos? Mitos y realidades aclarados por expertos sismólogos",
+                "titular_discover": f"La verdad detrás de las cadenas de redes sobre supuestos terremotos inminentes en Colombia",
+                "bajada": f"Desmintiendo falsos rumores que circulan en redes sociales sobre predicciones de sismos y luces en el cielo.",
+                "interlink_sugerido": f"¿Cómo activar las alertas sísmicas tempranas en su teléfono móvil?",
+                "tesis_editorial": f"Desmentir cadenas falsas, explicar por qué la ciencia aún no predice sismos y enseñar a verificar fuentes oficiales.",
+                "longitud_sugerida": "900 - 1.200 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+        ]
+    elif cat == "finanzas_banca":
+        return [
+            {
+                "id": "guia_solicitud",
+                "angulo": "Guía de Solicitud & Requisitos",
+                "icono": "credit_card",
+                "titular_h1": f"Requisitos y paso a paso para solicitar {kw_l} en Colombia sin contratiempos",
+                "titular_discover": f"¿Cómo tramitar {kw_l}? Documentos, ingresos mínimos y aprobación rápida",
+                "bajada": f"Guía detallada con los criterios de evaluación, canales digitales de solicitud y tiempo de entrega.",
+                "interlink_sugerido": f"¿Qué puntaje crediticio se requiere en Datacrédito para calificar a {kw_l}?",
+                "tesis_editorial": f"Explicar el procedimiento de estudio crediticio, ingresos requeridos y consejos para elevar la probabilidad de aprobación.",
+                "longitud_sugerida": "900 - 1.300 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "comparativa_tasas",
+                "angulo": "Comparativa de Tasas & Costos",
+                "icono": "calculate",
+                "titular_h1": f"Tasas de interés y costos en {kw_l}: ¿conviene frente a otras opciones?",
+                "titular_discover": f"El análisis completo de costos y tasa de interés efectiva anual de {kw_l}",
+                "bajada": f"Analizamos comisiones, cuotas de manejo y cobros adicionales para que tome la mejor decisión financiera.",
+                "interlink_sugerido": f"Comparativa entre las principales opciones bancarias en Colombia",
+                "tesis_editorial": f"Desglosar tasa EA, seguro de deudores, cuota de manejo y cálculo de compras a 1 cuota sin intereses.",
+                "longitud_sugerida": "1.000 - 1.400 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "ahorro_cuotas",
+                "angulo": "Estrategias de Ahorro & Exoneración",
+                "icono": "savings",
+                "titular_h1": f"¿Cómo no pagar cuota de manejo en {kw_l}? El truco legal que pocos usuarios usan",
+                "titular_discover": f"El secreto para exonerar la cuota de manejo en {kw_l}",
+                "bajada": f"Especialistas en finanzas personales revelan las metas de consumo y convenios que eliminan cobros innecesarios.",
+                "interlink_sugerido": f"Cómo solicitar la unificación de deudas o rebaja de tasa con su entidad bancaria",
+                "tesis_editorial": f"Tácticas comprobadas de negociación bancaria, cashback y metas mensuales para exonerar cuotas de manejo.",
+                "longitud_sugerida": "850 - 1.200 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "seguridad_antifraude",
+                "angulo": "Seguridad & Prevención de Fraudes",
+                "icono": "shield",
+                "titular_h1": f"¿Cómo proteger {kw_l} contra clonación y estafas virtuales en Colombia?",
+                "titular_discover": f"Las recomendaciones de ciberseguridad para evitar robos y cargos no reconocidos en {kw_l}",
+                "bajada": f"Claves para configurar la clave dinámica, límites transaccionales y bloquear operaciones sospechosas en tiempo real.",
+                "interlink_sugerido": f"¿Qué hacer inmediatamente si le cobran una transacción no autorizada?",
+                "tesis_editorial": f"Paso a paso para bloquear tarjetas digitales, apagar compras internacionales y presentar reclamos de reversión de pago.",
+                "longitud_sugerida": "900 - 1.200 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "preguntas_frecuentes",
+                "angulo": "Preguntas Frecuentes & Mitos Financieros",
+                "icono": "help",
+                "titular_h1": f"Todo lo que debe saber sobre {kw_l} antes de firmar o contratar",
+                "titular_discover": f"Los datos cruciales sobre {kw_l} que la mayoría de clientes descubre demasiado tarde",
+                "bajada": f"Resolvemos las dudas más recurrentes sobre fechas de corte, pago mínimo e impacto en su historial crediticio.",
+                "interlink_sugerido": f"¿Afecta su score financiero pagar el pago mínimo en {kw_l}?",
+                "tesis_editorial": f"Aclarar mitos de tarjetas de crédito, fechas de pago vs fechas de corte y cálculo de intereses corrientes y de mora.",
+                "longitud_sugerida": "1.000 - 1.300 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+        ]
+    else:
+        # Fallback general adaptativo
+        return [
+            {
+                "id": "guia_completa",
+                "angulo": "Guía Completa & Explicación",
+                "icono": "auto_stories",
+                "titular_h1": f"Todo lo que necesita saber sobre {kw_l}: guía práctica y conceptos clave",
+                "titular_discover": f"La guía definitiva sobre {kw_l}: detalles, respuestas y lo que dicen los expertos",
+                "bajada": f"Un análisis exhaustivo basado en las preguntas y búsquedas más frecuentes de los usuarios.",
+                "interlink_sugerido": f"Aspectos clave y recomendaciones esenciales a tener en cuenta sobre {kw_l}",
+                "tesis_editorial": f"Explicar con claridad qué es {kw_l}, cómo funciona, beneficios y recomendaciones de uso.",
+                "longitud_sugerida": "900 - 1.300 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "beneficios_claves",
+                "angulo": "Beneficios & Recomendaciones",
+                "icono": "star",
+                "titular_h1": f"Los beneficios principales de {kw_l} y cómo aprovecharlos al máximo",
+                "titular_discover": f"Por qué {kw_l} está ganando interés y cuáles son sus mayores ventajas",
+                "bajada": f"Analizamos los aspectos más destacados y las recomendaciones prácticas respaldadas por especialistas.",
+                "interlink_sugerido": f"Errores habituales al utilizar {kw_l} y cómo evitarlos",
+                "tesis_editorial": f"Desglosar las ventajas más valoradas por los usuarios con consejos concretos para potenciar sus resultados.",
+                "longitud_sugerida": "900 - 1.200 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "paso_a_paso",
+                "angulo": "Paso a Paso & Procedimiento",
+                "icono": "format_list_numbered",
+                "titular_h1": f"Cómo aplicar u optimizar {kw_l}: procedimiento paso a paso",
+                "titular_discover": f"El método sencillo y efectivo para utilizar {kw_l} sin complicaciones",
+                "bajada": f"Instrucciones claras y detalladas numeradas para obtener los mejores resultados en poco tiempo.",
+                "interlink_sugerido": f"Herramientas y recursos complementarios para optimizar {kw_l}",
+                "tesis_editorial": f"Proporcionar un tutorial paso a paso con recomendaciones técnicas o prácticas de fácil ejecución.",
+                "longitud_sugerida": "800 - 1.100 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "comparativa_analisis",
+                "angulo": "Comparativa & Alternativas",
+                "icono": "compare_arrows",
+                "titular_h1": f"¿Conviene {kw_l}? Análisis frente a las principales alternativas del mercado",
+                "titular_discover": f"La comparativa sobre {kw_l}: ventajas, desventajas y recomendaciones",
+                "bajada": f"Evaluamos las características clave y alternativas para ayudarte a tomar la decisión correcta.",
+                "interlink_sugerido": f"Factores determinantes al elegir la mejor opción según sus necesidades",
+                "tesis_editorial": f"Comparar puntos fuertes, puntos débiles y relación calidad/precio frente a otras opciones similares.",
+                "longitud_sugerida": "1.000 - 1.400 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+            {
+                "id": "mitos_realidades",
+                "angulo": "Mitos vs Realidades",
+                "icono": "psychology_alt",
+                "titular_h1": f"Mitos y verdades sobre {kw_l}: desmintiendo las creencias más populares",
+                "titular_discover": f"Lo que nadie le dice sobre {kw_l}: la verdad respaldada por datos",
+                "bajada": f"Separamos la ficción de los hechos comprobados para aclarar las dudas más comunes.",
+                "interlink_sugerido": f"Preguntas frecuentes que todo usuario se hace sobre {kw_l}",
+                "tesis_editorial": f"Analizar los mitos más difundidos en redes o internet y contraponerlos con evidencia y opinión de expertos.",
+                "longitud_sugerida": "950 - 1.300 palabras",
+                "tags_recomendados": tags_plana[:6],
+            },
+        ]
+
+
 def generar_ideas_notas_angulos(
     keyword_base: str,
     sugerencias: List[str] = None,
@@ -179,112 +395,40 @@ def generar_ideas_notas_angulos(
 ) -> List[dict]:
     """
     Genera 5 ideas de notas clasificadas por ángulos editoriales periodísticos
-    basándose en lo que busca la gente y siguiendo la fórmula del manual de estilo.
+    adaptados estrictamente al contexto temático real de la keyword.
     """
     sugs = (sugerencias or [])[:15]
     paas = (preguntas_paa or [])[:10]
     tags_info = tags_reales or obtener_tags_reales_google(keyword_base, sugs, paas, pais)
     tags_plana = tags_info.get("tags_lista_plana", [keyword_base])
 
-    # Fallbacks preestructurados de alta calidad siguiendo el documento
-    kw_title = keyword_base.title()
-    kw_lower = keyword_base.lower()
-
-    fallback_ideas = [
-        {
-            "id": "trucos_soluciones",
-            "angulo": "Trucos y Hacks Cotidianos",
-            "icono": "lightbulb",
-            "titular_h1": f"¿Para qué sirve {kw_lower} y por qué los expertos recomiendan hacerlo?",
-            "titular_discover": f"El truco con {kw_lower} que pocos conocen y resuelve un problema común en casa",
-            "bajada": f"Una solución práctica y accesible que aprovecha las propiedades de {kw_lower} para solucionar un inconveniente frecuente en el hogar.",
-            "interlink_sugerido": f"¿Tiene problemas con {kw_lower} en casa y no sabe por qué? Claves para solucionarlo",
-            "tesis_editorial": f"Explicar el fundamento físico/práctico de cómo usar {kw_lower}, por qué funciona y sus beneficios inmediatos.",
-            "longitud_sugerida": "800 - 1.100 palabras",
-            "tags_recomendados": tags_plana[:6],
-        },
-        {
-            "id": "salud_bienestar",
-            "angulo": "Salud, Bienestar y Nutrición",
-            "icono": "favorite",
-            "titular_h1": f"¿Qué le sucede al cuerpo al usar o consumir {kw_lower} todos los días? Beneficios y posibles efectos",
-            "titular_discover": f"Los efectos reales de {kw_lower} en el organismo: qué dice la ciencia y cómo consumirlo adecuadamente",
-            "bajada": f"Especialistas y estudios científicos revelan los aportes de {kw_lower} a la salud y las precauciones necesarias.",
-            "interlink_sugerido": f"Propiedades esenciales de {kw_lower} y cómo incorporarlo de forma segura en la rutina",
-            "tesis_editorial": f"Analizar compuestos activos, beneficios respaldados por estudios y advertencias sobre contraindicaciones o consumo excesivo.",
-            "longitud_sugerida": "1.000 - 1.400 palabras",
-            "tags_recomendados": tags_plana[:6],
-        },
-        {
-            "id": "tecnologia_ahorro",
-            "angulo": "Tecnología, Ahorro y Configuración",
-            "icono": "bolt",
-            "titular_h1": f"¿Cómo optimizar {kw_lower}? Consejos de los fabricantes para ahorrar dinero y energía",
-            "titular_discover": f"El truco definitivo en {kw_lower} para evitar gastos excesivos y mejorar el rendimiento",
-            "bajada": f"Marcas líderes comparten recomendaciones clave para prolongar la vida útil y reducir costos sin complicaciones.",
-            "interlink_sugerido": f"Mantenimiento preventivo y hábitos diarios para sacar el máximo provecho a {kw_lower}",
-            "tesis_editorial": f"Guía paso a paso con ajustes de configuración y hábitos sencillos que generan un ahorro tangible inmediato.",
-            "longitud_sugerida": "900 - 1.300 palabras",
-            "tags_recomendados": tags_plana[:6],
-        },
-        {
-            "id": "recetas_mascotas",
-            "angulo": "Guías Prácticas, Mascotas y Recetas",
-            "icono": "pets",
-            "titular_h1": f"Cómo preparar {kw_lower}: receta fácil, económica y con ingredientes naturales",
-            "titular_discover": f"El método casero y saludable para preparar {kw_lower} en pocos minutos y sin gastar de más",
-            "bajada": f"Una alternativa natural y sencilla elaborada con ingredientes caseros que cuida el bienestar y el bolsillo.",
-            "interlink_sugerido": f"Consejos de conservación y porciones recomendadas al preparar {kw_lower}",
-            "tesis_editorial": f"Explicar ingredientes, preparación paso a paso numerada y recomendaciones de seguridad o complementariedad.",
-            "longitud_sugerida": "800 - 1.100 palabras",
-            "tags_recomendados": tags_plana[:6],
-        },
-        {
-            "id": "mitos_actualidad",
-            "angulo": "Mitos, Curiosidades y Actualidad",
-            "icono": "psychology_alt",
-            "titular_h1": f"Mitos y realidades sobre {kw_lower}: las creencias más populares bajo la lupa",
-            "titular_discover": f"Los mitos y misterios que rodean a {kw_lower} y la verdad detrás de cada uno",
-            "bajada": f"Un recorrido por las teorías más curiosas, datos históricos y explicaciones psicológicas que explican este fenómeno.",
-            "interlink_sugerido": f"Patrones históricos y curiosidades poco conocidas sobre {kw_lower}",
-            "tesis_editorial": f"Desglosar 4 a 6 mitos o patrones con ejemplos claros, datos contundentes y contexto actual.",
-            "longitud_sugerida": "1.100 - 1.500 palabras",
-            "tags_recomendados": tags_plana[:6],
-        },
-    ]
+    cat = _detectar_categoria_contextual(keyword_base, sugs, paas)
+    fallback_ideas = _generar_fallbacks_inteligentes(keyword_base, tags_plana)
 
     if not GROQ_API_KEY:
         return fallback_ideas
 
     prompt = (
-        f"Eres el Editor Jefe de un importante periódico digital en {pais}.\n"
-        f"Tu objetivo es crear 5 IDEAS DE NOTAS PERIODÍSTICAS Y DE BLOG extraordinarias sobre el tema: '{keyword_base}'.\n"
-        f"Debes basarte 100% en las búsquedas reales de la gente y seguir la fórmula de los siguientes 5 ángulos editoriales:\n"
-        f"1. Trucos y Hacks Cotidianos (ej: '¿Para qué sirve poner una cuchara en la ventana...?')\n"
-        f"2. Salud, Bienestar y Nutrición (ej: '¿Qué le sucede al cuerpo al tomar cúrcuma todos los días...?')\n"
-        f"3. Tecnología, Ahorro y Configuración (ej: '¿Qué hacer si su nevera está consumiendo más luz...?')\n"
-        f"4. Guías Prácticas, Mascotas y Recetas (ej: 'Cómo preparar churu casero para gatos: receta fácil...')\n"
-        f"5. Mitos, Curiosidades y Actualidad (ej: 'La Maldición del Campeón y otros mitos mundialistas...')\n\n"
-        f"Evidencia real de búsquedas (Google Suggest): {json.dumps(sugs, ensure_ascii=False)}\n"
+        f"Eres el Editor Jefe de un prestigioso periódico digital en {pais}.\n"
+        f"Tu objetivo es crear 5 IDEAS DE NOTAS PERIODÍSTICAS Y DE BLOG extraordinarias, coherentes y de alto CTR sobre el tema: '{keyword_base}'.\n"
+        f"CATEGORÍA TEMÁTICA DETECTADA: {cat.upper()}.\n\n"
+        "REGLA DE ORO ABSOLUTA:\n"
+        "DEBES adaptar los 5 ángulos de manera 100% LÓGICA y REALISTA a la naturaleza temática del término. Está estrictamente PROHIBIDO inventar disparates como 'receta de sismo', 'consumir tarjeta de crédito', 'poner una cuchara para terremoto', 'ahorrar energía con temblor', etc. Todo debe tener sentido periodístico profesional real.\n\n"
+        f"Evidencia de búsquedas reales (Google Suggest): {json.dumps(sugs, ensure_ascii=False)}\n"
         f"Preguntas que hace la gente (PAA): {json.dumps(paas, ensure_ascii=False)}\n"
         f"Tags Reales de Google Trends disponibles: {json.dumps(tags_plana, ensure_ascii=False)}\n\n"
-        "REGLAS OBLIGATORIAS:\n"
-        "- Titular H1: Pregunta directa de alta curiosidad o gancho con beneficio claro y solución.\n"
-        "- Titular Discover: Titular magnético con alto CTR para Google Discover y redes sociales.\n"
-        "- Bajada: 1 a 2 oraciones que aporten contexto y resuman la tesis de la nota.\n"
-        "- Interlink sugerido: Pregunta o tema conectado para enlazar internamente.\n"
-        "- Tags recomendados: Selecciona entre 4 y 6 tags EXCLUSIVAMENTE de los tags reales proporcionados (prohibido inventar).\n\n"
-        "Devuelve ÚNICAMENTE un array JSON con los 5 objetos con esta estructura exacta:\n"
+        "Genera 5 ángulos totalmente alineados con la temática real (ej. si es sismo/noticia: reporte en vivo, prevención, causas científicas, números de emergencia, mitos sismológicos; si es tarjeta/banco: requisitos, comparativa de tasas, cuotas de manejo, seguridad antifraude, preguntas frecuentes; etc.).\n\n"
+        "Devuelve ÚNICAMENTE un array JSON con 5 objetos estructurados como sigue:\n"
         "[\n"
         "  {\n"
-        '    "id": "trucos_soluciones",\n'
-        '    "angulo": "Trucos y Hacks Cotidianos",\n'
-        '    "icono": "lightbulb",\n'
-        '    "titular_h1": "¿Para qué sirve...?",\n'
-        '    "titular_discover": "El truco con... que pocos conocen",\n'
-        '    "bajada": "Resumen en dos líneas...",\n'
-        '    "interlink_sugerido": "¿Pregunta relacionada?",\n'
-        '    "tesis_editorial": "Qué explicará el redactor...",\n'
+        '    "id": "angulo_1",\n'
+        '    "angulo": "Nombre del Ángulo Coherente",\n'
+        '    "icono": "newspaper",\n'
+        '    "titular_h1": "Titular H1 periodístico con alto CTR",\n'
+        '    "titular_discover": "Titular magnético para Google Discover",\n'
+        '    "bajada": "Resumen en dos líneas del enfoque...",\n'
+        '    "interlink_sugerido": "¿Pregunta o tema conectado para enlazar?",\n'
+        '    "tesis_editorial": "Qué explicará el artículo...",\n'
         '    "longitud_sugerida": "900 - 1.200 palabras",\n'
         '    "tags_recomendados": ["tag1", "tag2", "tag3"]\n'
         "  }\n"
@@ -388,22 +532,24 @@ def redactar_nota_editorial(
     if not GROQ_API_KEY:
         return fallback_nota
 
+    cat = _detectar_categoria_contextual(keyword_base, sugs, paas)
     prompt = (
         f"Eres un Redactor Periodístico Senior y Estratega SEO de un prestigioso medio digital en {pais}.\n"
         f"Debes redactar una NOTA PERIODÍSTICA / ARTÍCULO COMPLETO sobre: '{keyword_base}'.\n"
         f"Ángulo editorial: '{angulo}'.\n"
-        f"Titular base propuesto: '{h1_definido}'.\n\n"
-        "ESTILO Y ESTRUCTURA OBLIGATORIA (Basada en el Manual de Estilo de Referencia):\n"
-        "1. titular_h1: Titular periodístico de alto impacto, curiosidad o beneficio (ej: '¿Para qué sirve poner una cuchara en la ventana y por qué recomiendan hacerlo?').\n"
+        f"Titular base propuesto: '{h1_definido}'.\n"
+        f"CATEGORÍA TEMÁTICA DETECTADA: {cat.upper()}.\n\n"
+        "ESTILO Y ESTRUCTURA OBLIGATORIA (Basada en el Manual de Estilo Periodístico de Referencia):\n"
+        "1. titular_h1: Titular periodístico de alto impacto, curiosidad o beneficio adaptado 100% al tema real (sin mezclar trucos de cocina ni hogar si el tema es un desastre, banco o tecnología).\n"
         "2. titular_discover: Titular alternativo para Google Discover / Redes Sociales.\n"
         "3. bajada: 1 a 2 líneas concisas que resuman la tesis de la nota.\n"
-        "4. interlink_sugerido: Pregunta o tema relacionado para enlazar internamente (ej: '¿Tiene humedad en casa y no sabe por qué? Su origen y tipo es clave...').\n"
-        "5. parrafo_intro_1 y parrafo_intro_2: Introducción que conecta de forma empática con una situación cotidiana o problema real del lector.\n"
-        "6. respaldo_autoridad: Cita o mención de entidades, estudios (ej. revista Nutrients, APA, manuales de fabricantes como Haceb, LG, Samsung, o iniciativas oficiales).\n"
+        "4. interlink_sugerido: Pregunta o tema directamente relacionado para enlazar internamente.\n"
+        "5. parrafo_intro_1 y parrafo_intro_2: Introducción que conecta de forma profesional con la situación real del lector.\n"
+        "6. respaldo_autoridad: Cita o mención de entidades oficiales, estudios o expertos calificados del sector.\n"
         "7. foto_1 y foto_2: Pie de foto contextualizado y crédito ('Foto: iStock' o 'Foto: Imagen generada por IA').\n"
         "8. secciones_h2: Array de 2 a 3 secciones H2. Cada H2 debe tener un párrafo introductorio y un array 'bullets' donde CADA bullet tiene 'negrita' (nombre del concepto con dos puntos) y 'texto' (explicación concisa y accionable).\n"
-        "9. seccion_preguntas_frecuentes: Sección H2 resolviendo una duda crucial (ej: '¿Qué hacer si su nevera ya no sirve?').\n"
-        "10. cierre_responsable: Párrafo final con advertencia técnica/médica, llamado a la moderación o recomendación de consultar expertos.\n"
+        "9. seccion_preguntas_frecuentes: Sección H2 resolviendo una duda crucial sobre el tema real.\n"
+        "10. cierre_responsable: Párrafo final con advertencia técnica/médica/oficial, llamado a la moderación o recomendación de consultar expertos.\n"
         f"11. tags_reales: Array de 6 a 10 tags seleccionados EXCLUSIVAMENTE de esta lista de Google Trends y SERP: {json.dumps(tags_plana, ensure_ascii=False)}. ¡PROHIBIDO INVENTAR ETIQUETAS!\n\n"
         "Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura:\n"
         "{\n"
