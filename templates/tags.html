@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Key Search V 10.0 Ultra - Tags & Tendencias</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+{% include "_tailwind_config.html" %}
+<style>
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+.tag-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;user-select:none}
+.tag-chip:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.tag-chip.copied{animation:pulse-copy .4s ease}
+@keyframes pulse-copy{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+.score-bar{height:4px;border-radius:2px;background:linear-gradient(90deg,#059669,#10b981)}
+.rising-badge{background:linear-gradient(135deg,#7c3aed,#a855f7);color:white}
+.top-badge{background:linear-gradient(135deg,#0284c7,#38bdf8);color:white}
+.paa-badge{background:linear-gradient(135deg,#059669,#34d399);color:white}
+.related-badge{background:linear-gradient(135deg,#d97706,#fbbf24);color:white}
+.section-card{background:var(--md-sys-color-surface-container-lowest,#fff);border:1px solid var(--md-sys-color-outline-variant,#ddd);border-radius:16px;padding:20px}
+.ai-status{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.04em}
+.ai-level1{background:#0d1c32;color:#38bdf8}
+.ai-level2{background:#1a1333;color:#c084fc}
+.ai-level3{background:#0f1f0f;color:#34d399}
+.header-gradient{background:linear-gradient(135deg,#0d1c32 0%,#00677f 50%,#065f46 100%)}
+.skeleton{background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:skeleton-loading 1.5s infinite}
+@keyframes skeleton-loading{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+{% include "_sidebar.html" %}
+{% include "_topbar.html" %}
+<main class="ml-[240px] mt-16 p-lg">
+<div class="max-w-container-max mx-auto space-y-lg">
+
+  <!-- Header -->
+  <header class="header-gradient rounded-2xl p-lg text-white relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10" style="background:url('data:image/svg+xml,<svg width=60 height=60 xmlns=http://www.w3.org/2000/svg><circle cx=30 cy=30 r=20 fill=none stroke=white stroke-width=1/></svg>') repeat"></div>
+    <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-md">
+      <div>
+        <div class="flex items-center gap-xs text-cyan-300 font-bold text-label-sm uppercase tracking-wider mb-xs">
+          <span class="material-symbols-outlined text-sm">tag</span>
+          <span>Keyword Intelligence · Google Trends & Autocomplete</span>
+        </div>
+        <h2 class="font-h1 text-h1 text-white">Tags & Tendencias</h2>
+        <p class="text-cyan-100 mt-xs text-sm max-w-2xl">Los mejores tags reales extraídos de <strong>Google Trends Rising Queries</strong>, <strong>Top Related Queries</strong> y <strong>Google Autocomplete</strong>. Cero tags inventados.</p>
+      </div>
+
+      <!-- Input Independiente -->
+      <div class="flex items-center gap-sm bg-white/10 backdrop-blur border border-white/20 p-xs rounded-xl min-w-[320px]">
+        <input id="tagKwInput" type="text" placeholder="Keyword para generar tags..." class="bg-transparent border-0 focus:ring-0 text-sm px-sm py-xs w-48 md:w-52 text-white placeholder-white/60"/>
+        <select id="tagCountrySelect" class="bg-white/10 border border-white/20 text-white text-xs rounded-lg px-xs py-xs">
+          <option value="Colombia">🇨🇴 Colombia</option>
+          <option value="Mexico">🇲🇽 México</option>
+          <option value="España">🇪🇸 España</option>
+          <option value="Argentina">🇦🇷 Argentina</option>
+          <option value="Chile">🇨🇱 Chile</option>
+          <option value="Estados Unidos">🇺🇸 EE.UU.</option>
+        </select>
+        <button onclick="generarTagsDirecto()" id="btnGenerarTags" class="bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-bold text-label-sm px-md py-sm rounded-lg flex items-center gap-xs transition-all shadow">
+          <span class="material-symbols-outlined text-sm">bolt</span>
+          <span>Generar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Indicador de IA activa -->
+    <div class="relative mt-md flex items-center gap-sm flex-wrap">
+      <span class="text-xs text-white/60">IA activa:</span>
+      <span class="ai-status ai-level1">
+        <span class="material-symbols-outlined text-xs">auto_awesome</span>
+        {{ ai_chain.level1 }}
+      </span>
+      <span class="text-white/40 text-xs">→</span>
+      <span class="ai-status ai-level2">{{ ai_chain.level2 }}</span>
+      <span class="text-white/40 text-xs">→</span>
+      <span class="ai-status ai-level3">{{ ai_chain.level3 }}</span>
+    </div>
+  </header>
+
+  <!-- Barra de control -->
+  <div class="flex items-center justify-between gap-sm flex-wrap">
+    <div id="kwSelector" class="flex items-center gap-sm flex-wrap"></div>
+    <div class="flex items-center gap-sm">
+      <button onclick="copiarTodosLosTags()" class="flex items-center gap-xs text-label-sm px-md py-sm bg-surface-container border border-outline-variant rounded-lg hover:bg-surface-container-high transition-all">
+        <span class="material-symbols-outlined text-sm">content_copy</span>
+        <span>Copiar todos</span>
+      </button>
+      <button onclick="exportarCSV()" class="flex items-center gap-xs text-label-sm px-md py-sm bg-surface-container border border-outline-variant rounded-lg hover:bg-surface-container-high transition-all">
+        <span class="material-symbols-outlined text-sm">download</span>
+        <span>Exportar CSV</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Estado: sin datos -->
+  <div id="emptyState" class="hidden text-center py-3xl">
+    <span class="material-symbols-outlined text-5xl text-on-surface-variant opacity-40">tag</span>
+    <p class="mt-md text-on-surface-variant">Ingresa una keyword arriba o ejecuta el <a href="/config" class="text-primary underline">Pipeline</a> para ver tags reales.</p>
+  </div>
+
+  <!-- Loading skeleton -->
+  <div id="loadingState" class="hidden space-y-md">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-md">
+      {% for i in range(4) %}
+      <div class="section-card space-y-sm">
+        <div class="skeleton h-5 w-32 rounded"></div>
+        <div class="skeleton h-4 w-full rounded"></div>
+        <div class="skeleton h-4 w-3/4 rounded"></div>
+        <div class="skeleton h-4 w-2/3 rounded"></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Grid principal de tags -->
+  <div id="tagsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-md"></div>
+
+</div>
+</main>
+
+<script>
+let allTagsData = [];
+let currentKwIndex = 0;
+
+// ─── Inicio ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  cargarTagsDeSession();
+});
+
+async function cargarTagsDeSession() {
+  try {
+    const res = await fetch('/api/tags-data');
+    const data = await res.json();
+    if (data.has_data && data.data.length > 0) {
+      allTagsData = data.data;
+      renderKwSelector();
+      renderTags(0);
+    } else {
+      document.getElementById('emptyState').classList.remove('hidden');
+    }
+  } catch(e) {
+    document.getElementById('emptyState').classList.remove('hidden');
+  }
+}
+
+function renderKwSelector() {
+  const el = document.getElementById('kwSelector');
+  if (allTagsData.length <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = allTagsData.map((item, i) => `
+    <button onclick="renderTags(${i})" id="kwBtn${i}"
+      class="px-md py-xs rounded-full text-label-sm font-bold border transition-all
+        ${i === 0 ? 'bg-primary text-white border-primary' : 'bg-surface-container border-outline-variant text-on-surface-variant hover:bg-surface-container-high'}">
+      ${item.keyword}
+    </button>
+  `).join('');
+}
+
+function renderTags(idx) {
+  currentKwIndex = idx;
+  document.querySelectorAll('[id^=kwBtn]').forEach((btn, i) => {
+    btn.className = btn.className.replace(/(bg-primary text-white border-primary|bg-surface-container border-outline-variant text-on-surface-variant hover:bg-surface-container-high)/g, '');
+    if (i === idx) {
+      btn.classList.add('bg-primary', 'text-white', 'border-primary');
+    } else {
+      btn.classList.add('bg-surface-container', 'border-outline-variant', 'text-on-surface-variant', 'hover:bg-surface-container-high');
+    }
+  });
+
+  const item = allTagsData[idx];
+  const tags = item.editorial_tags || {};
+  const paa = item.paa || [];
+  const suggestions = item.suggestions || [];
+  const related = item.related || [];
+
+  renderTagsGrid(tags, paa, suggestions, related, item.keyword);
+}
+
+function renderTagsGrid(tags, paa, suggestions, related, keyword) {
+  const grid = document.getElementById('tagsGrid');
+  const rising = tags.rising_queries || [];
+  const top = tags.top_queries || [];
+  const topics = tags.related_topics || [];
+  const autocomplete = tags.autocomplete_tags || suggestions.slice(0, 20) || [];
+
+  grid.innerHTML = `
+    ${buildColumn('Tags en Tendencia (Rising)', 'trending_up', 'rising-badge', rising, '#7c3aed')}
+    ${buildColumn('Tags Más Buscados (Top)', 'bar_chart', 'top-badge', top, '#0284c7')}
+    ${buildColumn('Preguntas Clave (PAA)', 'help', 'paa-badge', paa.slice(0, 25), '#059669')}
+    ${buildColumn('Búsquedas Relacionadas', 'search', 'related-badge', related.slice(0, 25), '#d97706')}
+  `;
+}
+
+function buildColumn(title, icon, badgeClass, items, color) {
+  if (!items || items.length === 0) {
+    return `<div class="section-card">
+      <div class="flex items-center gap-xs mb-md">
+        <span class="material-symbols-outlined text-sm" style="color:${color}">${icon}</span>
+        <h3 class="font-label-md font-bold">${title}</h3>
+      </div>
+      <p class="text-on-surface-variant text-xs opacity-60 text-center py-md">Sin datos disponibles para esta keyword</p>
+    </div>`;
+  }
+
+  const chips = items.map((tag, i) => {
+    const score = Math.max(20, 100 - i * 4);
+    const tagText = typeof tag === 'string' ? tag : (tag.query || tag.title || tag.topic_title || String(tag));
+    if (!tagText) return '';
+    const tagEsc = tagText.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `
+      <div class="flex items-center gap-xs mb-xs group">
+        <button onclick="copiarTag('${tagEsc}', this)"
+          class="tag-chip ${badgeClass} flex-1 justify-start text-left leading-tight"
+          title="Clic para copiar">
+          <span class="material-symbols-outlined text-xs opacity-70">content_copy</span>
+          <span>${tagText}</span>
+        </button>
+        <div class="w-16 shrink-0">
+          <div class="score-bar" style="width:${score}%;background:linear-gradient(90deg,${color},${color}88)"></div>
+        </div>
+        <span class="text-xs text-on-surface-variant w-7 text-right shrink-0">${score}</span>
+      </div>`;
+  }).join('');
+
+  return `<div class="section-card flex flex-col gap-xs">
+    <div class="flex items-center justify-between mb-md">
+      <div class="flex items-center gap-xs">
+        <span class="material-symbols-outlined text-sm" style="color:${color}">${icon}</span>
+        <h3 class="font-label-md font-bold">${title}</h3>
+      </div>
+      <span class="text-xs bg-surface-container px-xs py-[2px] rounded-full text-on-surface-variant">${items.length}</span>
+    </div>
+    <div class="overflow-y-auto max-h-[480px] space-y-[2px] pr-xs">${chips}</div>
+  </div>`;
+}
+
+// ─── Generar tags bajo demanda ───────────────────────────────────────────────
+async function generarTagsDirecto() {
+  const kw = document.getElementById('tagKwInput').value.trim();
+  const country = document.getElementById('tagCountrySelect').value;
+  if (!kw) return;
+
+  const btn = document.getElementById('btnGenerarTags');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span><span>Generando...</span>';
+
+  document.getElementById('tagsGrid').innerHTML = '';
+  document.getElementById('loadingState').classList.remove('hidden');
+  document.getElementById('emptyState').classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/tags/generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keyword: kw, country})
+    });
+    const data = await res.json();
+    document.getElementById('loadingState').classList.add('hidden');
+
+    if (data.tags) {
+      // Inyectar en allTagsData para que funcione copiar-todo y CSV
+      const existing = allTagsData.findIndex(x => x.keyword === kw);
+      const newItem = {keyword: kw, category: '', suggestions: [], paa: [], related: [], editorial_tags: data.tags};
+      if (existing >= 0) allTagsData[existing] = newItem; else allTagsData.push(newItem);
+      currentKwIndex = allTagsData.length - 1;
+      renderKwSelector();
+      renderTagsGrid(data.tags, [], [], [], kw);
+    } else {
+      document.getElementById('emptyState').classList.remove('hidden');
+    }
+  } catch(e) {
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('emptyState').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm">bolt</span><span>Generar</span>';
+  }
+}
+
+// ─── Copiar ──────────────────────────────────────────────────────────────────
+function copiarTag(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.classList.add('copied');
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<span class="material-symbols-outlined text-xs">check</span><span>¡Copiado!</span>`;
+    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 1200);
+  });
+}
+
+function copiarTodosLosTags() {
+  const item = allTagsData[currentKwIndex];
+  if (!item) return;
+  const tags = item.editorial_tags || {};
+  const all = [
+    ...(tags.rising_queries || []),
+    ...(tags.top_queries || []),
+    ...(tags.autocomplete_tags || item.suggestions || []),
+    ...(item.paa || []),
+    ...(item.related || []),
+  ].map(t => typeof t === 'string' ? t : (t.query || t.title || t.topic_title || '')).filter(Boolean);
+  const unique = [...new Set(all)];
+  navigator.clipboard.writeText(unique.join('\n')).then(() => {
+    showToast(`${unique.length} tags copiados al portapapeles`);
+  });
+}
+
+function exportarCSV() {
+  const item = allTagsData[currentKwIndex];
+  if (!item) return;
+  const tags = item.editorial_tags || {};
+  const rows = [['Keyword Base', 'Tag', 'Tipo']];
+  const kw = item.keyword;
+  const add = (list, tipo) => list.forEach(t => {
+    const val = typeof t === 'string' ? t : (t.query || t.title || t.topic_title || '');
+    if (val) rows.push([kw, val, tipo]);
+  });
+  add(tags.rising_queries || [], 'Rising (Tendencia)');
+  add(tags.top_queries || [], 'Top (Más Buscado)');
+  add(tags.autocomplete_tags || item.suggestions || [], 'Autocomplete');
+  add(item.paa || [], 'PAA (Pregunta)');
+  add(item.related || [], 'Relacionada');
+
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `tags_${kw.replace(/\s/g,'_')}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showToast(msg) {
+  const el = document.createElement('div');
+  el.className = 'fixed bottom-6 right-6 bg-surface-container-high text-on-surface px-md py-sm rounded-xl shadow-lg flex items-center gap-xs z-50 animate-bounce';
+  el.innerHTML = `<span class="material-symbols-outlined text-sm text-primary">check_circle</span><span class="text-label-sm font-bold">${msg}</span>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// Enter en el input
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('tagKwInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') generarTagsDirecto();
+  });
+});
+</script>
+</body></html>

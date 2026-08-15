@@ -321,14 +321,26 @@ def parse_yaml_simple(path: str) -> dict:
 GOOGLE_ADS_LANGUAGE_CODE = LANG
 GOOGLE_ADS_GEO_TARGETS = COUNTRY_CATALOG.get(COUNTRY.lower(), {}).get("google_ads_geo_targets", [])
 
-# Groq API
+# ── Cadena de IA: GPT-OSS 120B (Groq) → Qwen (Groq) → Llama (Groq) ──────────
+# Si el usuario tiene su propia OpenAI API Key (sk-...), se usa ChatGPT real como
+# primera opción. Si no, se usa el modelo GPT-OSS en Groq como primer intento.
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+
+# Groq API (provee los 3 niveles de la jerarquía cuando no hay OpenAI Key)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip() or "openai/gpt-oss-120b"
+
+# Jerarquía de modelos: primario → secundario → terciario
+AI_MODEL_PRIMARY   = "openai/gpt-oss-120b"       # Nivel 1 — GPT-OSS 120B vía Groq (o gpt-4o-mini si hay OPENAI_API_KEY)
+AI_MODEL_SECONDARY = "qwen-qwq-32b"               # Nivel 2 — Qwen QwQ 32B vía Groq
+AI_MODEL_TERTIARY  = "llama-3.3-70b-versatile"    # Nivel 3 — Llama 3.3 70B vía Groq (fallback final)
+
+# Compatibilidad hacia atrás: GROQ_MODEL sigue apuntando al modelo primario
+GROQ_MODEL = os.getenv("GROQ_MODEL", AI_MODEL_PRIMARY).strip() or AI_MODEL_PRIMARY
+
 GROQ_AVAILABLE_MODELS = [
-    {"id": "openai/gpt-oss-120b", "name": "GPT-OSS 120B (Reasoning / Medium)", "badge": "Nuevo / Alta Potencia"},
-    {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B Versatile", "badge": "Ultra Rápido & Preciso"},
-    {"id": "deepseek-r1-distill-llama-70b", "name": "DeepSeek R1 Distill 70B", "badge": "Razonamiento"},
-    {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B Instant", "badge": "Ultra Ligero"},
+    {"id": AI_MODEL_PRIMARY,   "name": "GPT-OSS 120B — Nivel 1 (Primario)",  "badge": "ChatGPT / Alta Potencia"},
+    {"id": AI_MODEL_SECONDARY, "name": "Qwen QwQ 32B — Nivel 2 (Secundario)", "badge": "Qwen / Alibaba"},
+    {"id": AI_MODEL_TERTIARY,  "name": "Llama 3.3 70B — Nivel 3 (Terciario)", "badge": "Meta / Ultra Rápido"},
 ]
 
 

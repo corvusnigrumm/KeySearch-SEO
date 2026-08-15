@@ -54,20 +54,29 @@
     </button>
   </div>
 
-  <!-- Selector de Modelo de IA y Keyword Analizada -->
+  <!-- Indicador de Cadena de IA Activa y Keyword Analizada -->
   <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-md">
     <div class="flex items-center gap-sm">
       <div class="bg-secondary/10 text-secondary p-xs rounded-lg flex items-center justify-center">
         <span class="material-symbols-outlined text-sm">psychology</span>
       </div>
       <div>
-        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Modelo de IA (Groq Cloud):</label>
-        <select id="groqModelSelector" onchange="cambiarModeloGroq(this.value)" class="bg-surface border border-outline-variant text-on-surface rounded-lg text-body-xs font-bold py-1 px-2 focus:ring-2 focus:ring-primary">
-          <option value="openai/gpt-oss-120b" {% if groq_model == 'openai/gpt-oss-120b' %}selected{% endif %}>🚀 GPT-OSS 120B (Reasoning / Medium)</option>
-          <option value="llama-3.3-70b-versatile" {% if groq_model == 'llama-3.3-70b-versatile' %}selected{% endif %}>⚡ Llama 3.3 70B Versatile (Rápido & Preciso)</option>
-          <option value="deepseek-r1-distill-llama-70b" {% if groq_model == 'deepseek-r1-distill-llama-70b' %}selected{% endif %}>🧠 DeepSeek R1 Distill 70B</option>
-          <option value="llama-3.1-8b-instant" {% if groq_model == 'llama-3.1-8b-instant' %}selected{% endif %}>💨 Llama 3.1 8B Instant</option>
-        </select>
+        <label class="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Cadena de IA Activa (Fallback Automático):</label>
+        <div class="flex items-center gap-xs mt-xs flex-wrap">
+          <span class="inline-flex items-center gap-xs px-sm py-[3px] rounded-full text-[11px] font-bold" style="background:#0d1c32;color:#38bdf8">
+            <span class="material-symbols-outlined text-xs">auto_awesome</span>
+            {% if ai_chain.openai_active %}ChatGPT (gpt-4o-mini){% else %}GPT-OSS 120B (Groq){% endif %}
+          </span>
+          <span class="text-on-surface-variant text-xs">→</span>
+          <span class="inline-flex items-center gap-xs px-sm py-[3px] rounded-full text-[11px] font-bold" style="background:#1a1333;color:#c084fc">Qwen QwQ 32B</span>
+          <span class="text-on-surface-variant text-xs">→</span>
+          <span class="inline-flex items-center gap-xs px-sm py-[3px] rounded-full text-[11px] font-bold" style="background:#0f1f0f;color:#34d399">Llama 3.3 70B</span>
+          {% if ai_chain.openai_active %}
+          <span class="text-[10px] text-emerald-500 font-bold ml-xs">✓ OpenAI Key activa</span>
+          {% else %}
+          <span class="text-[10px] text-on-surface-variant ml-xs opacity-60">Agrega OPENAI_API_KEY en .env para usar ChatGPT real</span>
+          {% endif %}
+        </div>
       </div>
     </div>
 

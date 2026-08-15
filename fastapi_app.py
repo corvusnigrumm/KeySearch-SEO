@@ -42,9 +42,26 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 app = FastAPI(title="Key Search V 10.0 Ultra", version="10.0")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+# ── Keep-alive: evita que Render/servidores cloud duerman la app ──────────────
+async def _keepalive_loop():
+    """Hace ping interno cada 10 minutos para mantener el servidor despierto."""
+    import httpx
+    await asyncio.sleep(60)  # Espera inicial de 1 min
+    while True:
+        try:
+            async with httpx.AsyncClient() as client:
+                port = int(os.environ.get("PORT", 8001))
+                await client.get(f"http://localhost:{port}/ping", timeout=10)
+            logger.info("Keep-alive ping OK")
+        except Exception as e:
+            logger.debug("Keep-alive ping silenciado: %s", e)
+        await asyncio.sleep(600)  # Cada 10 minutos
+
+
 @app.on_event("startup")
 async def on_startup():
     init_db()
+    asyncio.create_task(_keepalive_loop())
 
 # ── Estado global de sesión ───────────────────────────────────────────────────
 class SessionState:
@@ -172,7 +189,13 @@ def _base_ctx(request: Request, user: User = None) -> dict:
             "wikipedia": True,
             "trends": HAS_PYTRENDS,
             "groq": bool(os.getenv("GROQ_API_KEY", "")),
-        }
+        },
+        "ai_chain": {
+            "openai_active": bool(os.getenv("OPENAI_API_KEY", "")),
+            "level1": "ChatGPT (gpt-4o-mini)" if os.getenv("OPENAI_API_KEY", "") else "GPT-OSS 120B (Groq)",
+            "level2": "Qwen QwQ 32B (Groq)",
+            "level3": "Llama 3.3 70B (Groq)",
+        },
     }
 
 
@@ -232,8 +255,13 @@ async def scraping_page(request: Request, user: User = Depends(get_current_user_
 
 
 @app.get("/clusters", response_class=HTMLResponse)
-async def clusters_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
-    return templates.TemplateResponse(request=request, name="clusters_map.html", context=_base_ctx(request, user))
+async def clusters_redirect(request: Request):
+    return RedirectResponse(url="/tags", status_code=301)
+
+
+@app.get("/tags", response_class=HTMLResponse)
+async def tags_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    return templates.TemplateResponse(request=request, name="tags.html", context=_base_ctx(request, user))
 
 
 @app.get("/editorial", response_class=HTMLResponse)
@@ -384,24 +412,8 @@ async def api_generate_ads_copy(request: Request, user: User = Depends(get_curre
         logger.error(f"Error generando ads copy: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
-@app.post("/api/generate-brief")
-async def api_generate_brief(request: Request, user: User = Depends(get_current_user_or_redirect)):
-    """Genera Content Brief Editorial (H1/H2/H3) para redactores bajo demanda."""
-    try:
-        data = await request.json()
-        kw = data.get("keyword", "").strip()
-        questions = data.get("questions", [])
-        intent = data.get("intent", "Informativa")
-        country = data.get("country", "Colombia")
-        if not kw:
-            return JSONResponse({"error": "Keyword requerida"}, status_code=400)
 
-        from scraper.content_brief import generar_content_brief
-        brief_data = generar_content_brief(kw, preguntas_paa=questions, intencion=intent, pais=country)
-        return JSONResponse(brief_data)
-    except Exception as e:
-        logger.error(f"Error generando content brief: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
+# NOTE: /api/generate-brief eliminado — reemplazado por el Estudio Editorial & Notas (/editorial)
 
 @app.post("/api/set-groq-model")
 async def api_set_groq_model(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -420,13 +432,12 @@ async def api_set_groq_model(request: Request, user: User = Depends(get_current_
         logger.error("Error cambiando modelo Groq: %s", e)
         return JSONResponse({"error": str(e)}, status_code=500)
 
-@app.get("/api/clusters-data")
-async def api_clusters_data(request: Request, user: User = Depends(get_current_user_or_redirect)):
-    """Devuelve los datos de la sesión actual para el Mapa de Clústeres."""
+@app.get("/api/tags-data")
+async def api_tags_data(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    """Devuelve los mejores tags de la sesión activa pre-calculados por el pipeline."""
     user_state = get_session(request)
     if not user_state or not user_state.last_run_data:
         return JSONResponse({"data": [], "has_data": False})
-    # Serializar sólo los campos necesarios para el grafo
     items = []
     for item in user_state.last_run_data:
         items.append({
@@ -435,10 +446,29 @@ async def api_clusters_data(request: Request, user: User = Depends(get_current_u
             "suggestions": item.get("suggestions", []),
             "paa": item.get("paa", []),
             "related": item.get("related", []),
-            "ai_clusters": item.get("ai_clusters", []),
-            "content_brief": item.get("content_brief"),
+            "editorial_tags": item.get("editorial_tags", {}),
         })
     return JSONResponse({"data": items, "has_data": True})
+
+
+@app.post("/api/tags/generate")
+async def api_tags_generate(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    """Genera tags bajo demanda para una keyword directa (uso independiente)."""
+    try:
+        data = await request.json()
+        kw = data.get("keyword", "").strip()
+        country = data.get("country", "Colombia")
+        suggestions = data.get("suggestions", [])
+        paa = data.get("paa", [])
+        if not kw:
+            return JSONResponse({"error": "Keyword requerida"}, status_code=400)
+        from scraper.editorial_ideator import obtener_tags_reales_google
+        tags_data = obtener_tags_reales_google(kw, sugerencias=suggestions, preguntas_paa=paa, pais=country)
+        return JSONResponse({"keyword": kw, "tags": tags_data, "has_data": bool(tags_data)})
+    except Exception as e:
+        logger.error("Error generando tags: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 
 @app.get("/api/editorial-session-data")
 async def api_editorial_session_data(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -454,8 +484,6 @@ async def api_editorial_session_data(request: Request, user: User = Depends(get_
             "suggestions": item.get("suggestions", []),
             "paa": item.get("paa", []),
             "related": item.get("related", []),
-            "ai_clusters": item.get("ai_clusters", []),
-            "content_brief": item.get("content_brief"),
             "editorial_tags": item.get("editorial_tags"),
             "editorial_ideas": item.get("editorial_ideas"),
             "editorial_nota": item.get("editorial_nota"),
@@ -998,9 +1026,8 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
             except Exception:
                 pass
 
-            # Generar Meta Tags, Schema FAQPage, Copies de Ads, Content Brief, KGR y Estudio Editorial
+            # Generar Meta Tags, Schema FAQPage, Copies de Ads, KGR y Estudio Editorial
             from scraper.ai_filter import generar_schema_y_meta_tags, generar_copywriting_ads_y_hooks
-            from scraper.content_brief import generar_content_brief
             from scraper.kgr_estimator import estimar_kgr
             from scraper.editorial_ideator import obtener_tags_reales_google, generar_ideas_notas_angulos, redactar_nota_editorial
 
@@ -1008,7 +1035,6 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
             all_questions = (paa + preg_ac)
             seo_schema = generar_schema_y_meta_tags(kw, all_questions, pais=c_name)
             ads_copy = generar_copywriting_ads_y_hooks(kw, all_questions, intencion=cat, pais=c_name)
-            content_brief = generar_content_brief(kw, sugerencias=sug, preguntas_paa=paa, preguntas_ac=preg_ac, pais=c_name, intencion=cat)
 
             # Generación automática del módulo editorial en el Pipeline
             user_state.status_msg = f"[{idx}/{total}] ✍️ Estudio Editorial & Tags Google Trends: {kw}"
@@ -1046,10 +1072,8 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
                 "paa": paa,
                 "related": rel,
                 "preguntas_autocompletado": preg_ac,
-                "ai_clusters": ai_clusters,
                 "seo_schema": seo_schema,
                 "ads_copy": ads_copy,
-                "content_brief": content_brief,
                 "kgr_data": kgr_data,
                 "serp_analysis": serp_analysis,
                 "google_ads": google_ads_res,

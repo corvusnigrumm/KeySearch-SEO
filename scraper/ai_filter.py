@@ -3,7 +3,10 @@ import logging
 import re
 import requests
 
-from config import GROQ_API_KEY, GROQ_MODEL
+from config import (
+    GROQ_API_KEY, GROQ_MODEL, OPENAI_API_KEY,
+    AI_MODEL_PRIMARY, AI_MODEL_SECONDARY, AI_MODEL_TERTIARY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +42,13 @@ try:
 except Exception:
     _groq_client = None
 
+# Cliente OpenAI (opcional — solo si el usuario tiene su propia API Key)
+try:
+    import openai as _openai_module
+    _openai_client = _openai_module.OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+except Exception:
+    _openai_client = None
+
 
 def _limpiar_respuesta_json(raw_text: str) -> str:
     """Elimina etiquetas de razonamiento <think> y bloques markdown ```json."""
@@ -61,95 +71,120 @@ def _limpiar_respuesta_json(raw_text: str) -> str:
     return text
 
 
-def _post_groq_json(prompt: str, timeout: int = 45, model: str = None):
-    """
-    Invoca Groq utilizando el SDK oficial (soporta openai/gpt-oss-120b con reasoning_effort='medium'
-    y Llama 3.3 70B) y devuelve contenido JSON parseado.
-    """
-    if not GROQ_API_KEY:
+def _llamar_groq_modelo(prompt: str, model_id: str, timeout: int = 45):
+    """Invoca un modelo específico en Groq y retorna JSON parseado o None si falla."""
+    if not GROQ_API_KEY or not _groq_client:
+        return None
+    is_reasoning = ("gpt-oss" in model_id.lower() or "deepseek" in model_id.lower() or "qwq" in model_id.lower())
+    try:
+        req_params = {
+            "model": model_id,
+            "messages": [
+                {"role": "system", "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra."},
+                {"role": "user", "content": prompt},
+            ],
+        }
+        if is_reasoning:
+            req_params["temperature"] = 1
+            req_params["max_completion_tokens"] = 2048
+            req_params["top_p"] = 1
+            if "gpt-oss" in model_id.lower():
+                req_params["reasoning_effort"] = "medium"
+        else:
+            req_params["temperature"] = 0.2
+            req_params["max_tokens"] = 2048
+        completion = _groq_client.chat.completions.create(**req_params)
+        raw = completion.choices[0].message.content or ""
+        clean = _limpiar_respuesta_json(raw)
+        return json.loads(clean) if clean else None
+    except Exception as e:
+        logger.warning("Groq [%s] fallo: %s", model_id, e)
         return None
 
-    target_model = model or GROQ_MODEL
-    is_reasoning = ("gpt-oss" in target_model.lower() or "deepseek-r1" in target_model.lower())
 
-    # 1. Intento con SDK oficial de Groq
-    if _groq_client is not None:
-        try:
-            req_params = {
-                "model": target_model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, "
-                            "sin etiquetas markdown, sin texto extra y sin explicaciones."
-                        )
-                    },
-                    {"role": "user", "content": prompt}
-                ],
-            }
+def _llamar_openai_modelo(prompt: str, timeout: int = 45):
+    """Invoca ChatGPT real via OpenAI API si hay OPENAI_API_KEY. Retorna JSON o None."""
+    if not OPENAI_API_KEY or not _openai_client:
+        return None
+    try:
+        completion = _openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            max_tokens=2048,
+            timeout=timeout,
+        )
+        raw = completion.choices[0].message.content or ""
+        clean = _limpiar_respuesta_json(raw)
+        return json.loads(clean) if clean else None
+    except Exception as e:
+        logger.warning("OpenAI [gpt-4o-mini] fallo: %s", e)
+        return None
 
-            if is_reasoning:
-                req_params["temperature"] = 1
-                req_params["max_completion_tokens"] = 2048
-                req_params["top_p"] = 1
-                if "gpt-oss" in target_model.lower():
-                    req_params["reasoning_effort"] = "medium"
-            else:
-                req_params["temperature"] = 0.2
-                req_params["max_tokens"] = 2048
 
-            completion = _groq_client.chat.completions.create(**req_params)
-            raw_content = completion.choices[0].message.content or ""
-            clean_json = _limpiar_respuesta_json(raw_content)
-            if clean_json:
-                return json.loads(clean_json)
-        except Exception as e:
-            logger.warning("Error con SDK Groq (%s): %s. Intentando fallback...", target_model, e)
-            # Fallback a llama-3.3-70b-versatile si el modelo solicitado falló
-            if target_model != "llama-3.3-70b-versatile":
-                try:
-                    fallback_comp = _groq_client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=[
-                            {"role": "system", "content": "Devuelve UNICAMENTE JSON valido."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        temperature=0.2,
-                        max_tokens=2048
-                    )
-                    raw_content = fallback_comp.choices[0].message.content or ""
-                    clean_json = _limpiar_respuesta_json(raw_content)
-                    if clean_json:
-                        return json.loads(clean_json)
-                except Exception as fb_err:
-                    logger.warning("Fallback SDK falló: %s", fb_err)
+def _post_groq_json(prompt: str, timeout: int = 45, model: str = None):
+    """
+    Cadena de IA con fallback automatico en 3 niveles:
+      Nivel 1 — ChatGPT (OpenAI API Key, si disponible) / GPT-OSS 120B (Groq)
+      Nivel 2 — Qwen QwQ 32B (Groq)
+      Nivel 3 — Llama 3.3 70B (Groq, fallback final garantizado)
+    """
+    # Si el caller pide un modelo concreto, respetarlo (sin cadena)
+    if model and model not in (AI_MODEL_PRIMARY, AI_MODEL_SECONDARY, AI_MODEL_TERTIARY):
+        return _llamar_groq_modelo(prompt, model, timeout)
 
-    # 2. Fallback por HTTP requests directo
+    # Nivel 0: ChatGPT real (solo si hay OPENAI_API_KEY)
+    if OPENAI_API_KEY:
+        result = _llamar_openai_modelo(prompt, timeout)
+        if result is not None:
+            logger.debug("IA activa: ChatGPT (OpenAI)")
+            return result
+        logger.warning("ChatGPT fallo, escalando a Nivel 1 (GPT-OSS 120B)...")
+
+    # Nivel 1: GPT-OSS 120B via Groq
+    result = _llamar_groq_modelo(prompt, AI_MODEL_PRIMARY, timeout)
+    if result is not None:
+        logger.debug("IA activa: GPT-OSS 120B (Groq - Nivel 1)")
+        return result
+    logger.warning("GPT-OSS 120B fallo, escalando a Nivel 2 (Qwen)...")
+
+    # Nivel 2: Qwen QwQ 32B via Groq
+    result = _llamar_groq_modelo(prompt, AI_MODEL_SECONDARY, timeout)
+    if result is not None:
+        logger.debug("IA activa: Qwen QwQ 32B (Groq - Nivel 2)")
+        return result
+    logger.warning("Qwen fallo, escalando a Nivel 3 (Llama 3.3 70B)...")
+
+    # Nivel 3: Llama 3.3 70B — fallback final via Groq
+    result = _llamar_groq_modelo(prompt, AI_MODEL_TERTIARY, timeout)
+    if result is not None:
+        logger.debug("IA activa: Llama 3.3 70B (Groq - Nivel 3)")
+        return result
+
+    # Fallback HTTP directo si el SDK falla
+    if not GROQ_API_KEY:
+        return None
     url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {GROQ_API_KEY}"
-    }
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {GROQ_API_KEY}"}
     payload = {
-        "model": target_model,
+        "model": AI_MODEL_TERTIARY,
         "messages": [
             {"role": "system", "content": "Devuelve UNICAMENTE JSON valido sin markdown."},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.2,
-        "max_tokens": 2048,
+        "temperature": 0.2, "max_tokens": 2048,
     }
-
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=timeout)
-        response.raise_for_status()
-        data = response.json()
-        raw_content = data["choices"][0]["message"]["content"]
-        clean_json = _limpiar_respuesta_json(raw_content)
-        return json.loads(clean_json)
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        resp.raise_for_status()
+        raw = resp.json()["choices"][0]["message"]["content"]
+        clean = _limpiar_respuesta_json(raw)
+        return json.loads(clean) if clean else None
     except Exception as e:
-        logger.warning("Error en llamada HTTP Groq JSON: %s", e)
+        logger.warning("Fallback HTTP final fallo: %s", e)
         return None
 
 
