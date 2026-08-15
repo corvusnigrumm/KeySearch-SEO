@@ -11,12 +11,12 @@
         * { font-family: 'Inter', sans-serif; }
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
-        /* Fondo Aurora Animado */
         body {
-            background-color: #030712;
+            background-color: #02050e;
             overflow-x: hidden;
         }
 
+        /* Fondo Aurora Animado */
         .aurora-bg {
             position: fixed;
             inset: 0;
@@ -27,10 +27,10 @@
 
         .aurora-blob {
             position: absolute;
-            filter: blur(90px);
-            opacity: 0.45;
+            filter: blur(95px);
+            opacity: 0.4;
             border-radius: 50%;
-            animation: floatAurora 18s ease-in-out infinite alternate;
+            animation: floatAurora 20s ease-in-out infinite alternate;
         }
 
         .blob-1 {
@@ -47,16 +47,16 @@
             right: -10%;
             width: 60vw;
             height: 60vw;
-            background: radial-gradient(circle, #7f00ff 0%, #e100ff 100%);
+            background: radial-gradient(circle, #d4af37 0%, #7f00ff 100%);
             animation-duration: 26s;
             animation-delay: -5s;
         }
 
         .blob-3 {
-            top: 40%;
+            top: 35%;
             left: 30%;
-            width: 40vw;
-            height: 40vw;
+            width: 45vw;
+            height: 45vw;
             background: radial-gradient(circle, #00c6ff 0%, #0072ff 100%);
             animation-duration: 20s;
             animation-delay: -10s;
@@ -69,54 +69,92 @@
             100% { transform: translate(0, 0) scale(1) rotate(360deg); }
         }
 
+        /* Marco Dorado Premium para el Logo */
+        .gold-frame-wrapper {
+            display: inline-flex;
+            padding: 4px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
+            box-shadow: 0 0 35px rgba(212, 175, 55, 0.45),
+                        0 8px 32px rgba(0, 0, 0, 0.6);
+            animation: goldGlow 4s ease-in-out infinite alternate;
+            transition: transform 0.3s ease;
+        }
+
+        .gold-frame-wrapper:hover {
+            transform: scale(1.05) rotate(1deg);
+        }
+
+        .gold-frame-inner {
+            background: rgba(7, 12, 24, 0.92);
+            border-radius: 20px;
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .gold-logo-img {
+            max-height: 85px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 14px rgba(255, 215, 0, 0.5));
+        }
+
+        @keyframes goldGlow {
+            0% { box-shadow: 0 0 25px rgba(212, 175, 55, 0.35); }
+            100% { box-shadow: 0 0 55px rgba(255, 223, 0, 0.7); }
+        }
+
         /* Glassmorphism Panel */
         .glass-card {
-            background: rgba(13, 22, 41, 0.65);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
+            background: rgba(10, 18, 35, 0.72);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6),
-                        0 0 40px rgba(0, 242, 254, 0.12);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.75),
+                        0 0 50px rgba(0, 242, 254, 0.12);
             position: relative;
             z-index: 10;
         }
 
         /* Input Glow */
         .input-glow {
-            background: rgba(17, 27, 49, 0.7);
+            background: rgba(15, 25, 46, 0.75);
             border: 1px solid rgba(255, 255, 255, 0.12);
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .input-glow:focus-within {
             border-color: #00f2fe;
-            box-shadow: 0 0 16px rgba(0, 242, 254, 0.35);
-            background: rgba(17, 27, 49, 0.95);
+            box-shadow: 0 0 18px rgba(0, 242, 254, 0.4);
+            background: rgba(15, 25, 46, 0.95);
         }
 
-        /* Glowing Button */
+        /* Glowing Buttons */
         .btn-glow-primary {
             background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
-            box-shadow: 0 4px 20px rgba(0, 198, 255, 0.35);
+            box-shadow: 0 4px 20px rgba(0, 198, 255, 0.4);
             transition: all 0.25s ease;
         }
         .btn-glow-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 28px rgba(0, 198, 255, 0.55);
+            box-shadow: 0 6px 28px rgba(0, 198, 255, 0.65);
         }
 
         .btn-glow-success {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
             transition: all 0.25s ease;
         }
         .btn-glow-success:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 28px rgba(16, 185, 129, 0.55);
+            box-shadow: 0 6px 28px rgba(16, 185, 129, 0.65);
         }
 
-        /* Canvas z-index */
-        #neuralCanvas {
+        /* Canvas de Ondas */
+        #rippleCanvas {
             position: fixed;
             inset: 0;
             z-index: 1;
@@ -126,29 +164,31 @@
 </head>
 <body class="text-slate-100 min-h-screen flex items-center justify-center p-4 relative">
 
-    <!-- Fondo Animado (Aurora Gradient Blobs) -->
+    <!-- Fondo Animado Aurora -->
     <div class="aurora-bg">
         <div class="aurora-blob blob-1"></div>
         <div class="aurora-blob blob-2"></div>
         <div class="aurora-blob blob-3"></div>
     </div>
 
-    <!-- Canvas de Partículas Constelación Inteligente -->
-    <canvas id="neuralCanvas"></canvas>
+    <!-- Canvas de Ondas Fluidas & Partículas al mover el mouse -->
+    <canvas id="rippleCanvas"></canvas>
 
     <!-- Tarjeta Principal de Login -->
     <div class="glass-card p-8 md:p-10 rounded-3xl w-full max-w-md transition-all duration-300">
         
-        <!-- Header & Logo -->
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/30 mb-4 animate-bounce">
-                <span class="material-symbols-outlined text-3xl text-white">auto_awesome</span>
+        <!-- LOGO DORADO CON MARCO PREMIUM -->
+        <div class="text-center mb-6">
+            <div class="gold-frame-wrapper mb-4">
+                <div class="gold-frame-inner">
+                    <img src="/logo-dorado.png" alt="LOGO DORADO" class="gold-logo-img" onerror="this.src='/static/logo_dorado.png'"/>
+                </div>
             </div>
-            <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-400 bg-clip-text text-transparent">
+            <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-amber-200 via-amber-300 to-yellow-500 bg-clip-text text-transparent">
                 KeySearch V10 Ultra
             </h1>
-            <p class="text-slate-400 text-xs font-medium mt-2 max-w-xs mx-auto">
-                Inteligencia SEO, Mapeo de Tendencias & Copywriting IA
+            <p class="text-slate-400 text-xs font-medium mt-1 max-w-xs mx-auto">
+                Inteligencia SEO & Minería de Búsquedas Multi-Motor
             </p>
         </div>
 
@@ -168,7 +208,7 @@
         {% endif %}
 
         <!-- Pestañas de Navegación -->
-        <div class="flex bg-slate-900/60 p-1 rounded-xl border border-slate-800 mb-6 backdrop-blur">
+        <div class="flex bg-slate-900/70 p-1 rounded-xl border border-slate-800 mb-6 backdrop-blur">
             <button id="tab-login" onclick="switchTab('login')"
                 class="flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md">
                 <span class="material-symbols-outlined text-sm">login</span>
@@ -234,14 +274,14 @@
         </form>
 
         <!-- Footer Info -->
-        <div class="mt-8 pt-6 border-t border-slate-800/80 text-center">
-            <p class="text-[11px] text-slate-500 font-mono">
-                KeySearch V10.0 Ultra · Servidor Seguro Activo
+        <div class="mt-8 pt-5 border-t border-slate-800/80 text-center">
+            <p class="text-[11px] text-amber-300/70 font-mono flex items-center justify-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                Render Deployment Ready · KeySearch V10.0
             </p>
         </div>
     </div>
 
-    <!-- Script de Pestañas y Canvas de Partículas Neurales -->
     <script>
         function switchTab(tab) {
             const btnLogin = document.getElementById('tab-login');
@@ -269,13 +309,14 @@
         switchTab('register');
         {% endif %}
 
-        // ─── Canvas de Partículas Interactivas (Constelación Neural) ─────────
+        // ─── CANVAS INTERACTIVO CON EFECTO DE ONDAS DE AGUA (RIPPLES) ───────────────
         (function() {
-            const canvas = document.getElementById('neuralCanvas');
+            const canvas = document.getElementById('rippleCanvas');
             const ctx = canvas.getContext('2d');
             let width, height;
             let particles = [];
-            let mouse = { x: null, y: null, radius: 140 };
+            let ripples = [];
+            let lastMouseX = null, lastMouseY = null;
 
             function resize() {
                 width = canvas.width = window.innerWidth;
@@ -283,32 +324,80 @@
             }
 
             window.addEventListener('resize', resize);
+
+            // Generar onda fluida al mover el mouse
+            function emitRipple(x, y) {
+                ripples.push({
+                    x: x,
+                    y: y,
+                    r: 5,
+                    maxR: 160 + Math.random() * 60,
+                    alpha: 0.85,
+                    color: Math.random() > 0.4 ? 'rgba(0, 242, 254, ' : 'rgba(212, 175, 55, '
+                });
+            }
+
             window.addEventListener('mousemove', (e) => {
-                mouse.x = e.clientX;
-                mouse.y = e.clientY;
+                const dist = Math.hypot(e.clientX - (lastMouseX || 0), e.clientY - (lastMouseY || 0));
+                if (dist > 25) { // Emitir onda cada 25px de movimiento
+                    emitRipple(e.clientX, e.clientY);
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                }
             });
-            window.addEventListener('mouseleave', () => {
-                mouse.x = null;
-                mouse.y = null;
+
+            window.addEventListener('click', (e) => {
+                emitRipple(e.clientX, e.clientY);
+                emitRipple(e.clientX, e.clientY);
             });
 
             resize();
 
-            const particleCount = Math.min(80, Math.floor(window.innerWidth / 18));
+            // Generar partículas constelación
+            const particleCount = Math.min(75, Math.floor(window.innerWidth / 20));
             for (let i = 0; i < particleCount; i++) {
                 particles.push({
                     x: Math.random() * width,
                     y: Math.random() * height,
-                    vx: (Math.random() - 0.5) * 0.7,
-                    vy: (Math.random() - 0.5) * 0.7,
+                    vx: (Math.random() - 0.5) * 0.6,
+                    vy: (Math.random() - 0.5) * 0.6,
                     radius: Math.random() * 2 + 1,
-                    color: Math.random() > 0.5 ? '#00f2fe' : '#7f00ff'
+                    color: Math.random() > 0.5 ? '#00f2fe' : '#d4af37'
                 });
             }
 
             function animate() {
                 ctx.clearRect(0, 0, width, height);
 
+                // 1. Renderizar Ondas Expansivas (Ripples)
+                for (let i = ripples.length - 1; i >= 0; i--) {
+                    let rip = ripples[i];
+                    rip.r += 2.8;
+                    rip.alpha -= 0.014;
+
+                    if (rip.alpha <= 0 || rip.r >= rip.maxR) {
+                        ripples.splice(i, 1);
+                        continue;
+                    }
+
+                    // Anillo exterior de onda
+                    ctx.beginPath();
+                    ctx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2);
+                    ctx.strokeStyle = rip.color + rip.alpha + ')';
+                    ctx.lineWidth = 2.2;
+                    ctx.stroke();
+
+                    // Anillo interior secundario (eco de agua)
+                    if (rip.r > 20) {
+                        ctx.beginPath();
+                        ctx.arc(rip.x, rip.y, rip.r * 0.65, 0, Math.PI * 2);
+                        ctx.strokeStyle = rip.color + (rip.alpha * 0.5) + ')';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+
+                // 2. Renderizar Partículas y Reacción con Ondas
                 for (let i = 0; i < particles.length; i++) {
                     let p = particles[i];
                     p.x += p.vx;
@@ -317,37 +406,37 @@
                     if (p.x < 0 || p.x > width) p.vx *= -1;
                     if (p.y < 0 || p.y > height) p.vy *= -1;
 
-                    // Interacción Mouse
-                    if (mouse.x !== null) {
-                        let dx = mouse.x - p.x;
-                        let dy = mouse.y - p.y;
-                        let dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < mouse.radius) {
-                            let force = (mouse.radius - dist) / mouse.radius;
-                            p.x -= (dx / dist) * force * 3;
-                            p.y -= (dy / dist) * force * 3;
+                    // Desplazamiento por ondas cercanas
+                    ripples.forEach(rip => {
+                        let dx = p.x - rip.x;
+                        let dy = p.y - rip.y;
+                        let d = Math.hypot(dx, dy);
+                        if (Math.abs(d - rip.r) < 30) {
+                            let push = (30 - Math.abs(d - rip.r)) * 0.08;
+                            p.x += (dx / d) * push;
+                            p.y += (dy / d) * push;
                         }
-                    }
+                    });
 
                     // Dibujar Partícula
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                     ctx.fillStyle = p.color;
-                    ctx.shadowBlur = 10;
+                    ctx.shadowBlur = 8;
                     ctx.shadowColor = p.color;
                     ctx.fill();
 
-                    // Conexiones de Constelación
+                    // Conexiones entre partículas
                     for (let j = i + 1; j < particles.length; j++) {
                         let p2 = particles[j];
                         let dx = p.x - p2.x;
                         let dy = p.y - p2.y;
-                        let dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < 120) {
+                        let dist = Math.hypot(dx, dy);
+                        if (dist < 110) {
                             ctx.beginPath();
                             ctx.moveTo(p.x, p.y);
                             ctx.lineTo(p2.x, p2.y);
-                            ctx.strokeStyle = `rgba(0, 242, 254, ${1 - dist / 120 * 0.8})`;
+                            ctx.strokeStyle = `rgba(0, 242, 254, ${1 - dist / 110 * 0.75})`;
                             ctx.lineWidth = 0.5;
                             ctx.shadowBlur = 0;
                             ctx.stroke();

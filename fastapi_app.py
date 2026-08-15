@@ -39,8 +39,24 @@ logger = logging.getLogger("keysearch")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 app = FastAPI(title="Key Search V 10.0 Ultra", version="10.0")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+os.makedirs(os.path.join(BASE_DIR, "static"), exist_ok=True)
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+@app.get("/logo-dorado.png")
+async def serve_logo_dorado():
+    logo_root = os.path.join(BASE_DIR, "LOGO DORADO.png")
+    if os.path.exists(logo_root):
+        return FileResponse(logo_root, media_type="image/png")
+    logo_static = os.path.join(BASE_DIR, "static", "logo_dorado.png")
+    if os.path.exists(logo_static):
+        return FileResponse(logo_static, media_type="image/png")
+    return JSONResponse({"error": "Logo no encontrado"}, status_code=404)
 
 # ── Keep-alive: evita que Render/servidores cloud duerman la app ──────────────
 async def _keepalive_loop():
