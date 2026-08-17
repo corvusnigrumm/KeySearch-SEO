@@ -10,7 +10,7 @@ import re
 from typing import Dict, List, Optional
 
 from config import GROQ_API_KEY, GROQ_MODEL, LANG, COUNTRY
-from scraper.ai_filter import _post_groq_json
+from scraper.ai_client import post_groq_json as _post_groq_json
 from scraper.volume_estimator import HAS_PYTRENDS, TRENDS_TIMEFRAME
 
 logger = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scraper.ai_filter import generar_schema_y_meta_tags
+from scraper.ai_generator import generar_schema_y_meta_tags
 
 
 def test_schema_generation():

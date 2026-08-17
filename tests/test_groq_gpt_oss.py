@@ -7,7 +7,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import GROQ_MODEL, GROQ_AVAILABLE_MODELS
-from scraper.ai_filter import _post_groq_json, _limpiar_respuesta_json
+from scraper.ai_client import post_groq_json as _post_groq_json, limpiar_respuesta_json as _limpiar_respuesta_json
 
 
 def test_groq_gpt_oss_model_config():

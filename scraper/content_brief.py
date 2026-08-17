@@ -15,7 +15,7 @@ import re
 from typing import Dict, List, Optional
 
 from config import GROQ_API_KEY, GROQ_MODEL
-from scraper.ai_filter import _post_groq_json
+from scraper.ai_client import post_groq_json as _post_groq_json
 
 logger = logging.getLogger(__name__)
 

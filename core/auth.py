@@ -1,44 +1,97 @@
+"""
+core/auth.py - Autenticacion segura: bcrypt + JWT con claims.
+"""
 import hashlib
+import hmac
 import os
-from datetime import datetime, timedelta
+import secrets
+import logging
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional
 from jose import jwt, JWTError
 
-# ── Configuracion JWT ─────────────────────────────────────────────────────────
-SECRET_KEY = os.environ.get("JWT_SECRET", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
+import bcrypt
+
+logger = logging.getLogger("keysearch.auth")
+
+# ── Configuracion JWT ────────────────────────────────────────────────────────
+_SECRET_FROM_ENV = os.environ.get("JWT_SECRET", "").strip()
+SECRET_KEY = _SECRET_FROM_ENV if _SECRET_FROM_ENV else secrets.token_hex(32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 dias
+JWT_ISSUER = "keysearch"
+JWT_AUDIENCE = "keysearch"
 
-# ── Password Hashing (SHA-256 + salt, sin dependencia de passlib/bcrypt) ──────
+if not _SECRET_FROM_ENV:
+    logger.warning(
+        "JWT_SECRET no definido. Se genero una clave aleatoria. "
+        "Todos los tokens se invalidaran al reiniciar el servidor. "
+        "Define JWT_SECRET en tu .env o variable de entorno."
+    )
+
+
+# ── Password Hashing (bcrypt, resistente a brute-force) ─────────────────────
 def get_password_hash(password: str) -> str:
-    """Genera un hash seguro con salt aleatorio."""
-    salt = os.urandom(16).hex()
-    h = hashlib.sha256((salt + password).encode("utf-8")).hexdigest()
-    return f"{salt}${h}"
+    """Genera un hash bcrypt con salt automatico."""
+    password_bytes = password.encode("utf-8")
+    salt = bcrypt.gensalt(rounds=12)
+    h = bcrypt.hashpw(password_bytes, salt)
+    return h.decode("utf-8")
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifica la contraseña contra el hash almacenado."""
+    """Verifica la contrasena contra el hash bcrypt. Comparacion constante en tiempo."""
+    try:
+        result = bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+        return result
+    except Exception:
+        # Fallback para hashes SHA-256 legacy durante migracion
+        return _verify_password_legacy(plain_password, hashed_password)
+
+
+def _verify_password_legacy(plain_password: str, hashed_password: str) -> bool:
+    """Verifica hashes SHA-256 legacy. Retirar despues de migrar todos los usuarios."""
     try:
         salt, stored_hash = hashed_password.split("$", 1)
         h = hashlib.sha256((salt + plain_password).encode("utf-8")).hexdigest()
-        return h == stored_hash
-    except ValueError:
+        return hmac.compare_digest(h, stored_hash)
+    except (ValueError, AttributeError):
         return False
 
-# ── JWT Tokens ────────────────────────────────────────────────────────────────
-def create_access_token(data: dict, expires_delta: timedelta = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
 
-def decode_access_token(token: str):
+# ── JWT Tokens ────────────────────────────────────────────────────────────────
+def create_access_token(
+    data: Dict[str, Any],
+    expires_delta: Optional[timedelta] = None,
+) -> str:
+    """Crea un JWT con claims estandar (iss, aud, exp, iat, jti)."""
+    to_encode = data.copy()
+    now = datetime.now(timezone.utc)
+    expire = now + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+
+    to_encode.update({
+        "exp": expire,
+        "iat": now,
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
+        "jti": secrets.token_hex(16),
+    })
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
+    """Decodifica y valida un JWT. Retorna None si es invalido."""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            issuer=JWT_ISSUER,
+            audience=JWT_AUDIENCE,
+        )
         return payload
     except JWTError:
         return None

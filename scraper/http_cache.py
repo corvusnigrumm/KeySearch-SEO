@@ -2,7 +2,12 @@ import hashlib
 import json
 import os
 import time
+import logging
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+logger = logging.getLogger(__name__)
+
+_CLEANUP_DONE = False
 
 
 def _safe_mkdir(path: str) -> None:
@@ -34,9 +39,45 @@ def make_key(url: str) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def cleanup_expired(cache_dir: str, ttl_seconds: int) -> int:
+    """Elimina archivos de cache expirados. Devuelve la cantidad eliminada."""
+    global _CLEANUP_DONE
+    if _CLEANUP_DONE:
+        return 0
+
+    _CLEANUP_DONE = True
+    removed = 0
+    if not cache_dir or not os.path.isdir(cache_dir):
+        return 0
+
+    now = int(time.time())
+    try:
+        for filename in os.listdir(cache_dir):
+            if not filename.endswith(".json"):
+                continue
+            path = os.path.join(cache_dir, filename)
+            try:
+                with open(path, "r", encoding="utf-8") as fh:
+                    payload = json.load(fh)
+                ts = int(payload.get("ts", 0))
+                if ttl_seconds > 0 and (now - ts) > ttl_seconds:
+                    os.remove(path)
+                    removed += 1
+            except Exception:
+                continue
+    except Exception as exc:
+        logger.debug("Cache cleanup error: %s", exc)
+
+    if removed:
+        logger.info("Cache cleanup: %d expired files removed", removed)
+    return removed
+
+
 def get_text(cache_dir: str, key: str, ttl_seconds: int) -> str | None:
     if not cache_dir:
         return None
+
+    cleanup_expired(cache_dir, ttl_seconds)
 
     path = _cache_path(cache_dir, key)
     if not os.path.exists(path):

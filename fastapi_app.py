@@ -6,8 +6,10 @@ Suite Profesional de SEO, Keyword Research, Content Briefs, Schema FAQ y Ads Cop
 
 import os
 import io
+import re
 import csv
 import json
+import html as html_mod
 import asyncio
 import logging
 import datetime
@@ -15,6 +17,7 @@ import uuid
 import secrets
 import urllib.parse
 from typing import List, Optional, Dict, Any
+from contextlib import asynccontextmanager
 
 # Cargar .env local si existe
 try:
@@ -28,7 +31,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, Red
 from fastapi.templating import Jinja2Templates
 
 from sqlalchemy.orm import Session
-from core.database import init_db, get_db, User, SearchHistory
+from core.database import init_db, get_db, User, SearchHistory, PipelineSession, SessionLocal
 
 import config
 from core.auth import verify_password, get_password_hash, create_access_token, decode_access_token
@@ -42,11 +45,136 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-app = FastAPI(title="Key Search V 10.0 Ultra", version="10.0")
+
+# ── Keep-alive loop ───────────────────────────────────────────────────────────
+async def _keepalive_loop():
+    """Hace ping interno cada 10 minutos para mantener el servidor despierto."""
+    import httpx
+    await asyncio.sleep(60)
+    while True:
+        try:
+            async with httpx.AsyncClient() as client:
+                port = int(os.environ.get("PORT", 8001))
+                await client.get(f"http://localhost:{port}/ping", timeout=10)
+            logger.info("Keep-alive ping OK")
+        except Exception as e:
+            logger.debug("Keep-alive ping silenciado: %s", e)
+        await asyncio.sleep(600)
+
+
+# ── Lifespan (reemplaza on_event deprecated) ──────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    task = asyncio.create_task(_keepalive_loop())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="Key Search V 10.0 Ultra", version="10.0", lifespan=lifespan)
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 os.makedirs(os.path.join(BASE_DIR, "static"), exist_ok=True)
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+from pydantic import BaseModel, Field
+
+class SchemaRequest(BaseModel):
+    keyword: str = Field(..., min_length=1, max_length=500)
+    questions: list = Field(default_factory=list)
+    country: str = Field(default="Colombia", max_length=100)
+
+class AdsCopyRequest(BaseModel):
+    keyword: str = Field(..., min_length=1, max_length=500)
+    questions: list = Field(default_factory=list)
+    intent: str = Field(default="Informativa / Comercial", max_length=100)
+    country: str = Field(default="Colombia", max_length=100)
+
+class GroqModelRequest(BaseModel):
+    model: str = Field(..., min_length=1, max_length=200)
+
+
+class SchemaResponse(BaseModel):
+    meta_title: str = ""
+    meta_description: str = ""
+    slug_sugerido: str = ""
+    faq_items: list = Field(default_factory=list)
+
+
+class AdsCopyResponse(BaseModel):
+    google_ads: dict = Field(default_factory=dict)
+    social_ads: dict = Field(default_factory=dict)
+    tiktok_reels_hooks: list = Field(default_factory=list)
+    guion_video_30s: dict = Field(default_factory=dict)
+
+
+class GroqModelResponse(BaseModel):
+    status: str = "ok"
+    current_model: str = ""
+
+
+class HealthResponse(BaseModel):
+    status: str
+    version: str
+    uptime_seconds: float
+    db: dict = Field(default_factory=dict)
+    ai_configured: bool = False
+    timestamp: str = ""
+
+
+class ErrorResponse(BaseModel):
+    error: str
+
+from core.security import (
+    security_headers_middleware,
+    rate_limit_middleware,
+    register_exception_handlers,
+    ai_rate_limiter,
+    generate_csrf_token,
+    validate_csrf_token,
+)
+
+security_headers_middleware(app)
+rate_limit_middleware(app)
+register_exception_handlers(app)
+
+from core.monitoring import RequestIDMiddleware, setup_structured_logging
+
+app.add_middleware(RequestIDMiddleware)
+setup_structured_logging()
+
+from core.monitoring import PrometheusMiddleware
+app.add_middleware(PrometheusMiddleware)
+
+
+# ── Gzip Compression Middleware ──────────────────────────────────────────────
+import gzip as _gzip
+
+@app.middleware("http")
+async def gzip_middleware(request: Request, call_next):
+    response = await call_next(request)
+    accept = request.headers.get("accept-encoding", "")
+    if "gzip" in accept and hasattr(response, "body"):
+        body = response.body
+        if isinstance(body, (bytes, bytearray)) and len(body) > 500:
+            compressed = _gzip.compress(body, compresslevel=5)
+            if len(compressed) < len(body):
+                from starlette.responses import Response
+                return Response(
+                    content=compressed,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.media_type,
+                )
+    return response
+
+
+# ── LRU Cache for repeated queries ───────────────────────────────────────────
+from functools import lru_cache
+
+@lru_cache(maxsize=128)
+def _cached_country_names() -> dict:
+    return {c: c for c in ["Colombia", "Mexico", "España", "Argentina", "Chile", "Peru", "USA"]}
 
 @app.get("/logo-dorado.png")
 async def serve_logo_dorado():
@@ -58,45 +186,141 @@ async def serve_logo_dorado():
         return FileResponse(logo_static, media_type="image/png")
     return JSONResponse({"error": "Logo no encontrado"}, status_code=404)
 
-# ── Keep-alive: evita que Render/servidores cloud duerman la app ──────────────
-async def _keepalive_loop():
-    """Hace ping interno cada 10 minutos para mantener el servidor despierto."""
-    import httpx
-    await asyncio.sleep(60)  # Espera inicial de 1 min
-    while True:
-        try:
-            async with httpx.AsyncClient() as client:
-                port = int(os.environ.get("PORT", 8001))
-                await client.get(f"http://localhost:{port}/ping", timeout=10)
-            logger.info("Keep-alive ping OK")
-        except Exception as e:
-            logger.debug("Keep-alive ping silenciado: %s", e)
-        await asyncio.sleep(600)  # Cada 10 minutos
 
-
-@app.on_event("startup")
-async def on_startup():
-    init_db()
-    asyncio.create_task(_keepalive_loop())
-
-# ── Estado global de sesión ───────────────────────────────────────────────────
+# ── Estado de sesion (persistido en DB) ──────────────────────────────────────
 class SessionState:
-    def __init__(self):
-        self.reset()
+    """Wrapper sobre PipelineSession de DB con interfaz compatible."""
+
+    def __init__(self, db_session: PipelineSession = None):
+        self._db = db_session
         self.logs: List[Dict[str, str]] = []
-        self.user_id: Optional[int] = None
+
+    @property
+    def keywords(self) -> List[str]:
+        if self._db and self._db.keywords_json:
+            try:
+                return json.loads(self._db.keywords_json)
+            except Exception:
+                return []
+        return []
+
+    @keywords.setter
+    def keywords(self, value: List[str]):
+        if self._db:
+            self._db.keywords_json = json.dumps(value, ensure_ascii=False)
+
+    @property
+    def is_running(self) -> bool:
+        return self._db.is_running if self._db else False
+
+    @is_running.setter
+    def is_running(self, value: bool):
+        if self._db:
+            self._db.is_running = value
+
+    @property
+    def progress(self) -> int:
+        return self._db.progress if self._db else 0
+
+    @progress.setter
+    def progress(self, value: int):
+        if self._db:
+            self._db.progress = value
+
+    @property
+    def status_msg(self) -> str:
+        return self._db.status_msg if self._db else "Listo."
+
+    @status_msg.setter
+    def status_msg(self, value: str):
+        if self._db:
+            self._db.status_msg = value
+
+    @property
+    def last_run_data(self) -> Optional[List[dict]]:
+        if self._db and self._db.last_run_data_json:
+            try:
+                return json.loads(self._db.last_run_data_json)
+            except Exception:
+                return None
+        return None
+
+    @last_run_data.setter
+    def last_run_data(self, value):
+        if self._db:
+            self._db.last_run_data_json = json.dumps(value, ensure_ascii=False) if value else None
+
+    @property
+    def error_msg(self) -> Optional[str]:
+        return self._db.error_msg if self._db else None
+
+    @error_msg.setter
+    def error_msg(self, value):
+        if self._db:
+            self._db.error_msg = value
+
+    @property
+    def country(self) -> str:
+        return self._db.country if self._db else "co"
+
+    @country.setter
+    def country(self, value: str):
+        if self._db:
+            self._db.country = value
+
+    @property
+    def profile(self) -> str:
+        return self._db.profile if self._db else "normal"
+
+    @profile.setter
+    def profile(self, value: str):
+        if self._db:
+            self._db.profile = value
+
+    @property
+    def started_at(self) -> Optional[str]:
+        if self._db and self._db.started_at:
+            return self._db.started_at.strftime("%Y-%m-%d %H:%M:%S")
+        return None
+
+    @started_at.setter
+    def started_at(self, value: str):
+        if self._db:
+            self._db.started_at = datetime.datetime.now()
+
+    @property
+    def finished_at(self) -> Optional[str]:
+        if self._db and self._db.finished_at:
+            return self._db.finished_at.strftime("%Y-%m-%d %H:%M:%S")
+        return None
+
+    @finished_at.setter
+    def finished_at(self, value: str):
+        if self._db:
+            self._db.finished_at = datetime.datetime.now()
+
+    @property
+    def user_id(self) -> Optional[int]:
+        return self._db.user_id if self._db else None
+
+    @user_id.setter
+    def user_id(self, value):
+        if self._db:
+            self._db.user_id = value
 
     def reset(self):
-        self.keywords: List[str] = []
-        self.is_running: bool = False
-        self.progress: int = 0
-        self.status_msg: str = "Listo. Ingresa keywords para comenzar."
-        self.last_run_data: Optional[List[dict]] = None
-        self.error_msg: Optional[str] = None
-        self.country: str = "co"
-        self.profile: str = "normal"
-        self.started_at: Optional[str] = None
-        self.finished_at: Optional[str] = None
+        if self._db:
+            self._db.keywords_json = "[]"
+            self._db.is_running = False
+            self._db.progress = 0
+            self._db.status_msg = "Listo. Ingresa keywords para comenzar."
+            self._db.last_run_data_json = None
+            self._db.error_msg = None
+            self._db.country = "co"
+            self._db.profile = "normal"
+            self._db.started_at = None
+            self._db.finished_at = None
+        self.logs = []
 
     def add_log(self, level: str, message: str):
         entry = {
@@ -109,31 +333,65 @@ class SessionState:
             self.logs = self.logs[-200:]
 
 
-sessions: Dict[str, SessionState] = {}
-
-
 @app.middleware("http")
 async def session_middleware(request: Request, call_next):
     session_id = request.cookies.get("session_id")
     is_new = False
+
+    # Validar que session_id sea un UUID valido (prevenir session fixation)
+    if session_id:
+        try:
+            uuid.UUID(session_id)
+        except ValueError:
+            session_id = None
+
     if not session_id:
         session_id = str(uuid.uuid4())
         is_new = True
-    
+
     request.state.session_id = session_id
-    
-    if session_id not in sessions:
-        sessions[session_id] = SessionState()
-        
+
+    # Buscar o crear sesion en DB
+    db = SessionLocal()
+    try:
+        db_session = db.query(PipelineSession).filter(PipelineSession.session_id == session_id).first()
+        if not db_session:
+            db_session = PipelineSession(session_id=session_id)
+            db.add(db_session)
+            db.commit()
+            db.refresh(db_session)
+        request.state.db_session = db_session
+        request.state.db_session_obj = db
+    except Exception as exc:
+        logger.error("Error en session middleware: %s", exc)
+        db.close()
+        request.state.db_session = None
+        request.state.db_session_obj = None
+
     response = await call_next(request)
-    
+
+    # Flush cambios a DB despues de la request
+    try:
+        if request.state.db_session_obj:
+            request.state.db_session_obj.commit()
+            request.state.db_session_obj.close()
+    except Exception:
+        pass
+
     if is_new:
-        response.set_cookie(key="session_id", value=session_id, max_age=86400 * 30)
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            max_age=86400 * 30,
+            httponly=True,
+            samesite="lax",
+        )
     return response
 
 
 def get_session(request: Request) -> SessionState:
-    return sessions.get(request.state.session_id)
+    db_session = getattr(request.state, "db_session", None)
+    return SessionState(db_session)
 
 
 # ── Helpers de contexto e Identidad ──────────────────────────────────────────
@@ -162,7 +420,7 @@ def get_current_user_or_redirect(request: Request, db: Session = Depends(get_db)
     return user
 
 def _get_google_ads_detail() -> dict:
-    """Devuelve diagnostico detallado de Google Ads para la UI."""
+    """Devuelve diagnostico detallado de Google Ads para la UI. Sin secretos expuestos."""
     from scraper.google_ads_metrics import get_google_ads_status, HAS_GOOGLE_ADS_LIB
     status = get_google_ads_status()
     yaml_path = getattr(config, "GOOGLE_ADS_CONFIG_PATH", "")
@@ -176,11 +434,11 @@ def _get_google_ads_detail() -> dict:
         "yaml_path": yaml_path,
         "customer_id": customer_id,
         "customer_id_file": getattr(config, "GOOGLE_ADS_CUSTOMER_ID_FILE", ""),
-        "developer_token": yaml_vals.get("developer_token", ""),
-        "client_id": yaml_vals.get("client_id", ""),
-        "client_secret": yaml_vals.get("client_secret", ""),
-        "refresh_token": yaml_vals.get("refresh_token", ""),
-        "login_customer_id": yaml_vals.get("login_customer_id", ""),
+        "has_developer_token": bool(yaml_vals.get("developer_token", "")),
+        "has_client_id": bool(yaml_vals.get("client_id", "")),
+        "has_client_secret": bool(yaml_vals.get("client_secret", "")),
+        "has_refresh_token": bool(yaml_vals.get("refresh_token", "")),
+        "has_login_customer_id": bool(yaml_vals.get("login_customer_id", "")),
     }
 
 
@@ -233,19 +491,19 @@ async def register(
         if not username or not password:
             return templates.TemplateResponse(
                 request=request, name="login.html",
-                context={"request": request, "error": "Usuario y contraseña requeridos.", "show_register": True}
+                context={"request": request, "error": "Usuario y contrasena requeridos.", "show_register": True}
             )
         if len(password) < 4:
             return templates.TemplateResponse(
                 request=request, name="login.html",
-                context={"request": request, "error": "La contraseña debe tener al menos 4 caracteres.", "show_register": True}
+                context={"request": request, "error": "La contrasena debe tener al menos 4 caracteres.", "show_register": True}
             )
 
         existing = db.query(User).filter(User.username == username).first()
         if existing:
             return templates.TemplateResponse(
                 request=request, name="login.html",
-                context={"request": request, "error": f"El perfil '{username}' ya existe. Intenta ingresar.", "show_register": True}
+                context={"request": request, "error": "El perfil ya existe. Intenta ingresar.", "show_register": True}
             )
 
         new_user = User(username=username, password_hash=get_password_hash(password))
@@ -261,7 +519,8 @@ async def register(
             value=token,
             httponly=True,
             samesite="lax",
-            max_age=60 * 60 * 24 * 7,  # 7 días
+            secure=os.environ.get("HTTPS", "").lower() in ("1", "true", "yes"),
+            max_age=60 * 60 * 24 * 7,
         )
         return response
 
@@ -270,7 +529,7 @@ async def register(
         db.rollback()
         return templates.TemplateResponse(
             request=request, name="login.html",
-            context={"request": request, "error": f"Error al crear la cuenta: {exc}", "show_register": True}
+            context={"request": request, "error": "Error al crear la cuenta. Intenta de nuevo.", "show_register": True}
         )
 
 
@@ -287,7 +546,7 @@ async def login(
         if not user or not verify_password(password, user.password_hash):
             return templates.TemplateResponse(
                 request=request, name="login.html",
-                context={"request": request, "error": "Usuario o contraseña incorrectos."}
+                context={"request": request, "error": "Usuario o contrasena incorrectos."}
             )
 
         token = create_access_token({"sub": str(user.id)})
@@ -297,7 +556,8 @@ async def login(
             value=token,
             httponly=True,
             samesite="lax",
-            max_age=60 * 60 * 24 * 7,  # 7 días
+            secure=os.environ.get("HTTPS", "").lower() in ("1", "true", "yes"),
+            max_age=60 * 60 * 24 * 7,
         )
         logger.info("Login exitoso: %s (id=%s)", user.username, user.id)
         return response
@@ -306,14 +566,28 @@ async def login(
         logger.error("Error en /login: %s", exc)
         return templates.TemplateResponse(
             request=request, name="login.html",
-            context={"request": request, "error": f"Error al iniciar sesión: {exc}"}
+            context={"request": request, "error": "Error al iniciar sesion. Intenta de nuevo."}
         )
 
 
 @app.post("/api/logout")
-async def logout():
+async def logout(request: Request):
+    # Eliminar la PipelineSession de DB para invalidar la sesion
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        try:
+            db = SessionLocal()
+            session = db.query(PipelineSession).filter(PipelineSession.session_id == session_id).first()
+            if session:
+                db.delete(session)
+                db.commit()
+            db.close()
+        except Exception as exc:
+            logger.error("Error eliminando sesion en logout: %s", exc)
+
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie("access_token", samesite="lax")
+    response.delete_cookie("session_id", samesite="lax")
     return response
 
 
@@ -374,9 +648,23 @@ async def ping_endpoint():
     return {"status": "ok"}
 
 
+@app.get("/health")
+async def health_endpoint():
+    from core.monitoring import health_check_data
+    data = health_check_data()
+    status_code = 200 if data["status"] == "healthy" else 503
+    return JSONResponse(data, status_code=status_code)
+
+
+@app.get("/metrics")
+async def metrics_endpoint():
+    from core.monitoring import metrics_response
+    return metrics_response()
+
+
 # ── API: Estado del pipeline ──────────────────────────────────────────────────
 @app.get("/status")
-async def get_status(request: Request):
+async def get_status(request: Request, user: User = Depends(get_current_user_or_redirect)):
     user_state = get_session(request)
     return {
         "is_running": user_state.is_running,
@@ -391,7 +679,7 @@ async def get_status(request: Request):
 
 
 @app.get("/api/logs")
-async def get_logs(request: Request):
+async def get_logs(request: Request, user: User = Depends(get_current_user_or_redirect)):
     user_state = get_session(request)
     return {"logs": user_state.logs}
 
@@ -419,6 +707,13 @@ async def run_pipeline(
             {"status": "error", "message": "No ingresaste ninguna keyword."},
             status_code=400,
         )
+    if len(kw_list) > 20:
+        return JSONResponse(
+            {"status": "error", "message": "Maximo 20 keywords por ejecucion."},
+            status_code=400,
+        )
+    # Limitar longitud de cada keyword
+    kw_list = [k[:200] for k in kw_list]
 
     user_state.reset()
     user_state.user_id = user.id
@@ -455,61 +750,61 @@ async def api_history(user: User = Depends(get_current_user_or_redirect), db: Se
     return {"history": history_list}
 
 @app.post("/api/generate-schema")
-async def api_generate_schema(request: Request, user: User = Depends(get_current_user_or_redirect)):
+async def api_generate_schema(body: SchemaRequest, user: User = Depends(get_current_user_or_redirect)):
     """Genera Meta Tags de Alto CTR y Schema JSON-LD (FAQPage) bajo demanda."""
     try:
-        data = await request.json()
-        kw = data.get("keyword", "").strip()
-        questions = data.get("questions", [])
-        country = data.get("country", "Colombia")
+        kw = body.keyword.strip()
+        questions = body.questions
+        country = body.country
         if not kw:
             return JSONResponse({"error": "Keyword requerida"}, status_code=400)
 
-        from scraper.ai_filter import generar_schema_y_meta_tags
+        from scraper.ai_generator import generar_schema_y_meta_tags
         schema_data = generar_schema_y_meta_tags(kw, questions, pais=country)
         return JSONResponse(schema_data)
     except Exception as e:
-        logger.error(f"Error generando schema: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
+        logger.error("Error generando schema: %s", e)
+        return JSONResponse({"error": "Error generando schema. Intenta de nuevo."}, status_code=500)
 
 @app.post("/api/generate-ads-copy")
-async def api_generate_ads_copy(request: Request, user: User = Depends(get_current_user_or_redirect)):
+async def api_generate_ads_copy(body: AdsCopyRequest, user: User = Depends(get_current_user_or_redirect)):
     """Genera Copies de Google Ads, Facebook Ads y Hooks para TikTok bajo demanda."""
     try:
-        data = await request.json()
-        kw = data.get("keyword", "").strip()
-        questions = data.get("questions", [])
-        intent = data.get("intent", "Informativa / Comercial")
-        country = data.get("country", "Colombia")
+        kw = body.keyword.strip()
+        questions = body.questions
+        intent = body.intent
+        country = body.country
         if not kw:
             return JSONResponse({"error": "Keyword requerida"}, status_code=400)
 
-        from scraper.ai_filter import generar_ads_copy
+        from scraper.ai_generator import generar_copywriting_ads_y_hooks as generar_ads_copy
         ads_data = generar_ads_copy(kw, preguntas=questions, intencion=intent, pais=country)
         return JSONResponse(ads_data)
     except Exception as e:
-        logger.error(f"Error generando ads copy: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
+        logger.error("Error generando ads copy: %s", e)
+        return JSONResponse({"error": "Error generando ads copy. Intenta de nuevo."}, status_code=500)
 
 
 # NOTE: /api/generate-brief eliminado — reemplazado por el Estudio Editorial & Notas (/editorial)
 
 @app.post("/api/set-groq-model")
-async def api_set_groq_model(request: Request, user: User = Depends(get_current_user_or_redirect)):
+async def api_set_groq_model(body: GroqModelRequest, user: User = Depends(get_current_user_or_redirect)):
     """Cambia el modelo de Groq activo dinámicamente."""
     try:
-        data = await request.json()
-        model_id = data.get("model", "").strip()
+        model_id = body.model.strip()
         if not model_id:
             return JSONResponse({"error": "Modelo requerido"}, status_code=400)
 
         import config
+        allowed_models = [m["id"] for m in getattr(config, "GROQ_AVAILABLE_MODELS", [])]
+        if allowed_models and model_id not in allowed_models:
+            return JSONResponse({"error": "Modelo no permitido."}, status_code=400)
         config.GROQ_MODEL = model_id
         logger.info("Modelo de Groq actualizado dinámicamente a: %s", model_id)
         return JSONResponse({"status": "ok", "current_model": model_id})
     except Exception as e:
         logger.error("Error cambiando modelo Groq: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return JSONResponse({"error": "Error cambiando modelo."}, status_code=500)
 
 @app.get("/api/tags-data")
 async def api_tags_data(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -546,7 +841,7 @@ async def api_tags_generate(request: Request, user: User = Depends(get_current_u
         return JSONResponse({"keyword": kw, "tags": tags_data, "has_data": bool(tags_data)})
     except Exception as e:
         logger.error("Error generando tags: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return JSONResponse({"error": "Error generando tags."}, status_code=500)
 
 
 @app.get("/api/editorial-session-data")
@@ -589,7 +884,7 @@ async def api_editorial_tags_reales(request: Request, user: User = Depends(get_c
         return JSONResponse(tags_data)
     except Exception as e:
         logger.error("Error obteniendo tags reales: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return JSONResponse({"error": "Error obteniendo tags reales."}, status_code=500)
 
 @app.post("/api/editorial/idear")
 async def api_editorial_idear(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -609,7 +904,7 @@ async def api_editorial_idear(request: Request, user: User = Depends(get_current
         return JSONResponse({"ideas": ideas, "tags_reales": tags_data})
     except Exception as e:
         logger.error("Error ideando notas editoriales: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return JSONResponse({"error": "Error generando ideas editoriales."}, status_code=500)
 
 @app.post("/api/editorial/redactar")
 async def api_editorial_redactar(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -639,7 +934,7 @@ async def api_editorial_redactar(request: Request, user: User = Depends(get_curr
         return JSONResponse(nota)
     except Exception as e:
         logger.error("Error redactando nota editorial: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return JSONResponse({"error": "Error redactando nota editorial."}, status_code=500)
 
 @app.post("/api/editorial/exportar-docx")
 async def api_editorial_exportar_docx(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -653,9 +948,13 @@ async def api_editorial_exportar_docx(request: Request, user: User = Depends(get
         from scraper.editorial_ideator import exportar_nota_docx
         doc_stream = exportar_nota_docx(nota_data)
         
-        # Nombre de archivo limpio
+        # Nombre de archivo limpio (prevenir header injection)
         h1_raw = nota_data.get("titular_h1", "Nota_Editorial")
-        clean_name = re.sub(r'[\\/*?:"<>|¿¡]', "", h1_raw).strip().replace(" ", "_")[:60]
+        clean_name = re.sub(r'[^\w\s-]', "", h1_raw).strip().replace(" ", "_")[:60]
+        if not clean_name:
+            clean_name = "Nota_Editorial"
+        # Prevenir path traversal en filename
+        clean_name = re.sub(r'\.\.', "", clean_name)
         filename = f"{clean_name}.docx"
 
         return StreamingResponse(
@@ -665,7 +964,7 @@ async def api_editorial_exportar_docx(request: Request, user: User = Depends(get
         )
     except Exception as e:
         logger.error("Error exportando docx: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return JSONResponse({"error": "Error exportando documento."}, status_code=500)
 
 @app.get("/download/history/{item_id}")
 async def download_history_excel(item_id: int, user: User = Depends(get_current_user_or_redirect), db: Session = Depends(get_db)):
@@ -703,7 +1002,7 @@ async def download_history_excel(item_id: int, user: User = Depends(get_current_
         )
     except Exception as e:
         logger.exception("Error generando Excel histórico")
-        return JSONResponse({"error": f"Error generando Excel histórico: {e}"}, status_code=500)
+        return JSONResponse({"error": "Error generando Excel historico."}, status_code=500)
 
 
 # ── Descarga de resultados ────────────────────────────────────────────────────
@@ -745,7 +1044,7 @@ async def download_excel(request: Request, user: User = Depends(get_current_user
             )
         except Exception as e:
             logger.exception("Error generando Excel")
-            return JSONResponse({"error": f"Error generando Excel: {e}"}, status_code=500)
+            return JSONResponse({"error": "Error generando Excel."}, status_code=500)
     else:
         # Modo Batch: generar un ZIP con un Excel por cada keyword
         import zipfile
@@ -782,12 +1081,12 @@ async def download_excel(request: Request, user: User = Depends(get_current_user
             )
         except Exception as e:
             logger.exception("Error generando ZIP de Excel")
-            return JSONResponse({"error": f"Error generando ZIP: {e}"}, status_code=500)
+            return JSONResponse({"error": "Error generando ZIP."}, status_code=500)
 
 
 
 @app.get("/download/json")
-async def download_json(request: Request):
+async def download_json(request: Request, user: User = Depends(get_current_user_or_redirect)):
     user_state = get_session(request)
     if not user_state.last_run_data:
         return JSONResponse({"error": "No hay datos para exportar."}, status_code=404)
@@ -825,29 +1124,41 @@ async def save_google_ads_config(
     customer_id: str = Form(""),
     user: User = Depends(get_current_user_or_redirect),
 ):
-    """Guarda la configuración de Google Ads en los archivos locales."""
+    """Guarda la configuracion de Google Ads en los archivos locales."""
     yaml_path = getattr(config, "GOOGLE_ADS_CONFIG_PATH", os.path.join(BASE_DIR, "google-ads.yaml"))
     cid_path = getattr(config, "GOOGLE_ADS_CUSTOMER_ID_FILE", os.path.join(BASE_DIR, "google-ads.customer-id.txt"))
 
+    # Preservar valores existentes si el campo viene vacio
+    existing = config.parse_yaml_simple(yaml_path) if os.path.exists(yaml_path) else {}
+
+    def _sanitize_yaml_val(val: str) -> str:
+        return re.sub(r'[\n\r"\\]', '', val).strip()[:500]
+
+    final_dev = _sanitize_yaml_val(developer_token) if developer_token.strip() else _sanitize_yaml_val(existing.get("developer_token", ""))
+    final_cid = _sanitize_yaml_val(client_id) if client_id.strip() else _sanitize_yaml_val(existing.get("client_id", ""))
+    final_csec = _sanitize_yaml_val(client_secret) if client_secret.strip() else _sanitize_yaml_val(existing.get("client_secret", ""))
+    final_refresh = _sanitize_yaml_val(refresh_token) if refresh_token.strip() else _sanitize_yaml_val(existing.get("refresh_token", ""))
+    final_login = _sanitize_yaml_val(login_customer_id.replace("-", "")) if login_customer_id.strip() else _sanitize_yaml_val(existing.get("login_customer_id", ""))
+
     yaml_content = (
-        f'developer_token: "{developer_token}"\n'
-        f'client_id: "{client_id}"\n'
-        f'client_secret: "{client_secret}"\n'
-        f'refresh_token: "{refresh_token}"\n'
-        f'login_customer_id: "{login_customer_id.replace("-", "").strip()}"\n'
+        f'developer_token: "{final_dev}"\n'
+        f'client_id: "{final_cid}"\n'
+        f'client_secret: "{final_csec}"\n'
+        f'refresh_token: "{final_refresh}"\n'
+        f'login_customer_id: "{final_login}"\n'
         f'use_proto_plus: true\n'
     )
     try:
         with open(yaml_path, "w", encoding="utf-8") as f:
             f.write(yaml_content)
-        clean_cid = customer_id.replace("-", "").strip()
+        clean_cid = re.sub(r'[^0-9]', '', customer_id)[:20]
         with open(cid_path, "w", encoding="utf-8") as f:
             f.write(clean_cid)
         logger.info("Google Ads config guardada por %s", user.username)
-        return JSONResponse({"status": "ok", "message": "Configuración de Google Ads guardada correctamente."})
+        return JSONResponse({"status": "ok", "message": "Configuracion de Google Ads guardada correctamente."})
     except Exception as exc:
         logger.exception("Error guardando config de Google Ads")
-        return JSONResponse({"status": "error", "message": f"Error guardando: {exc}"}, status_code=500)
+        return JSONResponse({"status": "error", "message": "Error guardando configuracion."}, status_code=500)
 
 
 @app.post("/api/test/google-ads")
@@ -894,7 +1205,7 @@ async def test_google_ads_connection(
         return JSONResponse(res)
     except Exception as exc:
         logger.exception("Error en test de Google Ads")
-        return JSONResponse({"success": False, "detail": f"Error inesperado: {exc}"}, status_code=500)
+        return JSONResponse({"success": False, "detail": "Error inesperado en la prueba."}, status_code=500)
 
 
 @app.get("/api/google-ads/auth")
@@ -905,13 +1216,12 @@ async def google_ads_oauth_start(request: Request):
     cid = vals.get("client_id", "")
     csecret = vals.get("client_secret", "")
     if not cid or not csecret:
-        return JSONResponse({"error": "Primero guarda client_id y client_secret en la configuración."}, status_code=400)
+        return JSONResponse({"error": "Primero guarda client_id y client_secret en la configuracion."}, status_code=400)
 
     state = secrets.token_urlsafe(24)
-    # Construir redirect_uri basado en el host de la petición
-    host = request.headers.get("host", "localhost:8001")
-    scheme = request.headers.get("x-forwarded-proto", "http")
-    redirect_uri = f"{scheme}://{host}/api/google-ads/callback"
+    # Usar redirect_uri fijo desde config para prevenir Host header injection
+    base_url = os.environ.get("APP_BASE_URL", "http://localhost:8001").rstrip("/")
+    redirect_uri = f"{base_url}/api/google-ads/callback"
 
     _oauth_states[state] = {"client_id": cid, "client_secret": csecret, "redirect_uri": redirect_uri}
 
@@ -932,9 +1242,10 @@ async def google_ads_oauth_start(request: Request):
 async def google_ads_oauth_callback(request: Request, code: str = "", state: str = "", error: str = ""):
     """Callback de OAuth. Intercambia el code por refresh_token y lo guarda."""
     if error:
-        return HTMLResponse(f"<h2>Error de Google: {error}</h2><p><a href='/api-status'>Volver</a></p>", status_code=400)
+        safe_error = html_mod.escape(error[:200])
+        return HTMLResponse(f"<h2>Error de Google: {safe_error}</h2><p><a href='/api-status'>Volver</a></p>", status_code=400)
     if state not in _oauth_states:
-        return HTMLResponse("<h2>Estado inválido o expirado.</h2><p><a href='/api-status'>Volver</a></p>", status_code=400)
+        return HTMLResponse("<h2>Estado invalido o expirado.</h2><p><a href='/api-status'>Volver</a></p>", status_code=400)
 
     ctx = _oauth_states.pop(state)
     import requests as http_requests
@@ -950,22 +1261,25 @@ async def google_ads_oauth_callback(request: Request, code: str = "", state: str
         token_data = resp.json()
     except Exception as exc:
         logger.exception("Error intercambiando code por tokens")
-        return HTMLResponse(f"<h2>Error obteniendo tokens: {exc}</h2><p><a href='/api-status'>Volver</a></p>", status_code=500)
+        return HTMLResponse("<h2>Error obteniendo tokens. Reintenta el flujo.</h2><p><a href='/api-status'>Volver</a></p>", status_code=500)
 
     new_refresh = token_data.get("refresh_token", "")
     if not new_refresh:
-        return HTMLResponse("<h2>No se recibió refresh_token. Reintenta el flujo.</h2><p><a href='/api-status'>Volver</a></p>", status_code=400)
+        return HTMLResponse("<h2>No se recibio refresh_token. Reintenta el flujo.</h2><p><a href='/api-status'>Volver</a></p>", status_code=400)
 
     # Leer yaml actual y sobrescribir refresh_token
     yaml_path = getattr(config, "GOOGLE_ADS_CONFIG_PATH", os.path.join(BASE_DIR, "google-ads.yaml"))
     vals = config.parse_yaml_simple(yaml_path)
-    vals["refresh_token"] = new_refresh
+
+    def _sanitize_yaml_val(val: str) -> str:
+        return re.sub(r'[\n\r"\\]', '', str(val)).strip()[:500]
+
     yaml_content = (
-        f'developer_token: "{vals.get("developer_token", "")}"\n'
-        f'client_id: "{vals.get("client_id", "")}"\n'
-        f'client_secret: "{vals.get("client_secret", "")}"\n'
-        f'refresh_token: "{new_refresh}"\n'
-        f'login_customer_id: "{vals.get("login_customer_id", "")}"\n'
+        f'developer_token: "{_sanitize_yaml_val(vals.get("developer_token", ""))}"\n'
+        f'client_id: "{_sanitize_yaml_val(vals.get("client_id", ""))}"\n'
+        f'client_secret: "{_sanitize_yaml_val(vals.get("client_secret", ""))}"\n'
+        f'refresh_token: "{_sanitize_yaml_val(new_refresh)}"\n'
+        f'login_customer_id: "{_sanitize_yaml_val(vals.get("login_customer_id", ""))}"\n'
         f'use_proto_plus: true\n'
     )
     try:
@@ -973,7 +1287,7 @@ async def google_ads_oauth_callback(request: Request, code: str = "", state: str
             f.write(yaml_content)
     except Exception as exc:
         logger.exception("Error guardando refresh_token")
-        return HTMLResponse(f"<h2>Token obtenido pero error guardando: {exc}</h2>", status_code=500)
+        return HTMLResponse("<h2>Token obtenido pero hubo un error guardandolo.</h2>", status_code=500)
 
     logger.info("Refresh token de Google Ads obtenido y guardado exitosamente.")
     return RedirectResponse("/api-status?oauth=success")
@@ -982,21 +1296,31 @@ async def google_ads_oauth_callback(request: Request, code: str = "", state: str
 # ── Tarea asíncrona del pipeline ──────────────────────────────────────────────
 async def _run_pipeline_task(user_state: SessionState, keywords: List[str], country_code: str, profile: str):
     try:
-        user_state.add_log("INFO", "Cargando módulos del motor de scraping...")
+        user_state.add_log("INFO", "Cargando modulos del motor de scraping...")
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
             None, _blocking_pipeline, user_state, keywords, country_code, profile
         )
         user_state.last_run_data = result
-        user_state.status_msg = f"✅ Completado. {len(result)} keyword(s) procesadas."
+        user_state.status_msg = f"Completado. {len(result)} keyword(s) procesadas."
         user_state.progress = 100
         user_state.finished_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         user_state.add_log("SUCCESS", f"Pipeline completado exitosamente. {len(result)} resultados.")
-        
-        # Guardar en Base de Datos el historial de busqueda
+
+        # Commit estado de sesion a DB
+        try:
+            if user_state._db:
+                db_gen = get_db()
+                db = next(db_gen)
+                db.merge(user_state._db)
+                db.commit()
+                db_gen.close()
+        except Exception as se:
+            logger.error("Error guardando estado de sesion: %s", se)
+
+        # Guardar historial de busqueda
         if user_state.user_id:
             try:
-                # Usar un generador manual de db session porque estamos en background sin request
                 db_gen = get_db()
                 db = next(db_gen)
                 for res in result:
@@ -1013,16 +1337,25 @@ async def _run_pipeline_task(user_state: SessionState, keywords: List[str], coun
                 db_gen.close()
                 user_state.add_log("INFO", "Resultados guardados en tu Historial.")
             except Exception as dbe:
-                logger.error(f"Error guardando historial en BD: {dbe}")
+                logger.error("Error guardando historial en BD: %s", dbe)
                 user_state.add_log("WARNING", "Error guardando en historial de BD.")
-                
+
     except Exception as exc:
         logger.exception("Error en pipeline")
-        user_state.error_msg = str(exc)
-        user_state.status_msg = f"❌ Error: {exc}"
-        user_state.add_log("ERROR", f"Pipeline falló: {exc}")
+        user_state.error_msg = "Error en el pipeline."
+        user_state.status_msg = "Error: hubo un problema procesando las keywords."
+        user_state.add_log("ERROR", "Pipeline fallo. Revisa los logs del servidor.")
     finally:
         user_state.is_running = False
+        # Commit final del estado
+        try:
+            if user_state._db:
+                db = SessionLocal()
+                db.merge(user_state._db)
+                db.commit()
+                db.close()
+        except Exception:
+            pass
 
 
 def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_code: str, profile: str) -> List[dict]:
@@ -1063,7 +1396,8 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
             ai_clusters = []
             ai_intents = {}
             if GROQ_API_KEY:
-                from scraper.ai_filter import filtrar_con_ia, clasificar_intencion_ia, generar_clusters_tematicos
+                from scraper.ai_filter import filtrar_con_ia
+                from scraper.ai_generator import clasificar_intencion_ia, generar_clusters_tematicos
                 country_name = ctx.get("country_name", "Colombia")
                 sug = filtrar_con_ia(sug, kw, country_name) if sug else sug
                 preg_ac = filtrar_con_ia(preg_ac, kw, country_name) if preg_ac else preg_ac
@@ -1112,7 +1446,7 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
                 pass
 
             # Generar Meta Tags, Schema FAQPage, Copies de Ads, KGR y Estudio Editorial
-            from scraper.ai_filter import generar_schema_y_meta_tags, generar_copywriting_ads_y_hooks
+            from scraper.ai_generator import generar_schema_y_meta_tags, generar_copywriting_ads_y_hooks
             from scraper.kgr_estimator import estimar_kgr
             from scraper.editorial_ideator import obtener_tags_reales_google, generar_ideas_notas_angulos, redactar_nota_editorial
 
@@ -1175,7 +1509,7 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
 
 
         except Exception as e:
-            user_state.add_log("ERROR", f"  ✗ Error en '{kw}': {e}")
+            user_state.add_log("ERROR", f"  Error procesando '{kw}'.")
             all_results.append({
                 "keyword": kw,
                 "category": "Error",

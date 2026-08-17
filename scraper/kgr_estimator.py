@@ -13,9 +13,7 @@ Rangos:
   - KGR > 1.00: 🔴 Término Saturado
 """
 
-import math
-import re
-from typing import Dict, List, Optional
+from typing import Optional
 
 
 def estimar_kgr(

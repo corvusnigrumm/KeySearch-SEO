@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "keysearch"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["localhost:8000"]
+        labels:
+          app: "keysearch"
+          environment: "production"

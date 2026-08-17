@@ -1,0 +1,60 @@
+[project]
+name = "keysearch"
+version = "10.0.0"
+description = "Suite Profesional de SEO, Keyword Research, Content Briefs, Schema FAQ y Ads Copywriting."
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "Proprietary"}
+
+dependencies = [
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml",
+    "openpyxl>=3.1.0",
+    "rich>=13.7.0",
+    "pytrends>=4.9.0",
+    "pandas",
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.23.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.9",
+    "aiofiles>=23.0.0",
+    "python-dotenv>=1.0.0",
+    "groq",
+    "httpx>=0.27.0",
+    "openai>=1.30.0",
+    "SQLAlchemy>=2.0.0",
+    "python-jose[cryptography]>=3.3.0",
+    "prometheus_client>=0.20.0",
+    "bcrypt>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "F841",   # local variable assigned but never used (common in scrapers)
+    "B008",   # do not perform function calls in argument defaults
+    "A001",   # variable is shadowing a Python builtin
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short"

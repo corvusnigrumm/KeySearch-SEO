@@ -194,76 +194,76 @@
 
         <!-- Mensajes de Alerta -->
         {% if error %}
-        <div class="bg-rose-500/15 border border-rose-500/40 text-rose-300 px-4 py-3 rounded-xl mb-6 text-xs flex items-start gap-2 backdrop-blur-md">
-            <span class="material-symbols-outlined text-sm shrink-0 text-rose-400 mt-0.5">error</span>
+        <div role="alert" class="bg-rose-500/15 border border-rose-500/40 text-rose-300 px-4 py-3 rounded-xl mb-6 text-xs flex items-start gap-2 backdrop-blur-md">
+            <span class="material-symbols-outlined text-sm shrink-0 text-rose-400 mt-0.5" aria-hidden="true">error</span>
             <span>{{ error }}</span>
         </div>
         {% endif %}
         
         {% if msg %}
-        <div class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded-xl mb-6 text-xs flex items-start gap-2 backdrop-blur-md">
-            <span class="material-symbols-outlined text-sm shrink-0 text-emerald-400 mt-0.5">check_circle</span>
+        <div role="status" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded-xl mb-6 text-xs flex items-start gap-2 backdrop-blur-md">
+            <span class="material-symbols-outlined text-sm shrink-0 text-emerald-400 mt-0.5" aria-hidden="true">check_circle</span>
             <span>{{ msg }}</span>
         </div>
         {% endif %}
 
         <!-- Pestañas de Navegación -->
-        <div class="flex bg-slate-900/70 p-1 rounded-xl border border-slate-800 mb-6 backdrop-blur">
-            <button id="tab-login" onclick="switchTab('login')"
+        <div role="tablist" aria-label="Tipo de formulario" class="flex bg-slate-900/70 p-1 rounded-xl border border-slate-800 mb-6 backdrop-blur">
+            <button id="tab-login" role="tab" aria-selected="true" aria-controls="form-login" onclick="switchTab('login')"
                 class="flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md">
-                <span class="material-symbols-outlined text-sm">login</span>
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">login</span>
                 <span>Ingresar</span>
             </button>
-            <button id="tab-register" onclick="switchTab('register')"
+            <button id="tab-register" role="tab" aria-selected="false" aria-controls="form-register" onclick="switchTab('register')"
                 class="flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200">
-                <span class="material-symbols-outlined text-sm">person_add</span>
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">person_add</span>
                 <span>Crear Perfil</span>
             </button>
         </div>
 
         <!-- Formulario Iniciar Sesión -->
-        <form id="form-login" action="/login" method="POST" class="space-y-4">
+        <form id="form-login" action="/login" method="POST" class="space-y-4" aria-label="Formulario de inicio de sesion">
             <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Nombre de Perfil</label>
+                <label for="login-username" class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Nombre de Perfil</label>
                 <div class="input-glow rounded-xl flex items-center px-3.5 py-2.5">
-                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5">account_circle</span>
-                    <input type="text" name="username" required placeholder="Tu usuario..."
-                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none"/>
+                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5" aria-hidden="true">account_circle</span>
+                    <input id="login-username" type="text" name="username" required placeholder="Tu usuario..."
+                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none" autocomplete="username"/>
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Contraseña</label>
+                <label for="login-password" class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Contraseña</label>
                 <div class="input-glow rounded-xl flex items-center px-3.5 py-2.5">
-                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5">lock</span>
-                    <input type="password" name="password" required placeholder="••••••••"
-                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none"/>
+                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5" aria-hidden="true">lock</span>
+                    <input id="login-password" type="password" name="password" required placeholder="••••••••"
+                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none" autocomplete="current-password"/>
                 </div>
             </div>
 
             <button type="submit" class="btn-glow-primary w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mt-6">
                 <span>Entrar al Hub</span>
-                <span class="material-symbols-outlined text-base">arrow_forward</span>
+                <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_forward</span>
             </button>
         </form>
 
         <!-- Formulario Crear Perfil -->
-        <form id="form-register" action="/register" method="POST" class="space-y-4 hidden">
+        <form id="form-register" action="/register" method="POST" class="space-y-4 hidden" aria-label="Formulario de registro">
             <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Nuevo Nombre de Perfil</label>
+                <label for="register-username" class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Nuevo Nombre de Perfil</label>
                 <div class="input-glow rounded-xl flex items-center px-3.5 py-2.5">
-                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5">badge</span>
-                    <input type="text" name="username" required placeholder="Ej: Carlos SEO"
-                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none"/>
+                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5" aria-hidden="true">badge</span>
+                    <input id="register-username" type="text" name="username" required placeholder="Ej: Carlos SEO"
+                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none" autocomplete="username"/>
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Contraseña de Acceso</label>
+                <label for="register-password" class="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">Contraseña de Acceso</label>
                 <div class="input-glow rounded-xl flex items-center px-3.5 py-2.5">
-                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5">key</span>
-                    <input type="password" name="password" required placeholder="Mínimo 4 caracteres"
-                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none"/>
+                    <span class="material-symbols-outlined text-slate-400 text-lg mr-2.5" aria-hidden="true">key</span>
+                    <input id="register-password" type="password" name="password" required placeholder="Mínimo 4 caracteres"
+                        class="bg-transparent w-full text-sm text-white placeholder-slate-500 focus:outline-none" autocomplete="new-password"/>
                 </div>
             </div>
 

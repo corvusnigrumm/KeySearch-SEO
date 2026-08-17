@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+.env
+.env.*
+*.db
+data/
+.pytest_cache
+.coverage
+htmlcov/
+*.md
+!requirements.txt
+stitch_keysearch_ai_data_engine/
+.vscode/
+.idea/

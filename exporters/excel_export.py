@@ -12,7 +12,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 from config import APP_NAME, APP_VERSION, EXCEL_TEMPLATE_PATH, OUTPUT_DIR
-from scraper.ai_filter import generar_bloques_editoriales
+from scraper.ai_generator import generar_bloques_editoriales
 from scraper.utils import generar_nombre_archivo
 from scraper.volume_estimator import ordenar_por_volumen
 

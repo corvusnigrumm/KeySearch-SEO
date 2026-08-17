@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="Key Search V 10.0 Ultra - Suite Profesional de SEO y Marketing Digital"/>
+    <title>{% block title %}Key Search V10{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+    {% include "_tailwind_config.html" %}
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased">
+    {% block body %}
+    <div class="flex min-h-screen">
+        {% include "_sidebar.html" %}
+        <div class="flex-1 flex flex-col ml-[240px]">
+            {% include "_topbar.html" %}
+            <main id="main-content" role="main" class="flex-1 p-6" aria-label="{% block main_label %}Contenido principal{% endblock %}">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    {% endblock %}
+
+    <script>
+    // Common app utilities
+    window.KeySearch = {
+        // CSRF token from cookie
+        getCsrfToken() {
+            const match = document.cookie.match(/csrf_token=([^;]+)/);
+            return match ? match[1] : '';
+        },
+        // Show toast notification
+        showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container') || (() => {
+                const c = document.createElement('div');
+                c.id = 'toast-container';
+                c.className = 'fixed top-4 right-4 z-50 flex flex-col gap-2';
+                c.setAttribute('role', 'alert');
+                c.setAttribute('aria-live', 'polite');
+                document.body.appendChild(c);
+                return c;
+            })();
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500',
+                warning: 'bg-amber-500'
+            };
+            const toast = document.createElement('div');
+            toast.className = `${colors[type] || colors.info} text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-[slideIn_0.3s_ease]`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 4000);
+        },
+        // Format numbers with locale
+        formatNumber(n) {
+            return new Intl.NumberFormat('es-CO').format(n);
+        },
+        // Loading state toggle
+        setLoading(btn, loading) {
+            if (loading) {
+                btn.dataset.originalText = btn.textContent;
+                btn.disabled = true;
+                btn.classList.add('opacity-60', 'cursor-wait');
+                btn.innerHTML = '<span class="inline-block animate-spin mr-2">&#8987;</span>Cargando...';
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('opacity-60', 'cursor-wait');
+                btn.textContent = btn.dataset.originalText || btn.textContent;
+            }
+        }
+    };
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

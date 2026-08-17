@@ -2,27 +2,50 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# ── Secretos y credenciales (NUNCA commitear) ──
+.env
+.env.*
+!.env.example
+*.env
 google-ads.yaml
-archivo google-ads.yaml.txt
 google-ads.customer-id.txt
+archivo google-ads.yaml.txt
 client_secret_*.json
 oauth_*.py
 intercambiar_token.py
 renovar_token_google_ads.py
 generate_google_ads_refresh_token.py
-Nuevo Documento de texto.txt
+*.txt.key
+GROQ_API_KEY.env
+service_account*.json
+*.pem
+*.key
+
+# ── Build / Dist ──
 outputs/
 dist/
 build/
-downloaded_files/
 *.exe
+*.spec
+
+# ── Datos / Cache ──
+downloaded_files/
+data/
+*.csv
 scratch/
+
+# ── Documentos generados ──
 *.xlsx
 *.pdf
 *.log
-.env
-.env.*
-*.txt.key
-data/
-*.csv
-GROQ_API_KEY.env
+
+# ── Temp / OS ──
+.DS_Store
+Thumbs.db
+Nuevo Documento de texto.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/

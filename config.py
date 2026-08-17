@@ -24,7 +24,7 @@ def _runtime_base_dir() -> str:
 
 BASE_DIR = _runtime_base_dir()
 APP_NAME = "KeySearch Editorial & Ads Optimizer"
-APP_VERSION = "6.0"
+APP_VERSION = "10.0"
 
 
 def _read_optional_value(path: str) -> str:

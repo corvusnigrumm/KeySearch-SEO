@@ -6,7 +6,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scraper.ai_filter import generar_copywriting_ads_y_hooks
+from scraper.ai_generator import generar_copywriting_ads_y_hooks
 
 
 def test_ads_copywriting():

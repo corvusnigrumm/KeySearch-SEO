@@ -52,6 +52,33 @@ El proyecto cuenta con configuración nativa para **Render** ([`render.yaml`](re
 
 ---
 
+## Seguridad
+
+Ver [SECURITY.md](SECURITY.md) para politicas de Reporte de Vulnerabilidades.
+
+---
+
+## Cambios
+
+Ver [CHANGELOG.md](CHANGELOG.md) para historial de versiones.
+
+---
+
+## Endpoints de Monitoreo
+
+| Endpoint | Descripcion |
+|----------|-------------|
+| `GET /ping` | Health check basico (200 OK) |
+| `GET /health` | Health check detallado (DB, uptime, version, AI status) |
+
+---
+
+## Licencia
+
+Uso interno / Privado.
+
+---
+
 ## 💻 Ejecución Local
 
 ```bash

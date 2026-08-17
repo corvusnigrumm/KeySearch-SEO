@@ -68,7 +68,7 @@ _PATRONES_COMERCIAL = [
 _PATRONES_INFORMATIVO = [
     r"\bque es\b", r"\bcomo\b", r"\bpor que\b", r"\bcuando\b", r"\bdonde\b",
     r"\bquien\b", r"\bpara que sirve\b", r"\bsignificado\b", r"\btutorial\b",
-    r"\bguia\b", r"\bpasp a paso\b", r"\bdefinicion\b", r"\bejemplos\b",
+    r"\bguia\b", r"\bpasos a paso\b", r"\bdefinicion\b", r"\bejemplos\b",
     r"\btipos de\b", r"\bhistoria\b", r"\bcaracteristicas\b",
 ]
 

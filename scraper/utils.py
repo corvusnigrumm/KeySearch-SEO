@@ -92,5 +92,3 @@ def es_relevante_riguroso(keyword_base: str, sugerencia: str) -> bool:
 
     umbral_minimo = max(1, int(len(palabras_kb) * 0.45))
     return coincidencias >= umbral_minimo
-
-    return False
