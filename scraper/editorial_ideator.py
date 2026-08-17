@@ -6,10 +6,8 @@ y Redacción Periodística Estructurada según el Manual de Referencia de Estilo
 import io
 import json
 import logging
-import re
-from typing import Dict, List, Optional
 
-from config import GROQ_API_KEY, GROQ_MODEL, LANG, COUNTRY
+from config import GROQ_API_KEY
 from scraper.ai_client import post_groq_json as _post_groq_json
 from scraper.volume_estimator import HAS_PYTRENDS, TRENDS_TIMEFRAME
 
@@ -34,8 +32,8 @@ def _normalizar_pais(pais: str) -> str:
 
 def obtener_tags_reales_google(
     keyword: str,
-    sugerencias: List[str] = None,
-    preguntas_paa: List[str] = None,
+    sugerencias: list[str] = None,
+    preguntas_paa: list[str] = None,
     pais: str = "Colombia",
     language_code: str = "es",
 ) -> dict:
@@ -45,7 +43,7 @@ def obtener_tags_reales_google(
     2. Google Trends (Top Related Queries)
     3. Google Trends (Related Topics / Entidades reconocidas)
     4. Google Autocomplete exacto (Long-tail)
-    
+
     Garantía: Cero tags inventados o genéricos.
     """
     geo_code = _normalizar_pais(pais)
@@ -59,6 +57,7 @@ def obtener_tags_reales_google(
     if HAS_PYTRENDS and keyword:
         try:
             from pytrends.request import TrendReq
+
             pytrends = TrendReq(hl=language_code, tz=360, timeout=(10, 25))
             pytrends.build_payload(
                 [keyword[:90]],
@@ -73,7 +72,7 @@ def obtener_tags_reales_google(
                 related_dict = pytrends.related_queries()
                 if keyword in related_dict and related_dict[keyword]:
                     data_kw = related_dict[keyword]
-                    
+
                     # Rising
                     if "rising" in data_kw and data_kw["rising"] is not None:
                         df_rising = data_kw["rising"]
@@ -82,7 +81,9 @@ def obtener_tags_reales_google(
                                 q_name = str(row["query"]).strip()
                                 val = row.get("value", "")
                                 val_str = "Breakout" if str(val).lower() == "breakout" or val > 1000 else f"+{val}%"
-                                rising_queries.append({"tag": q_name, "tipo": "Breakout / En Aumento", "crecimiento": val_str})
+                                rising_queries.append(
+                                    {"tag": q_name, "tipo": "Breakout / En Aumento", "crecimiento": val_str}
+                                )
 
                     # Top
                     if "top" in data_kw and data_kw["top"] is not None:
@@ -91,7 +92,9 @@ def obtener_tags_reales_google(
                             for _, row in df_top.head(10).iterrows():
                                 q_name = str(row["query"]).strip()
                                 val = row.get("value", 100)
-                                top_queries.append({"tag": q_name, "tipo": "Top Búsqueda", "interes_relativo": int(val)})
+                                top_queries.append(
+                                    {"tag": q_name, "tipo": "Top Búsqueda", "interes_relativo": int(val)}
+                                )
             except Exception as e:
                 logger.warning("Error extrayendo related_queries en pytrends: %s", e)
 
@@ -170,27 +173,141 @@ def obtener_tags_reales_google(
     }
 
 
-def _detectar_categoria_contextual(keyword: str, sugerencias: List[str] = None, preguntas_paa: List[str] = None) -> str:
+def _detectar_categoria_contextual(keyword: str, sugerencias: list[str] = None, preguntas_paa: list[str] = None) -> str:
     """Clasifica la keyword en su dominio temático real para evitar titulares disparatados."""
     full_text = " ".join([str(keyword)] + (sugerencias or []) + (preguntas_paa or [])).lower()
-    
-    if any(k in full_text for k in ["terremoto", "sismo", "temblor", "epicentro", "magnitud", "replica", "sismologico", "desastre", "tsunami", "volcan", "inundacion", "lluvias", "huracan", "emergencia", "muertos", "heridos", "alerta"]):
+
+    if any(
+        k in full_text
+        for k in [
+            "terremoto",
+            "sismo",
+            "temblor",
+            "epicentro",
+            "magnitud",
+            "replica",
+            "sismologico",
+            "desastre",
+            "tsunami",
+            "volcan",
+            "inundacion",
+            "lluvias",
+            "huracan",
+            "emergencia",
+            "muertos",
+            "heridos",
+            "alerta",
+        ]
+    ):
         return "noticias_sismos"
-    if any(k in full_text for k in ["banco", "tarjeta", "credito", "debito", "cuenta", "ahorros", "prestamo", "hipoteca", "interes", "subsidio", "impuesto", "dolar", "tasa", "nequi", "daviplata", "bancolombia", "davivienda", "bbva", "finanzas"]):
+    if any(
+        k in full_text
+        for k in [
+            "banco",
+            "tarjeta",
+            "credito",
+            "debito",
+            "cuenta",
+            "ahorros",
+            "prestamo",
+            "hipoteca",
+            "interes",
+            "subsidio",
+            "impuesto",
+            "dolar",
+            "tasa",
+            "nequi",
+            "daviplata",
+            "bancolombia",
+            "davivienda",
+            "bbva",
+            "finanzas",
+        ]
+    ):
         return "finanzas_banca"
-    if any(k in full_text for k in ["iphone", "samsung", "xiaomi", "huawei", "whatsapp", "android", "ios", "windows", "laptop", "procesador", "inteligencia artificial", "chatgpt", "app", "consola", "playstation"]):
+    if any(
+        k in full_text
+        for k in [
+            "iphone",
+            "samsung",
+            "xiaomi",
+            "huawei",
+            "whatsapp",
+            "android",
+            "ios",
+            "windows",
+            "laptop",
+            "procesador",
+            "inteligencia artificial",
+            "chatgpt",
+            "app",
+            "consola",
+            "playstation",
+        ]
+    ):
         return "tecnologia"
-    if any(k in full_text for k in ["receta", "cocinar", "ingredientes", "como preparar", "comida", "postre", "almuerzo", "cena", "plato", "gastronomia", "sabor", "cocina"]):
+    if any(
+        k in full_text
+        for k in [
+            "receta",
+            "cocinar",
+            "ingredientes",
+            "como preparar",
+            "comida",
+            "postre",
+            "almuerzo",
+            "cena",
+            "plato",
+            "gastronomia",
+            "sabor",
+            "cocina",
+        ]
+    ):
         return "recetas"
-    if any(k in full_text for k in ["salud", "enfermedad", "sintomas", "remedio", "beneficios", "propiedades", "medico", "doctor", "dolor", "curcuma", "colageno", "vitamina", "dieta", "organismo"]):
+    if any(
+        k in full_text
+        for k in [
+            "salud",
+            "enfermedad",
+            "sintomas",
+            "remedio",
+            "beneficios",
+            "propiedades",
+            "medico",
+            "doctor",
+            "dolor",
+            "curcuma",
+            "colageno",
+            "vitamina",
+            "dieta",
+            "organismo",
+        ]
+    ):
         return "salud_bienestar"
-    if any(k in full_text for k in ["partido", "futbol", "gol", "seleccion", "champions", "mundial", "liga", "marcador", "resultado", "pelicula", "serie", "estreno", "actor"]):
+    if any(
+        k in full_text
+        for k in [
+            "partido",
+            "futbol",
+            "gol",
+            "seleccion",
+            "champions",
+            "mundial",
+            "liga",
+            "marcador",
+            "resultado",
+            "pelicula",
+            "serie",
+            "estreno",
+            "actor",
+        ]
+    ):
         return "deportes_entretenimiento"
-    
+
     return "general"
 
 
-def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) -> List[dict]:
+def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: list[str]) -> list[dict]:
     kw_l = keyword_base.lower()
     cat = _detectar_categoria_contextual(keyword_base)
 
@@ -201,10 +318,10 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "angulo": "Último Reporte & Cobertura en Vivo",
                 "icono": "newspaper",
                 "titular_h1": f"Último reporte sobre {kw_l}: epicentro, magnitud y municipios donde se sintió",
-                "titular_discover": f"Sismo en Colombia hoy: informe oficial de magnitud y zonas donde fue percibido",
-                "bajada": f"El Servicio Sismológico y las autoridades de gestión del riesgo emiten el balance oficial tras el reciente temblor.",
-                "interlink_sugerido": f"¿Qué hacer tras un sismo en Colombia? Pasos clave para verificar estructuras en casa",
-                "tesis_editorial": f"Reportar datos oficiales de magnitud, profundidad, mapa de afectación y declaraciones institucionales.",
+                "titular_discover": "Sismo en Colombia hoy: informe oficial de magnitud y zonas donde fue percibido",
+                "bajada": "El Servicio Sismológico y las autoridades de gestión del riesgo emiten el balance oficial tras el reciente temblor.",
+                "interlink_sugerido": "¿Qué hacer tras un sismo en Colombia? Pasos clave para verificar estructuras en casa",
+                "tesis_editorial": "Reportar datos oficiales de magnitud, profundidad, mapa de afectación y declaraciones institucionales.",
                 "longitud_sugerida": "800 - 1.200 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -212,11 +329,11 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "id": "prevencion_emergencia",
                 "angulo": "Prevención & Protocolos de Emergencia",
                 "icono": "warning",
-                "titular_h1": f"¿Qué debe contener el kit de emergencia ante un sismo y cómo actuar durante el temblor?",
-                "titular_discover": f"El protocolo de seguridad definitivo ante sismos en Colombia: lo que no puede faltar en su hogar",
-                "bajada": f"Recomendaciones de los organismos de socorro para proteger a su familia y mascotas ante eventos telúricos.",
-                "interlink_sugerido": f"¿Cómo preparar a niños y adultos mayores durante una alerta de sismo?",
-                "tesis_editorial": f"Guía práctica con elementos del maletín de vida, puntos de encuentro y recomendaciones en edificios o vía pública.",
+                "titular_h1": "¿Qué debe contener el kit de emergencia ante un sismo y cómo actuar durante el temblor?",
+                "titular_discover": "El protocolo de seguridad definitivo ante sismos en Colombia: lo que no puede faltar en su hogar",
+                "bajada": "Recomendaciones de los organismos de socorro para proteger a su familia y mascotas ante eventos telúricos.",
+                "interlink_sugerido": "¿Cómo preparar a niños y adultos mayores durante una alerta de sismo?",
+                "tesis_editorial": "Guía práctica con elementos del maletín de vida, puntos de encuentro y recomendaciones en edificios o vía pública.",
                 "longitud_sugerida": "900 - 1.300 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -224,11 +341,11 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "id": "explicativo_geologico",
                 "angulo": "Explicación Científica & Geológica",
                 "icono": "public",
-                "titular_h1": f"¿Por qué tiembla tanto en Colombia y cuáles son las zonas de mayor actividad sísmica?",
-                "titular_discover": f"La razón científica por la que ocurren constantes temblores en Colombia explicada por geólogos",
-                "bajada": f"Especialistas analizan la interacción de las placas tectónicas en el territorio nacional.",
-                "interlink_sugerido": f"Conozca la falla geológica de la Mesa de los Santos y su impacto en la sismicidad del país",
-                "tesis_editorial": f"Explicar con datos sencillos la tectónica de placas en Colombia y los antecedentes históricos.",
+                "titular_h1": "¿Por qué tiembla tanto en Colombia y cuáles son las zonas de mayor actividad sísmica?",
+                "titular_discover": "La razón científica por la que ocurren constantes temblores en Colombia explicada por geólogos",
+                "bajada": "Especialistas analizan la interacción de las placas tectónicas en el territorio nacional.",
+                "interlink_sugerido": "Conozca la falla geológica de la Mesa de los Santos y su impacto en la sismicidad del país",
+                "tesis_editorial": "Explicar con datos sencillos la tectónica de placas en Colombia y los antecedentes históricos.",
                 "longitud_sugerida": "1.000 - 1.400 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -236,11 +353,11 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "id": "lineas_atencion",
                 "angulo": "Líneas de Atención & Reporte de Daños",
                 "icono": "phone_in_talk",
-                "titular_h1": f"Números de emergencia y canales para reportar afectaciones tras sismo en Colombia",
-                "titular_discover": f"¿Dónde reportar grietas o emergencias tras el sismo? Lista completa de canales oficiales",
-                "bajada": f"Directorio nacional de Cruz Roja, Defensa Civil, Bomberos y consejos para evaluar daños en edificaciones.",
-                "interlink_sugerido": f"Cómo solicitar una inspección técnica de riesgo en su municipio",
-                "tesis_editorial": f"Directorio completo de contactos de emergencia, recomendaciones de evaluación visual de daños y números de socorro.",
+                "titular_h1": "Números de emergencia y canales para reportar afectaciones tras sismo en Colombia",
+                "titular_discover": "¿Dónde reportar grietas o emergencias tras el sismo? Lista completa de canales oficiales",
+                "bajada": "Directorio nacional de Cruz Roja, Defensa Civil, Bomberos y consejos para evaluar daños en edificaciones.",
+                "interlink_sugerido": "Cómo solicitar una inspección técnica de riesgo en su municipio",
+                "tesis_editorial": "Directorio completo de contactos de emergencia, recomendaciones de evaluación visual de daños y números de socorro.",
                 "longitud_sugerida": "700 - 1.000 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -248,11 +365,11 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "id": "mitos_alarmas",
                 "angulo": "Verificación de Datos & Falsas Alarmas",
                 "icono": "fact_check",
-                "titular_h1": f"¿Se pueden predecir los sismos? Mitos y realidades aclarados por expertos sismólogos",
-                "titular_discover": f"La verdad detrás de las cadenas de redes sobre supuestos terremotos inminentes en Colombia",
-                "bajada": f"Desmintiendo falsos rumores que circulan en redes sociales sobre predicciones de sismos y luces en el cielo.",
-                "interlink_sugerido": f"¿Cómo activar las alertas sísmicas tempranas en su teléfono móvil?",
-                "tesis_editorial": f"Desmentir cadenas falsas, explicar por qué la ciencia aún no predice sismos y enseñar a verificar fuentes oficiales.",
+                "titular_h1": "¿Se pueden predecir los sismos? Mitos y realidades aclarados por expertos sismólogos",
+                "titular_discover": "La verdad detrás de las cadenas de redes sobre supuestos terremotos inminentes en Colombia",
+                "bajada": "Desmintiendo falsos rumores que circulan en redes sociales sobre predicciones de sismos y luces en el cielo.",
+                "interlink_sugerido": "¿Cómo activar las alertas sísmicas tempranas en su teléfono móvil?",
+                "tesis_editorial": "Desmentir cadenas falsas, explicar por qué la ciencia aún no predice sismos y enseñar a verificar fuentes oficiales.",
                 "longitud_sugerida": "900 - 1.200 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -265,9 +382,9 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "credit_card",
                 "titular_h1": f"Requisitos y paso a paso para solicitar {kw_l} en Colombia sin contratiempos",
                 "titular_discover": f"¿Cómo tramitar {kw_l}? Documentos, ingresos mínimos y aprobación rápida",
-                "bajada": f"Guía detallada con los criterios de evaluación, canales digitales de solicitud y tiempo de entrega.",
+                "bajada": "Guía detallada con los criterios de evaluación, canales digitales de solicitud y tiempo de entrega.",
                 "interlink_sugerido": f"¿Qué puntaje crediticio se requiere en Datacrédito para calificar a {kw_l}?",
-                "tesis_editorial": f"Explicar el procedimiento de estudio crediticio, ingresos requeridos y consejos para elevar la probabilidad de aprobación.",
+                "tesis_editorial": "Explicar el procedimiento de estudio crediticio, ingresos requeridos y consejos para elevar la probabilidad de aprobación.",
                 "longitud_sugerida": "900 - 1.300 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -277,9 +394,9 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "calculate",
                 "titular_h1": f"Tasas de interés y costos en {kw_l}: ¿conviene frente a otras opciones?",
                 "titular_discover": f"El análisis completo de costos y tasa de interés efectiva anual de {kw_l}",
-                "bajada": f"Analizamos comisiones, cuotas de manejo y cobros adicionales para que tome la mejor decisión financiera.",
-                "interlink_sugerido": f"Comparativa entre las principales opciones bancarias en Colombia",
-                "tesis_editorial": f"Desglosar tasa EA, seguro de deudores, cuota de manejo y cálculo de compras a 1 cuota sin intereses.",
+                "bajada": "Analizamos comisiones, cuotas de manejo y cobros adicionales para que tome la mejor decisión financiera.",
+                "interlink_sugerido": "Comparativa entre las principales opciones bancarias en Colombia",
+                "tesis_editorial": "Desglosar tasa EA, seguro de deudores, cuota de manejo y cálculo de compras a 1 cuota sin intereses.",
                 "longitud_sugerida": "1.000 - 1.400 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -289,9 +406,9 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "savings",
                 "titular_h1": f"¿Cómo no pagar cuota de manejo en {kw_l}? El truco legal que pocos usuarios usan",
                 "titular_discover": f"El secreto para exonerar la cuota de manejo en {kw_l}",
-                "bajada": f"Especialistas en finanzas personales revelan las metas de consumo y convenios que eliminan cobros innecesarios.",
-                "interlink_sugerido": f"Cómo solicitar la unificación de deudas o rebaja de tasa con su entidad bancaria",
-                "tesis_editorial": f"Tácticas comprobadas de negociación bancaria, cashback y metas mensuales para exonerar cuotas de manejo.",
+                "bajada": "Especialistas en finanzas personales revelan las metas de consumo y convenios que eliminan cobros innecesarios.",
+                "interlink_sugerido": "Cómo solicitar la unificación de deudas o rebaja de tasa con su entidad bancaria",
+                "tesis_editorial": "Tácticas comprobadas de negociación bancaria, cashback y metas mensuales para exonerar cuotas de manejo.",
                 "longitud_sugerida": "850 - 1.200 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -301,9 +418,9 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "shield",
                 "titular_h1": f"¿Cómo proteger {kw_l} contra clonación y estafas virtuales en Colombia?",
                 "titular_discover": f"Las recomendaciones de ciberseguridad para evitar robos y cargos no reconocidos en {kw_l}",
-                "bajada": f"Claves para configurar la clave dinámica, límites transaccionales y bloquear operaciones sospechosas en tiempo real.",
-                "interlink_sugerido": f"¿Qué hacer inmediatamente si le cobran una transacción no autorizada?",
-                "tesis_editorial": f"Paso a paso para bloquear tarjetas digitales, apagar compras internacionales y presentar reclamos de reversión de pago.",
+                "bajada": "Claves para configurar la clave dinámica, límites transaccionales y bloquear operaciones sospechosas en tiempo real.",
+                "interlink_sugerido": "¿Qué hacer inmediatamente si le cobran una transacción no autorizada?",
+                "tesis_editorial": "Paso a paso para bloquear tarjetas digitales, apagar compras internacionales y presentar reclamos de reversión de pago.",
                 "longitud_sugerida": "900 - 1.200 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -313,9 +430,9 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "help",
                 "titular_h1": f"Todo lo que debe saber sobre {kw_l} antes de firmar o contratar",
                 "titular_discover": f"Los datos cruciales sobre {kw_l} que la mayoría de clientes descubre demasiado tarde",
-                "bajada": f"Resolvemos las dudas más recurrentes sobre fechas de corte, pago mínimo e impacto en su historial crediticio.",
+                "bajada": "Resolvemos las dudas más recurrentes sobre fechas de corte, pago mínimo e impacto en su historial crediticio.",
                 "interlink_sugerido": f"¿Afecta su score financiero pagar el pago mínimo en {kw_l}?",
-                "tesis_editorial": f"Aclarar mitos de tarjetas de crédito, fechas de pago vs fechas de corte y cálculo de intereses corrientes y de mora.",
+                "tesis_editorial": "Aclarar mitos de tarjetas de crédito, fechas de pago vs fechas de corte y cálculo de intereses corrientes y de mora.",
                 "longitud_sugerida": "1.000 - 1.300 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -329,7 +446,7 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "auto_stories",
                 "titular_h1": f"Todo lo que necesita saber sobre {kw_l}: guía práctica y conceptos clave",
                 "titular_discover": f"La guía definitiva sobre {kw_l}: detalles, respuestas y lo que dicen los expertos",
-                "bajada": f"Un análisis exhaustivo basado en las preguntas y búsquedas más frecuentes de los usuarios.",
+                "bajada": "Un análisis exhaustivo basado en las preguntas y búsquedas más frecuentes de los usuarios.",
                 "interlink_sugerido": f"Aspectos clave y recomendaciones esenciales a tener en cuenta sobre {kw_l}",
                 "tesis_editorial": f"Explicar con claridad qué es {kw_l}, cómo funciona, beneficios y recomendaciones de uso.",
                 "longitud_sugerida": "900 - 1.300 palabras",
@@ -341,9 +458,9 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "star",
                 "titular_h1": f"Los beneficios principales de {kw_l} y cómo aprovecharlos al máximo",
                 "titular_discover": f"Por qué {kw_l} está ganando interés y cuáles son sus mayores ventajas",
-                "bajada": f"Analizamos los aspectos más destacados y las recomendaciones prácticas respaldadas por especialistas.",
+                "bajada": "Analizamos los aspectos más destacados y las recomendaciones prácticas respaldadas por especialistas.",
                 "interlink_sugerido": f"Errores habituales al utilizar {kw_l} y cómo evitarlos",
-                "tesis_editorial": f"Desglosar las ventajas más valoradas por los usuarios con consejos concretos para potenciar sus resultados.",
+                "tesis_editorial": "Desglosar las ventajas más valoradas por los usuarios con consejos concretos para potenciar sus resultados.",
                 "longitud_sugerida": "900 - 1.200 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -353,9 +470,9 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "format_list_numbered",
                 "titular_h1": f"Cómo aplicar u optimizar {kw_l}: procedimiento paso a paso",
                 "titular_discover": f"El método sencillo y efectivo para utilizar {kw_l} sin complicaciones",
-                "bajada": f"Instrucciones claras y detalladas numeradas para obtener los mejores resultados en poco tiempo.",
+                "bajada": "Instrucciones claras y detalladas numeradas para obtener los mejores resultados en poco tiempo.",
                 "interlink_sugerido": f"Herramientas y recursos complementarios para optimizar {kw_l}",
-                "tesis_editorial": f"Proporcionar un tutorial paso a paso con recomendaciones técnicas o prácticas de fácil ejecución.",
+                "tesis_editorial": "Proporcionar un tutorial paso a paso con recomendaciones técnicas o prácticas de fácil ejecución.",
                 "longitud_sugerida": "800 - 1.100 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -365,9 +482,9 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "compare_arrows",
                 "titular_h1": f"¿Conviene {kw_l}? Análisis frente a las principales alternativas del mercado",
                 "titular_discover": f"La comparativa sobre {kw_l}: ventajas, desventajas y recomendaciones",
-                "bajada": f"Evaluamos las características clave y alternativas para ayudarte a tomar la decisión correcta.",
-                "interlink_sugerido": f"Factores determinantes al elegir la mejor opción según sus necesidades",
-                "tesis_editorial": f"Comparar puntos fuertes, puntos débiles y relación calidad/precio frente a otras opciones similares.",
+                "bajada": "Evaluamos las características clave y alternativas para ayudarte a tomar la decisión correcta.",
+                "interlink_sugerido": "Factores determinantes al elegir la mejor opción según sus necesidades",
+                "tesis_editorial": "Comparar puntos fuertes, puntos débiles y relación calidad/precio frente a otras opciones similares.",
                 "longitud_sugerida": "1.000 - 1.400 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -377,9 +494,9 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
                 "icono": "psychology_alt",
                 "titular_h1": f"Mitos y verdades sobre {kw_l}: desmintiendo las creencias más populares",
                 "titular_discover": f"Lo que nadie le dice sobre {kw_l}: la verdad respaldada por datos",
-                "bajada": f"Separamos la ficción de los hechos comprobados para aclarar las dudas más comunes.",
+                "bajada": "Separamos la ficción de los hechos comprobados para aclarar las dudas más comunes.",
                 "interlink_sugerido": f"Preguntas frecuentes que todo usuario se hace sobre {kw_l}",
-                "tesis_editorial": f"Analizar los mitos más difundidos en redes o internet y contraponerlos con evidencia y opinión de expertos.",
+                "tesis_editorial": "Analizar los mitos más difundidos en redes o internet y contraponerlos con evidencia y opinión de expertos.",
                 "longitud_sugerida": "950 - 1.300 palabras",
                 "tags_recomendados": tags_plana[:6],
             },
@@ -388,11 +505,11 @@ def _generar_fallbacks_inteligentes(keyword_base: str, tags_plana: List[str]) ->
 
 def generar_ideas_notas_angulos(
     keyword_base: str,
-    sugerencias: List[str] = None,
-    preguntas_paa: List[str] = None,
+    sugerencias: list[str] = None,
+    preguntas_paa: list[str] = None,
     pais: str = "Colombia",
     tags_reales: dict = None,
-) -> List[dict]:
+) -> list[dict]:
     """
     Genera 5 ideas de notas clasificadas por ángulos editoriales periodísticos
     adaptados estrictamente al contexto temático real de la keyword.
@@ -449,8 +566,8 @@ def redactar_nota_editorial(
     keyword_base: str,
     angulo: str = "Trucos y Hacks Cotidianos",
     titular_h1: str = None,
-    sugerencias: List[str] = None,
-    preguntas_paa: List[str] = None,
+    sugerencias: list[str] = None,
+    preguntas_paa: list[str] = None,
     pais: str = "Colombia",
     tags_reales: dict = None,
 ) -> dict:
@@ -473,58 +590,58 @@ def redactar_nota_editorial(
         "interlink_sugerido": f"¿Tiene dudas sobre {keyword_base.lower()}? Su origen y funcionamiento es clave para evitar inconvenientes",
         "parrafo_intro_1": f"El uso de {keyword_base.lower()} suele cobrar relevancia en situaciones cotidianas donde las personas buscan optimizar sus rutinas, mejorar el bienestar del hogar o solucionar dudas frecuentes que impactan la vida diaria.",
         "parrafo_intro_2": f"Frente a este escenario, diversas recomendaciones de especialistas y experiencias prácticas señalan que prestar atención a los detalles de {keyword_base.lower()} permite obtener resultados efectivos sin incurrir en gastos adicionales ni procedimientos complejos.",
-        "respaldo_autoridad": f"De acuerdo con análisis técnicos y estudios especializados en el sector, la correcta implementación de estos métodos contribuye significativamente al confort y a la durabilidad de los recursos del hogar.",
+        "respaldo_autoridad": "De acuerdo con análisis técnicos y estudios especializados en el sector, la correcta implementación de estos métodos contribuye significativamente al confort y a la durabilidad de los recursos del hogar.",
         "foto_1": {
             "pie_de_foto": f"El uso adecuado de {keyword_base.lower()} aporta múltiples ventajas cotidianas.",
-            "credito": "Foto: Imagen generada por IA"
+            "credito": "Foto: Imagen generada por IA",
         },
         "secciones_h2": [
             {
                 "h2": f"¿Cómo funciona y cuáles son los fundamentos de {keyword_base.title()}?",
-                "parrafo_intro_seccion": f"La propuesta de este método consiste en aplicar principios prácticos orientados a obtener la máxima eficiencia:",
+                "parrafo_intro_seccion": "La propuesta de este método consiste en aplicar principios prácticos orientados a obtener la máxima eficiencia:",
                 "bullets": [
                     {
                         "negrita": "Principio fundamental:",
-                        "texto": f"Aprovecha los factores del entorno para canalizar y potenciar el efecto deseado de forma controlada."
+                        "texto": "Aprovecha los factores del entorno para canalizar y potenciar el efecto deseado de forma controlada.",
                     },
                     {
                         "negrita": "Facilidad de aplicación:",
-                        "texto": f"No requiere herramientas especializadas y puede implementarse en pocos minutos en cualquier vivienda."
+                        "texto": "No requiere herramientas especializadas y puede implementarse en pocos minutos en cualquier vivienda.",
                     },
                     {
                         "negrita": "Impacto inmediato:",
-                        "texto": f"Permite notar cambios favorables desde las primeras horas de uso continuo."
-                    }
-                ]
+                        "texto": "Permite notar cambios favorables desde las primeras horas de uso continuo.",
+                    },
+                ],
             },
             {
-                "h2": f"Beneficios clave y recomendaciones prácticas",
-                "parrafo_intro_seccion": f"Aunque no sustituye soluciones estructurales complejas, su aplicación constante aporta beneficios concretos:",
+                "h2": "Beneficios clave y recomendaciones prácticas",
+                "parrafo_intro_seccion": "Aunque no sustituye soluciones estructurales complejas, su aplicación constante aporta beneficios concretos:",
                 "bullets": [
                     {
                         "negrita": "Optimización de recursos:",
-                        "texto": f"Contribuye a reducir gastos innecesarios y prolongar la vida útil de los elementos involucrados."
+                        "texto": "Contribuye a reducir gastos innecesarios y prolongar la vida útil de los elementos involucrados.",
                     },
                     {
                         "negrita": "Prevención de inconvenientes:",
-                        "texto": f"Disminuye notablemente la probabilidad de que surjan deterioros acumulativos con el paso del tiempo."
+                        "texto": "Disminuye notablemente la probabilidad de que surjan deterioros acumulativos con el paso del tiempo.",
                     },
                     {
                         "negrita": "Mantenimiento preventivo:",
-                        "texto": f"Se recomienda complementar esta práctica con revisiones periódicas cada tres o seis meses."
-                    }
-                ]
-            }
+                        "texto": "Se recomienda complementar esta práctica con revisiones periódicas cada tres o seis meses.",
+                    },
+                ],
+            },
         ],
         "foto_2": {
             "pie_de_foto": f"Recomendaciones de los expertos para optimizar {keyword_base.lower()}.",
-            "credito": "Foto: iStock"
+            "credito": "Foto: iStock",
         },
         "seccion_preguntas_frecuentes": {
             "h2": f"¿Qué hacer si surgen complicaciones con {keyword_base.lower()}?",
-            "parrafo": f"Para situaciones donde no se obtengan los resultados esperados, se aconseja verificar las condiciones del entorno y consultar a entidades autorizadas o técnicos certificados para un diagnóstico formal."
+            "parrafo": "Para situaciones donde no se obtengan los resultados esperados, se aconseja verificar las condiciones del entorno y consultar a entidades autorizadas o técnicos certificados para un diagnóstico formal.",
         },
-        "cierre_responsable": f"Antes de adoptar cualquier cambio radical en sus rutinas o en el mantenimiento de su hogar, es aconsejable consultar con profesionales calificados o revisar los manuales oficiales del fabricante. Su incorporación debe entenderse como un complemento accesible y responsable dentro de los hábitos generales.",
+        "cierre_responsable": "Antes de adoptar cualquier cambio radical en sus rutinas o en el mantenimiento de su hogar, es aconsejable consultar con profesionales calificados o revisar los manuales oficiales del fabricante. Su incorporación debe entenderse como un complemento accesible y responsable dentro de los hábitos generales.",
         "tags_reales": tags_plana[:10],
         "tags_clasificados": tags_clasificados,
     }
@@ -562,15 +679,15 @@ def redactar_nota_editorial(
         '  "respaldo_autoridad": "...",\n'
         '  "foto_1": {"pie_de_foto": "...", "credito": "Foto: Imagen generada por IA"},\n'
         '  "secciones_h2": [\n'
-        '    {\n'
+        "    {\n"
         '      "h2": "...",\n'
         '      "parrafo_intro_seccion": "...",\n'
         '      "bullets": [\n'
         '        {"negrita": "Concepto clave:", "texto": "Explicación detallada..."},\n'
         '        {"negrita": "Otro punto:", "texto": "Explicación..."}\n'
-        '      ]\n'
-        '    }\n'
-        '  ],\n'
+        "      ]\n"
+        "    }\n"
+        "  ],\n"
         '  "foto_2": {"pie_de_foto": "...", "credito": "Foto: iStock"},\n'
         '  "seccion_preguntas_frecuentes": {"h2": "...", "parrafo": "..."},\n'
         '  "cierre_responsable": "...",\n'
@@ -611,7 +728,7 @@ def exportar_nota_markdown(nota_data: dict) -> str:
         lines.append(f"> **{bajada}**\n")
     if interlink:
         lines.append(f"🔗 *Le puede interesar:* [{interlink}](#)\n")
-    
+
     if p1:
         lines.append(f"{p1}\n")
     if p2:
@@ -676,7 +793,9 @@ def exportar_nota_html(nota_data: dict) -> str:
         html.append(f"<p>{autoridad}</p>")
 
     if f1 and f1.get("pie_de_foto"):
-        html.append(f'<figure><figcaption>{f1.get("pie_de_foto")} <em>({f1.get("credito", "Foto: iStock")})</em></figcaption></figure>')
+        html.append(
+            f"<figure><figcaption>{f1.get('pie_de_foto')} <em>({f1.get('credito', 'Foto: iStock')})</em></figcaption></figure>"
+        )
 
     for sec in nota_data.get("secciones_h2", []):
         html.append(f"<h2>{sec.get('h2')}</h2>")
@@ -688,7 +807,9 @@ def exportar_nota_html(nota_data: dict) -> str:
         html.append("</ul>")
 
     if f2 and f2.get("pie_de_foto"):
-        html.append(f'<figure><figcaption>{f2.get("pie_de_foto")} <em>({f2.get("credito", "Foto: iStock")})</em></figcaption></figure>')
+        html.append(
+            f"<figure><figcaption>{f2.get('pie_de_foto')} <em>({f2.get('credito', 'Foto: iStock')})</em></figcaption></figure>"
+        )
 
     faq = nota_data.get("seccion_preguntas_frecuentes", {})
     if faq and faq.get("h2"):

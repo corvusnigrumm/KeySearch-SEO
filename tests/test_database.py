@@ -1,18 +1,23 @@
 """
 Tests para core/database.py: session TTL cleanup y concurrency limits.
 """
-import sys
-import os
+
 import datetime
-import time
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.database import (
-    SessionLocal, PipelineSession, init_db,
-    cleanup_expired_sessions, SESSION_TTL_HOURS,
-    acquire_pipeline_slot, release_pipeline_slot, get_active_pipeline_count,
     MAX_CONCURRENT_PIPELINES,
+    SESSION_TTL_HOURS,
+    PipelineSession,
+    SessionLocal,
+    acquire_pipeline_slot,
+    cleanup_expired_sessions,
+    get_active_pipeline_count,
+    init_db,
+    release_pipeline_slot,
 )
 
 
@@ -65,8 +70,9 @@ class TestSessionTTL:
 
 class TestConcurrencyLimits:
     def setup_method(self):
-        from core.database import _pipeline_lock, _active_pipelines
         import core.database as mod
+        from core.database import _pipeline_lock
+
         with _pipeline_lock:
             mod._active_pipelines = 0
 

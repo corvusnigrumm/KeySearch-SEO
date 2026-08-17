@@ -1,6 +1,7 @@
 """
 Utilidades compartidas para los módulos de scraping.
 """
+
 import re
 import unicodedata
 from datetime import datetime
@@ -60,14 +61,14 @@ def es_relevante_riguroso(keyword_base: str, sugerencia: str) -> bool:
     """
     kb = dedupe_key(keyword_base)
     sug = dedupe_key(sugerencia)
-    
+
     if not kb or not sug:
         return False
-        
+
     # Coincidencia exacta o contención directa (el caso más común)
     if kb in sug or sug in kb:
         return True
-        
+
     palabras_kb = [p for p in kb.split() if len(p) > 2]
     if not palabras_kb:
         # Si la keyword eran sólo conectores cortos, aceptamos si la sugerencia empieza o contiene la keyword
@@ -77,7 +78,7 @@ def es_relevante_riguroso(keyword_base: str, sugerencia: str) -> bool:
     if len(palabras_kb) <= 2:
         # Al menos una palabra principal debe estar presente o ser raíz
         for p in palabras_kb:
-            stem = p[:-1] if (len(p) > 3 and p.endswith(('s', 'a', 'o', 'e'))) else p
+            stem = p[:-1] if (len(p) > 3 and p.endswith(("s", "a", "o", "e"))) else p
             if stem in sug:
                 return True
         return False
@@ -86,7 +87,7 @@ def es_relevante_riguroso(keyword_base: str, sugerencia: str) -> bool:
     # Exigimos que al menos el 50% de las palabras clave principales coincidan
     coincidencias = 0
     for p in palabras_kb:
-        stem = p[:-1] if (len(p) > 3 and p.endswith(('s', 'a', 'o', 'e'))) else p
+        stem = p[:-1] if (len(p) > 3 and p.endswith(("s", "a", "o", "e"))) else p
         if stem in sug:
             coincidencias += 1
 

@@ -7,24 +7,27 @@ Keysearch Editorial & Ads Optimizer
   - Metricas reales de Google Trends cuando estan disponibles
   - Score interno de prioridad para ordenar temas
 """
+
+import argparse
+import csv
 import os
 import re
 import sys
 import time
-import argparse
-import csv
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Cargar .env local si existe (GROQ_API_KEY, DATABASE_URL, etc.)
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
 
 # pyrefly: ignore [missing-import]
 from rich import box
+
 # pyrefly: ignore [missing-import]
 from rich.console import Console
 from rich.panel import Panel
@@ -650,8 +653,7 @@ def main():
 
             categoria, subcategoria = auto_categorizar(keyword)
             console.print(
-                f"  [dim]Categoria detectada automaticamente:[/] "
-                f"[bold cyan]{categoria}[/] / [cyan]{subcategoria}[/]\n"
+                f"  [dim]Categoria detectada automaticamente:[/] [bold cyan]{categoria}[/] / [cyan]{subcategoria}[/]\n"
             )
 
             editorial_context = {
@@ -702,13 +704,13 @@ def _cargar_keywords_archivo(path: str) -> list[str]:
 
     _, ext = os.path.splitext(path.lower())
     if ext == ".csv":
-        with open(path, "r", encoding="utf-8-sig", newline="") as file_handle:
+        with open(path, encoding="utf-8-sig", newline="") as file_handle:
             reader = csv.reader(file_handle)
             rows = [row for row in reader if row]
         values = [row[0] for row in rows if row and row[0] and not row[0].strip().startswith("#")]
         return _parse_keywords(",".join(values))
 
-    with open(path, "r", encoding="utf-8") as file_handle:
+    with open(path, encoding="utf-8") as file_handle:
         lines = [line.strip() for line in file_handle.readlines()]
     lines = [line for line in lines if line and not line.startswith("#")]
     return _parse_keywords("\n".join(lines))

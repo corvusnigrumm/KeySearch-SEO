@@ -1,7 +1,6 @@
-import os
 import json
+import os
 import tempfile
-import time
 import unittest
 
 from scraper.http_cache import get_text, make_key, set_text
@@ -19,7 +18,7 @@ class HttpCacheTests(unittest.TestCase):
             key = make_key("https://example.com/ttl")
             set_text(tmp, key, "x", status=200)
             path = os.path.join(tmp, f"{key}.json")
-            with open(path, "r", encoding="utf-8") as file_handle:
+            with open(path, encoding="utf-8") as file_handle:
                 payload = json.load(file_handle)
             payload["ts"] = 1
             with open(path, "w", encoding="utf-8") as file_handle:

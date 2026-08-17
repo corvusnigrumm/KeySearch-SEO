@@ -11,18 +11,16 @@ import datetime
 import json
 import logging
 import random
-import requests
 import urllib.parse
-from typing import Dict, List, Optional
+
+import requests
 
 from config import (
     CACHE_DIR,
     HTTP_CACHE_TTL_SECONDS,
     USER_AGENT_PROFILES,
-    LANG,
 )
 from scraper.http_cache import get_text, make_key, set_text
-from scraper.utils import limpiar_texto
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +33,7 @@ def _get_headers() -> dict:
     }
 
 
-def _buscar_articulo_wikipedia(query: str, lang: str = "es", session: requests.Session = None) -> Optional[str]:
+def _buscar_articulo_wikipedia(query: str, lang: str = "es", session: requests.Session = None) -> str | None:
     """Busca el título exacto del artículo en Wikipedia en el idioma objetivo."""
     session = session or requests.Session()
     api_url = f"https://{lang}.wikipedia.org/w/api.php?action=opensearch&search={urllib.parse.quote(query)}&limit=1&namespace=0&format=json"
@@ -64,7 +62,7 @@ def obtener_vistas_wikipedia(
     lang: str = "es",
     meses_atras: int = 1,
     session: requests.Session = None,
-) -> Optional[dict]:
+) -> dict | None:
     """
     Obtiene las visitas mensuales del artículo de Wikipedia para el término o entidad.
     Retorna un dict con:
@@ -81,7 +79,7 @@ def obtener_vistas_wikipedia(
         return None
 
     articulo_url_encoded = urllib.parse.quote(articulo.replace(" ", "_"), safe="")
-    
+
     # Calcular fechas del último mes completo
     now = datetime.datetime.now()
     # Tomamos el mes anterior para tener datos cerrados completos
@@ -133,16 +131,16 @@ def obtener_vistas_wikipedia(
     return None
 
 
-def enriquecer_con_wikipedia(keywords: List[str], lang: str = "es", max_items: int = 15) -> Dict[str, dict]:
+def enriquecer_con_wikipedia(keywords: list[str], lang: str = "es", max_items: int = 15) -> dict[str, dict]:
     """
     Enriquece un lote de keywords principales con métricas de visitas reales de Wikipedia.
     """
     session = requests.Session()
-    resultados: Dict[str, dict] = {}
-    
+    resultados: dict[str, dict] = {}
+
     for kw in keywords[:max_items]:
         datos = obtener_vistas_wikipedia(kw, lang=lang, session=session)
         if datos:
             resultados[kw] = datos
-            
+
     return resultados

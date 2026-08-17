@@ -1,9 +1,9 @@
 """
 Test para el Generador de Schema JSON-LD y Meta Tags de Alto CTR.
 """
-import sys
+
 import os
-import json
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -28,9 +28,9 @@ def test_schema_generation():
     print(f"[FAQs en Schema]: {len(res['faq_items'])}")
     print(f"\n[Schema String Sample]:\n{res['schema_faq_string'][:200]}...")
 
-    assert len(res['meta_title']) <= 65, "Meta Title demasiado largo"
-    assert len(res['meta_description']) <= 165, "Meta Description demasiado larga"
-    assert "FAQPage" in res['schema_faq_string'], "El Schema no contiene FAQPage"
+    assert len(res["meta_title"]) <= 65, "Meta Title demasiado largo"
+    assert len(res["meta_description"]) <= 165, "Meta Description demasiado larga"
+    assert "FAQPage" in res["schema_faq_string"], "El Schema no contiene FAQPage"
     print("\n>>> TEST DE SCHEMA Y META TAGS EXITOSO <<<")
 
 

@@ -1,6 +1,7 @@
 """
 Filtrado de keywords: pre-filtro determinista + filtro IA por lotes.
 """
+
 import json
 import logging
 import re
@@ -11,10 +12,33 @@ from scraper.ai_client import post_groq_json
 logger = logging.getLogger(__name__)
 
 _MARCAS_COMERCIALES = [
-    "claro", "movistar", "tigo", "etb", "une", "wom", "virgin", "directv",
-    "netflix", "spotify", "amazon", "apple", "samsung", "huawei", "xiaomi",
-    "mercadolibre", "rappi", "uber", "ifood", "didi", "cabify",
-    "bancolombia", "davivienda", "bbva", "nequi", "daviplata", "bancamia",
+    "claro",
+    "movistar",
+    "tigo",
+    "etb",
+    "une",
+    "wom",
+    "virgin",
+    "directv",
+    "netflix",
+    "spotify",
+    "amazon",
+    "apple",
+    "samsung",
+    "huawei",
+    "xiaomi",
+    "mercadolibre",
+    "rappi",
+    "uber",
+    "ifood",
+    "didi",
+    "cabify",
+    "bancolombia",
+    "davivienda",
+    "bbva",
+    "nequi",
+    "daviplata",
+    "bancamia",
 ]
 
 _PATRONES_SEO_INUTILES = [
@@ -33,18 +57,60 @@ _PATRONES_SEO_INUTILES = [
 _BATCH_SIZE = 40
 
 _TEMAS_NO_TRANSACCIONALES = {
-    "terremoto", "sismo", "temblor", "tsunami", "volcan", "erupcion", "inundacion",
-    "huracan", "tornado", "desastre", "tragedia", "muerte", "fallecimiento", "funeral",
-    "accidente", "asesinato", "cancer", "infarto", "enfermedad", "sintomas", "guerra",
-    "masacre", "atentado", "emergencia", "historia", "biografia", "definicion", "significado",
-    "clima", "temperatura", "hora", "fecha"
+    "terremoto",
+    "sismo",
+    "temblor",
+    "tsunami",
+    "volcan",
+    "erupcion",
+    "inundacion",
+    "huracan",
+    "tornado",
+    "desastre",
+    "tragedia",
+    "muerte",
+    "fallecimiento",
+    "funeral",
+    "accidente",
+    "asesinato",
+    "cancer",
+    "infarto",
+    "enfermedad",
+    "sintomas",
+    "guerra",
+    "masacre",
+    "atentado",
+    "emergencia",
+    "historia",
+    "biografia",
+    "definicion",
+    "significado",
+    "clima",
+    "temperatura",
+    "hora",
+    "fecha",
 }
 
 _MODIFICADORES_COMERCIALES_ABSURDOS = [
-    r"\bgratis\b", r"\bgratuito\b", r"\bbarato\b", r"\bbarata\b", r"\bprecio\b",
-    r"\bprecios\b", r"\bcosto\b", r"\bcostos\b", r"\bcomprar\b", r"\bventa\b",
-    r"\bvender\b", r"\bdescuento\b", r"\bcupon\b", r"\btienda\b", r"\balquiler\b",
-    r"\bdomicilio\b", r"\bdescargar\b", r"\bpdf gratis\b", r"\bcuanto vale\b",
+    r"\bgratis\b",
+    r"\bgratuito\b",
+    r"\bbarato\b",
+    r"\bbarata\b",
+    r"\bprecio\b",
+    r"\bprecios\b",
+    r"\bcosto\b",
+    r"\bcostos\b",
+    r"\bcomprar\b",
+    r"\bventa\b",
+    r"\bvender\b",
+    r"\bdescuento\b",
+    r"\bcupon\b",
+    r"\btienda\b",
+    r"\balquiler\b",
+    r"\bdomicilio\b",
+    r"\bdescargar\b",
+    r"\bpdf gratis\b",
+    r"\bcuanto vale\b",
 ]
 
 
@@ -114,7 +180,8 @@ def filtrar_con_ia(keywords: list[str], keyword_base: str, pais: str) -> list[st
     pre_filtradas = _filtro_determinista(keywords, keyword_base)
     logger.info(
         "Pre-filtro determinista: %d -> %d keywords",
-        len(keywords), len(pre_filtradas),
+        len(keywords),
+        len(pre_filtradas),
     )
 
     if not GROQ_API_KEY or not pre_filtradas:
@@ -122,7 +189,7 @@ def filtrar_con_ia(keywords: list[str], keyword_base: str, pais: str) -> list[st
 
     resultado_final = []
     for i in range(0, len(pre_filtradas), _BATCH_SIZE):
-        lote = pre_filtradas[i: i + _BATCH_SIZE]
+        lote = pre_filtradas[i : i + _BATCH_SIZE]
         lote_filtrado = _filtrar_lote_con_ia(lote, keyword_base, pais)
         resultado_final.extend(lote_filtrado)
 

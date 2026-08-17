@@ -29,6 +29,10 @@ jobs:
           pip install pytest
 
       - name: Run tests
+        env:
+          SECRET_KEY: "ci-secret-key-testing-minimum-32-chars!"
+          DATABASE_URL: "sqlite:///./data/ci_test.db"
+          GROQ_API_KEY: ""
         run: python -m pytest tests/ -v --tb=short
 
   lint:

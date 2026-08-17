@@ -1,12 +1,13 @@
 """
 Tests para scraper/categorizer.py: clasificación automática de keywords.
 """
-import sys
+
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scraper.categorizer import auto_categorizar, _normalizar, _puntuar
+from scraper.categorizer import _normalizar, _puntuar, auto_categorizar
 
 
 class TestNormalizar:

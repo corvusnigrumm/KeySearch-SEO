@@ -4,8 +4,8 @@ Exportador de resultados a Excel.
 El archivo prioriza trazabilidad y datos reales observables. Ya no muestra
 rangos mensuales inventados.
 """
+
 import os
-from typing import Dict, List
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -148,7 +148,15 @@ def _estado_google_ads(datos: dict) -> str:
     return f"No disponible ({google_ads.get('reason', 'sin detalle')})"
 
 
-def _crear_hoja_datos(wb: Workbook, titulo: str, items: List[str], volumenes: dict, encabezado_item: str, header_fill=FILL_HEADER, language_code: str = "es"):
+def _crear_hoja_datos(
+    wb: Workbook,
+    titulo: str,
+    items: list[str],
+    volumenes: dict,
+    encabezado_item: str,
+    header_fill=FILL_HEADER,
+    language_code: str = "es",
+):
     """Crea una hoja con trazabilidad real de cada termino."""
     sheet_exists = titulo in wb.sheetnames
     if sheet_exists:
@@ -274,7 +282,7 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
 
     if "Resumen" in wb.sheetnames:
         ws = wb["Resumen"]
-        
+
         # Escribir el título en A1 si existe la celda (manteniendo el estilo)
         ws.cell(row=1, column=1, value=f"Analisis de keyword: {keyword}")
 
@@ -295,7 +303,7 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
             25: len(relacionadas),
             26: con_ads,
             27: con_trends,
-            28: total
+            28: total,
         }
 
         for row_num, value in mapping.items():
@@ -306,14 +314,8 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
         conteo = {categoria: 0 for categoria in categorias_orden}
         for metrica in volumenes.values():
             conteo[_categorizar_score_texto(metrica.get("score", 0))] += 1
-        
-        priority_rows = {
-            "Muy alta": 33,
-            "Alta": 34,
-            "Media": 35,
-            "Baja": 36,
-            "Muy baja": 37
-        }
+
+        priority_rows = {"Muy alta": 33, "Alta": 34, "Media": 35, "Baja": 36, "Muy baja": 37}
 
         for cat in categorias_orden:
             row_num = priority_rows[cat]
@@ -411,7 +413,7 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
         for i in range(9):
             if i < len(bloques["ejes"]) and bloques["ejes"][i]:
                 ws.cell(row=row_ejes + 1 + i, column=1, value=bloques["ejes"][i])
-        
+
         if bloques.get("propuesta"):
             ws.cell(row=row_propuesta + 1, column=1, value=bloques["propuesta"])
         if bloques.get("enfoque"):
@@ -514,7 +516,9 @@ def _crear_hoja_resumen(wb: Workbook, keyword: str, datos: dict, volumenes: dict
         for col in range(3, 5):
             ws.cell(row=row, column=col).border = BORDER
 
-        ws.cell(row=row, column=1).fill = _fill_score({"Muy alta": 90, "Alta": 60, "Media": 35, "Baja": 20, "Muy baja": 5}[categoria])
+        ws.cell(row=row, column=1).fill = _fill_score(
+            {"Muy alta": 90, "Alta": 60, "Media": 35, "Baja": 20, "Muy baja": 5}[categoria]
+        )
 
     row += 3
     _aplicar_celda(ws, row, 1, "LECTURA EJECUTIVA", font=FONT_SECTION, alignment=ALIGN_LEFT)
@@ -580,7 +584,7 @@ def _crear_hoja_campana_ads(wb: Workbook, keyword: str, datos: dict, volumenes: 
         "Description 1",
         "Description 2",
         "Final URL",
-        "Prioridad Sugerida"
+        "Prioridad Sugerida",
     ]
     anchos = [24, 20, 30, 15, 25, 25, 25, 35, 35, 45, 15]
 
@@ -618,7 +622,7 @@ def _crear_hoja_campana_ads(wb: Workbook, keyword: str, datos: dict, volumenes: 
     titulos_ia = bloques.get("titulos", []) if bloques else []
     # Filtrar cadenas vacías
     titulos_ia = [t for t in titulos_ia if t.strip()]
-    
+
     enfoque_ia = bloques.get("enfoque", "") if bloques else ""
     propuesta_ia = bloques.get("propuesta", "") if bloques else ""
 
@@ -626,22 +630,30 @@ def _crear_hoja_campana_ads(wb: Workbook, keyword: str, datos: dict, volumenes: 
     h1_base = f"Leer Nota: {keyword.title()}"
     if len(h1_base) > 30:
         h1_base = h1_base[:27] + "..."
-        
+
     headline_1_sug = h1_base
-    
+
     headline_2_sug = titulos_ia[0] if (titulos_ia and len(titulos_ia[0]) <= 30) else keyword.title()
     if len(headline_2_sug) > 30:
         headline_2_sug = headline_2_sug[:27] + "..."
-        
+
     headline_3_sug = "Noticias de Hoy | El Periódico"
     if len(headline_3_sug) > 30:
         headline_3_sug = "Noticias de Hoy"
 
-    desc_1_sug = propuesta_ia if propuesta_ia else f"Entérate de las últimas novedades sobre {keyword}. Análisis profundo y veracidad periodística."
+    desc_1_sug = (
+        propuesta_ia
+        if propuesta_ia
+        else f"Entérate de las últimas novedades sobre {keyword}. Análisis profundo y veracidad periodística."
+    )
     if len(desc_1_sug) > 90:
         desc_1_sug = desc_1_sug[:87] + "..."
-        
-    desc_2_sug = enfoque_ia if enfoque_ia else "Mantente informado las 24 horas con el equipo de redacción de nuestro periódico. Suscríbete."
+
+    desc_2_sug = (
+        enfoque_ia
+        if enfoque_ia
+        else "Mantente informado las 24 horas con el equipo de redacción de nuestro periódico. Suscríbete."
+    )
     if len(desc_2_sug) > 90:
         desc_2_sug = desc_2_sug[:87] + "..."
 
@@ -651,7 +663,7 @@ def _crear_hoja_campana_ads(wb: Workbook, keyword: str, datos: dict, volumenes: 
     keywords_prioritarias = ordenar_por_volumen(all_keywords, volumenes)[:30]
 
     campaign_name = f"Promo_Periodico_{keyword.lower().replace(' ', '_')}"
-    url_slug = keyword.lower().replace(' ', '-')
+    url_slug = keyword.lower().replace(" ", "-")
     final_url = f"https://www.elperiodico.com/noticias/{url_slug}"
 
     for row_idx, kw in enumerate(keywords_prioritarias, 2):
@@ -660,7 +672,7 @@ def _crear_hoja_campana_ads(wb: Workbook, keyword: str, datos: dict, volumenes: 
         subcat = vol.get("subcategoria", "")
         ad_group = f"{cat} - {subcat}" if subcat and subcat != "-" else cat
         prioridad = _categorizar_score_texto(vol.get("score", 0))
-        
+
         row_fill = FILL_EVEN if row_idx % 2 == 0 else FILL_ODD
 
         # Si tenemos un titular de IA específico de la lista para esta fila (para dar variedad a los anuncios)
@@ -681,7 +693,7 @@ def _crear_hoja_campana_ads(wb: Workbook, keyword: str, datos: dict, volumenes: 
             desc_1_sug,
             desc_2_sug,
             final_url,
-            prioridad
+            prioridad,
         ]
 
         for col_idx, value in enumerate(valores, 1):
@@ -696,11 +708,11 @@ def _crear_hoja_campana_ads(wb: Workbook, keyword: str, datos: dict, volumenes: 
 
     ws.auto_filter.ref = ws.dimensions
     ws.freeze_panes = "A2"
-    ws.sheet_properties.tabColor = "C0392B" # Rojo Google Ads
+    ws.sheet_properties.tabColor = "C0392B"  # Rojo Google Ads
     return ws
 
 
-def exportar_excel(keyword: str, datos: Dict[str, List[str]]) -> str:
+def exportar_excel(keyword: str, datos: dict[str, list[str]]) -> str:
     """Exporta el reporte a Excel con trazabilidad real."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -725,11 +737,15 @@ def exportar_excel(keyword: str, datos: Dict[str, List[str]]) -> str:
 
     preguntas_ac = datos.get("preguntas_autocompletado", [])
     if preguntas_ac:
-        _crear_hoja_datos(wb, "Preguntas Autocompletado", preguntas_ac, volumenes, "Pregunta", FILL_HEADER_ALT, language_code)
+        _crear_hoja_datos(
+            wb, "Preguntas Autocompletado", preguntas_ac, volumenes, "Pregunta", FILL_HEADER_ALT, language_code
+        )
 
     relacionadas = datos.get("busquedas_relacionadas", [])
     if relacionadas:
-        _crear_hoja_datos(wb, "Busquedas relacionadas", relacionadas, volumenes, "Busqueda relacionada", FILL_HEADER, language_code)
+        _crear_hoja_datos(
+            wb, "Busquedas relacionadas", relacionadas, volumenes, "Busqueda relacionada", FILL_HEADER, language_code
+        )
 
     # Crear hoja estructurada de Campaña de Ads para cumplir políticas de Google Ads API
     _crear_hoja_campana_ads(wb, keyword, datos, volumenes)

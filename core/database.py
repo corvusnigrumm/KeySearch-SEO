@@ -1,10 +1,10 @@
-import os
 import datetime
-from typing import Generator, Optional
 import logging
+import os
+from collections.abc import Generator
 
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Boolean, Float, ForeignKey
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, create_engine
+from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 
 logger = logging.getLogger("keysearch.db")
 
@@ -14,7 +14,7 @@ if not DATABASE_URL:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     DATA_DIR = os.path.join(BASE_DIR, "data")
     os.makedirs(DATA_DIR, exist_ok=True)
-    
+
     db_path = os.path.join(DATA_DIR, "keysearch.db")
     DATABASE_URL = f"sqlite:///{db_path}"
 
@@ -34,6 +34,7 @@ engine = create_engine(DATABASE_URL, connect_args=connect_args, **_pool_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -86,6 +87,7 @@ class PipelineSession(Base):
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()

@@ -1,16 +1,17 @@
 """
 core/auth.py - Autenticacion segura: bcrypt + JWT con claims.
 """
+
 import hashlib
 import hmac
+import logging
 import os
 import secrets
-import logging
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
-from jose import jwt, JWTError
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import bcrypt
+from jose import JWTError, jwt
 
 logger = logging.getLogger("keysearch.auth")
 
@@ -64,25 +65,27 @@ def _verify_password_legacy(plain_password: str, hashed_password: str) -> bool:
 
 # ── JWT Tokens ────────────────────────────────────────────────────────────────
 def create_access_token(
-    data: Dict[str, Any],
-    expires_delta: Optional[timedelta] = None,
+    data: dict[str, Any],
+    expires_delta: timedelta | None = None,
 ) -> str:
     """Crea un JWT con claims estandar (iss, aud, exp, iat, jti)."""
     to_encode = data.copy()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
 
-    to_encode.update({
-        "exp": expire,
-        "iat": now,
-        "iss": JWT_ISSUER,
-        "aud": JWT_AUDIENCE,
-        "jti": secrets.token_hex(16),
-    })
+    to_encode.update(
+        {
+            "exp": expire,
+            "iat": now,
+            "iss": JWT_ISSUER,
+            "aud": JWT_AUDIENCE,
+            "jti": secrets.token_hex(16),
+        }
+    )
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
+def decode_access_token(token: str) -> dict[str, Any] | None:
     """Decodifica y valida un JWT. Retorna None si es invalido."""
     try:
         payload = jwt.decode(

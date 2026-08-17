@@ -1,10 +1,10 @@
 """
 Tests para scraper/ai_client.py: clientes IA y limpieza de respuestas.
 """
-import sys
+
 import os
-import json
-from unittest.mock import patch, MagicMock
+import sys
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -47,7 +47,7 @@ class TestLimpiarRespuestaJSON:
         assert limpiar_respuesta_json(None) == ""
 
     def test_solo_think_tags(self):
-        raw = '<think>razonamiento</think>'
+        raw = "<think>razonamiento</think>"
         result = limpiar_respuesta_json(raw)
         assert result == ""
 
@@ -79,7 +79,7 @@ class TestPostGroqJson:
 
     @patch("scraper.ai_client._llamar_groq_modelo")
     def test_cadena_fallback_escalada(self, mock_groq):
-        from config import AI_MODEL_PRIMARY, AI_MODEL_SECONDARY, AI_MODEL_TERTIARY
+        from config import AI_MODEL_PRIMARY, AI_MODEL_SECONDARY
 
         def side_effect(prompt, model_id, timeout=45):
             if model_id == AI_MODEL_PRIMARY:

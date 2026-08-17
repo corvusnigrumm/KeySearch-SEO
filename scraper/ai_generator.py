@@ -1,6 +1,7 @@
 """
 Generador de contenido IA: bloques editoriales, clusters, schema FAQPage y copies de ads.
 """
+
 import json
 import logging
 import re
@@ -79,7 +80,9 @@ def generar_bloques_editoriales(
         "enfoque": str(result.get("enfoque", "") or "").strip(),
         "titulos": [str(x).strip() for x in (titulos[:10] if titulos else fallback["titulos"])],
         "subtitulos": [str(x).strip() for x in (subtitulos[:10] if subtitulos else fallback["subtitulos"])],
-        "keywords_trends": [str(x).strip() for x in (kw_trends_res[:10] if kw_trends_res else fallback["keywords_trends"])],
+        "keywords_trends": [
+            str(x).strip() for x in (kw_trends_res[:10] if kw_trends_res else fallback["keywords_trends"])
+        ],
     }
 
     for key, size in [("ejes", 9), ("titulos", 10), ("subtitulos", 10), ("keywords_trends", 10)]:
@@ -149,7 +152,9 @@ def generar_schema_y_meta_tags(
             f"Que es {keyword_base.title()}? Todo lo que debes saber"[:60],
             f"{keyword_base.title()} en {pais}: Precios, Guia y Consejos"[:60],
         ],
-        "meta_description": f"Descubre todo sobre {keyword_base}: guia definitiva, respuestas a dudas frecuentes y consejos expertos para {pais}."[:155],
+        "meta_description": f"Descubre todo sobre {keyword_base}: guia definitiva, respuestas a dudas frecuentes y consejos expertos para {pais}."[
+            :155
+        ],
         "slug_sugerido": slug_limpio,
         "og_tags": {
             "og:title": f"{keyword_base.title()}: Guia y Preguntas Frecuentes",
@@ -164,10 +169,14 @@ def generar_schema_y_meta_tags(
             "@context": "https://schema.org",
             "@type": "FAQPage",
             "mainEntity": [
-                {"@type": "Question", "name": p, "acceptedAnswer": {"@type": "Answer", "text": f"Informacion completa sobre {p}."}}
+                {
+                    "@type": "Question",
+                    "name": p,
+                    "acceptedAnswer": {"@type": "Answer", "text": f"Informacion completa sobre {p}."},
+                }
                 for p in preguntas_muestra
-            ]
-        }
+            ],
+        },
     }
     fallback["schema_faq_string"] = (
         '<script type="application/ld+json">\n'
@@ -183,9 +192,9 @@ def generar_schema_y_meta_tags(
         f"Keyword: '{keyword_base}'. Preguntas: {json.dumps(preguntas_muestra, ensure_ascii=False)}\n\n"
         "Genera meta tags optimizados y Schema FAQPage.\n"
         "REGLAS: meta_title <= 60 car. meta_description entre 120-155 car con CTA.\n"
-        "Devuelve: {\"meta_title\": \"\", \"meta_titles_alternativos\": [\"\", \"\"], "
-        "\"meta_description\": \"\", \"slug_sugerido\": \"\", "
-        "\"faq_items\": [{\"pregunta\": \"\", \"respuesta\": \"\"}]}"
+        'Devuelve: {"meta_title": "", "meta_titles_alternativos": ["", ""], '
+        '"meta_description": "", "slug_sugerido": "", '
+        '"faq_items": [{"pregunta": "", "respuesta": ""}]}'
     )
 
     try:
@@ -196,10 +205,14 @@ def generar_schema_y_meta_tags(
                 "@context": "https://schema.org",
                 "@type": "FAQPage",
                 "mainEntity": [
-                    {"@type": "Question", "name": item.get("pregunta", ""),
-                     "acceptedAnswer": {"@type": "Answer", "text": item.get("respuesta", "")}}
-                    for item in faq_items if isinstance(item, dict) and item.get("pregunta")
-                ]
+                    {
+                        "@type": "Question",
+                        "name": item.get("pregunta", ""),
+                        "acceptedAnswer": {"@type": "Answer", "text": item.get("respuesta", "")},
+                    }
+                    for item in faq_items
+                    if isinstance(item, dict) and item.get("pregunta")
+                ],
             }
             schema_string = (
                 '<script type="application/ld+json">\n'
@@ -208,7 +221,9 @@ def generar_schema_y_meta_tags(
             )
             return {
                 "meta_title": str(data.get("meta_title", fallback["meta_title"]))[:60],
-                "meta_titles_alternativos": [str(t)[:60] for t in data.get("meta_titles_alternativos", fallback["meta_titles_alternativos"])],
+                "meta_titles_alternativos": [
+                    str(t)[:60] for t in data.get("meta_titles_alternativos", fallback["meta_titles_alternativos"])
+                ],
                 "meta_description": str(data.get("meta_description", fallback["meta_description"]))[:155],
                 "slug_sugerido": str(data.get("slug_sugerido", fallback["slug_sugerido"])),
                 "og_tags": {
@@ -248,12 +263,12 @@ def generar_copywriting_ads_y_hooks(
                 f"Descubre todo sobre {keyword_base} con asesoria experta. Calidad garantizada."[:90],
                 f"Aprende paso a paso como funciona {keyword_base}. Precios claros."[:90],
                 f"Buscando {keyword_base}? Encuentra las mejores opciones en {pais}."[:90],
-            ]
+            ],
         },
         "social_ads": {
             "hook_scroll_stopper": f"Alerta: Pensando en {keyword_base}? No cometas este error...",
             "copy_pas": f"Sabemos lo frustrante que es buscar informacion clara sobre {keyword_base}.\n\nPor eso creamos esta guia completa y practica.\n\nToca el enlace y descubrelo.",
-            "cta_boton": "Mas Informacion"
+            "cta_boton": "Mas Informacion",
         },
         "tiktok_reels_hooks": [
             f"El error numero 1 con {keyword_base} (y como evitarlo hoy)",
@@ -266,8 +281,8 @@ def generar_copywriting_ads_y_hooks(
             "segundos_0_3_gancho": f"Deten el scroll! Si buscas {keyword_base}, mira esto.",
             "segundos_4_15_problema": f"La mayoria comete el error de no comparar opciones con {keyword_base}.",
             "segundos_16_25_solucion": "El truco esta en seguir estos 3 pasos clave.",
-            "segundos_26_30_cta": "Guarda este video y sigieme para mas consejos."
-        }
+            "segundos_26_30_cta": "Guarda este video y sigieme para mas consejos.",
+        },
     }
 
     if not GROQ_API_KEY:
@@ -278,9 +293,9 @@ def generar_copywriting_ads_y_hooks(
         f"Crea copies para: '{keyword_base}'. Intencion: {intencion}.\n"
         f"Dudas reales: {json.dumps(preguntas_muestra, ensure_ascii=False)}\n\n"
         "REGLAS: titulos <= 30 car, descripciones <= 90 car.\n"
-        "Devuelve: {\"google_ads\": {\"titulos\": [...], \"descripciones\": [...]}, "
-        "\"social_ads\": {\"hook_scroll_stopper\": \"\", \"copy_pas\": \"\", \"cta_boton\": \"\"}, "
-        "\"tiktok_reels_hooks\": [...], \"guion_video_30s\": {\"segundos_0_3_gancho\": \"\", ...}}"
+        'Devuelve: {"google_ads": {"titulos": [...], "descripciones": [...]}, '
+        '"social_ads": {"hook_scroll_stopper": "", "copy_pas": "", "cta_boton": ""}, '
+        '"tiktok_reels_hooks": [...], "guion_video_30s": {"segundos_0_3_gancho": "", ...}}'
     )
 
     try:
@@ -290,10 +305,14 @@ def generar_copywriting_ads_y_hooks(
             return {
                 "google_ads": {
                     "titulos": [str(t)[:30] for t in g_ads.get("titulos", fallback["google_ads"]["titulos"])][:5],
-                    "descripciones": [str(d)[:90] for d in g_ads.get("descripciones", fallback["google_ads"]["descripciones"])][:3],
+                    "descripciones": [
+                        str(d)[:90] for d in g_ads.get("descripciones", fallback["google_ads"]["descripciones"])
+                    ][:3],
                 },
                 "social_ads": data.get("social_ads", fallback["social_ads"]),
-                "tiktok_reels_hooks": [str(h) for h in data.get("tiktok_reels_hooks", fallback["tiktok_reels_hooks"])][:5],
+                "tiktok_reels_hooks": [str(h) for h in data.get("tiktok_reels_hooks", fallback["tiktok_reels_hooks"])][
+                    :5
+                ],
                 "guion_video_30s": data.get("guion_video_30s", fallback["guion_video_30s"]),
             }
     except Exception as e:

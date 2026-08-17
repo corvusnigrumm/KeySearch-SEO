@@ -7,43 +7,62 @@ con las sugerencias que aparecen al escribir en la barra de búsqueda.
 También genera preguntas frecuentes combinando la keyword con
 prefijos de preguntas comunes en español.
 """
-import time
-import random
-import requests
-import logging
+
 import json
-from typing import List
+import logging
+import random
+import time
+
+import requests
 
 from config import (
-    AUTOCOMPLETE_URL,
-    LANG,
-    COUNTRY,
-    USER_AGENTS,
-    USER_AGENT_PROFILES,
-    QUESTION_MODIFIERS,
-    SEARCH_SUFFIXES,
     ALPHABET_EXPANSION,
     AUTOCOMPLETE_ALPHABET_LIMIT,
-    DELAY_BETWEEN_REQUESTS,
-    CACHE_DIR,
-    HTTP_CACHE_TTL_SECONDS,
-    AUTOCOMPLETE_DEEP_MIN_DELAY,
-    AUTOCOMPLETE_DEEP_MAX_DELAY,
-    AUTOCOMPLETE_PAA_RECURSIVE_DEPTH,
     AUTOCOMPLETE_DEEP_EXPANSION_LIMIT,
+    AUTOCOMPLETE_DEEP_MAX_DELAY,
+    AUTOCOMPLETE_DEEP_MIN_DELAY,
+    AUTOCOMPLETE_PAA_RECURSIVE_DEPTH,
+    CACHE_DIR,
+    COUNTRY,
+    HTTP_CACHE_TTL_SECONDS,
+    LANG,
+    QUESTION_MODIFIERS,
     SCRAPE_PROFILE,
+    USER_AGENT_PROFILES,
 )
-from scraper.utils import dedupe_key, limpiar_texto, es_relevante_riguroso
 from scraper.http_cache import get_text, make_key, set_text
+from scraper.utils import dedupe_key, es_relevante_riguroso, limpiar_texto
 
 # ─── Filtro de marcas comerciales para evitar contaminacion en expansion recursiva ───
 # Si la keyword_base NO menciona una de estas marcas y la sugerencia SI la menciona,
 # la sugerencia puede pasar como resultado pero NO puede ser semilla recursiva.
 _MARCAS_NO_SEED = {
-    "claro", "movistar", "tigo", "etb", "une", "wom", "directv", "virgin",
-    "netflix", "spotify", "amazon", "apple", "samsung", "huawei", "xiaomi",
-    "mercadolibre", "rappi", "uber", "didi", "cabify", "ifood",
-    "bancolombia", "davivienda", "bbva", "nequi", "daviplata",
+    "claro",
+    "movistar",
+    "tigo",
+    "etb",
+    "une",
+    "wom",
+    "directv",
+    "virgin",
+    "netflix",
+    "spotify",
+    "amazon",
+    "apple",
+    "samsung",
+    "huawei",
+    "xiaomi",
+    "mercadolibre",
+    "rappi",
+    "uber",
+    "didi",
+    "cabify",
+    "ifood",
+    "bancolombia",
+    "davivienda",
+    "bbva",
+    "nequi",
+    "daviplata",
 }
 
 
@@ -57,6 +76,7 @@ def _es_semilla_valida(sugerencia: str, keyword_base: str) -> bool:
         if marca in sug_lower and marca not in kb_lower:
             return False
     return True
+
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +113,11 @@ def _fetch_suggestions(
         "https://suggestqueries.google.com/complete/search?client=firefox&hl={lang}&gl={country}&q={query}",
         "https://www.google.com/complete/search?client=psy-ab&hl={lang}&gl={country}&q={query}",
         "https://suggestqueries.google.com/complete/search?client=psy&hl={lang}&gl={country}&q={query}",
-        "https://www.google.com/complete/search?client=chrome&hl={lang}&q={query}"
+        "https://www.google.com/complete/search?client=chrome&hl={lang}&q={query}",
     ]
 
     session = session or requests.Session()
-    
+
     for url_template in endpoints:
         url = url_template.format(
             lang=lang,
@@ -111,7 +131,7 @@ def _fetch_suggestions(
             "Accept": "*/*",
             "Accept-Language": f"{lang}-{country},{lang};q=0.9,en-US;q=0.8,en;q=0.7",
             "Referer": "https://www.google.com/",
-            "X-Requested-With": "XMLHttpRequest"
+            "X-Requested-With": "XMLHttpRequest",
         }
         headers = {k: v for k, v in headers.items() if v}
 
@@ -123,15 +143,16 @@ def _fetch_suggestions(
                     data = json.loads(cached)
                     if isinstance(data, list) and len(data) >= 2:
                         return [limpiar_texto(s) for s in data[1] if isinstance(s, str)]
-                except: pass
+                except:
+                    pass
 
             resp = session.get(url, headers=headers, timeout=8)
             if resp.status_code == 200:
                 # Algunos endpoints devuelven JSON con basura al inicio o formatos raros
                 content = resp.text
                 if content.startswith("window.google.ac.h("):
-                    content = content[content.find("(")+1 : content.rfind(")")]
-                
+                    content = content[content.find("(") + 1 : content.rfind(")")]
+
                 try:
                     data = json.loads(content)
                 except:
@@ -139,12 +160,13 @@ def _fetch_suggestions(
                     continue
 
                 set_text(CACHE_DIR, cache_key, json.dumps(data), status=200)
-                
+
                 # Detectar formato
                 if isinstance(data, list) and len(data) >= 2:
                     suggestions = data[1]
-                    if not suggestions: return []
-                    
+                    if not suggestions:
+                        return []
+
                     extracted = []
                     for s in suggestions:
                         if isinstance(s, str):
@@ -153,18 +175,19 @@ def _fetch_suggestions(
                             extracted.append(limpiar_texto(s[0]))
                         elif isinstance(s, dict):
                             phrase = s.get("phrase") or s.get("q") or s.get("suggestion")
-                            if phrase: extracted.append(limpiar_texto(phrase))
-                    
-                    if extracted: return extracted
-                
+                            if phrase:
+                                extracted.append(limpiar_texto(phrase))
+
+                    if extracted:
+                        return extracted
+
                 continue
             elif resp.status_code == 429:
                 continue
         except Exception:
             continue
-            
-    return []
 
+    return []
 
 
 from scraper.multi_engine_suggest import fetch_multi_engine_suggestions
@@ -175,7 +198,7 @@ def get_autocomplete_suggestions(
     expandir: bool = True,
     search_context: dict | None = None,
     engines: list[str] | None = None,
-) -> List[str]:
+) -> list[str]:
     """
     Obtiene sugerencias de autocompletado para una palabra clave consultando
     múltiples motores en tiempo real (Google, YouTube, Amazon, Bing, DuckDuckGo).
@@ -194,7 +217,7 @@ def get_autocomplete_suggestions(
     session = requests.Session()
     ctx = _resolver_contexto(search_context)
 
-    def _agregar(sugerencias: List[str]):
+    def _agregar(sugerencias: list[str]):
         for s in sugerencias:
             if not es_relevante_riguroso(keyword, s):
                 continue
@@ -223,10 +246,12 @@ def get_autocomplete_suggestions(
     if expandir:
         # 2. Expansión por modificadores de preguntas y comparativas multi-motor
         modificadores_clave = QUESTION_MODIFIERS + [" vs ", " precio ", " opiniones ", " comprar ", " mejor "]
-        for mod in modificadores_clave[:12 if _perfil_extremo(search_context) else 6]:
+        for mod in modificadores_clave[: 12 if _perfil_extremo(search_context) else 6]:
             q_mod = f"{mod}{keyword}" if not mod.startswith(" ") else f"{keyword}{mod}"
             try:
-                m_res = fetch_multi_engine_suggestions(q_mod, lang=ctx["language_code"], country=ctx["country_code"], engines=engines)
+                m_res = fetch_multi_engine_suggestions(
+                    q_mod, lang=ctx["language_code"], country=ctx["country_code"], engines=engines
+                )
                 if m_res:
                     _agregar(list(m_res.keys()))
             except Exception:
@@ -238,7 +263,9 @@ def get_autocomplete_suggestions(
         for letra in ALPHABET_EXPANSION[:limite_alfabeto]:
             q_letra = f"{keyword} {letra}"
             try:
-                m_res = fetch_multi_engine_suggestions(q_letra, lang=ctx["language_code"], country=ctx["country_code"], engines=engines)
+                m_res = fetch_multi_engine_suggestions(
+                    q_letra, lang=ctx["language_code"], country=ctx["country_code"], engines=engines
+                )
                 if m_res:
                     _agregar(list(m_res.keys()))
             except Exception:
@@ -257,7 +284,9 @@ def get_autocomplete_suggestions(
             for semilla in semillas:
                 # Consultar multi-motor para cada semilla
                 try:
-                    m_res = fetch_multi_engine_suggestions(semilla, lang=ctx["language_code"], country=ctx["country_code"], engines=engines)
+                    m_res = fetch_multi_engine_suggestions(
+                        semilla, lang=ctx["language_code"], country=ctx["country_code"], engines=engines
+                    )
                     if m_res:
                         _agregar(list(m_res.keys()))
                         nuevas.extend(list(m_res.keys()))
@@ -281,8 +310,7 @@ def get_autocomplete_suggestions(
     return todas
 
 
-
-def get_question_suggestions(keyword: str, search_context: dict | None = None) -> List[str]:
+def get_question_suggestions(keyword: str, search_context: dict | None = None) -> list[str]:
     """
     Genera preguntas específicas combinando la keyword con prefijos
     de preguntas comunes. Filtra solo resultados que parecen preguntas.
@@ -323,44 +351,45 @@ def get_question_suggestions(keyword: str, search_context: dict | None = None) -
     ]
 
     if _perfil_extremo(search_context):
-        prefijos_preguntas.extend([
-            "ejemplos de ",
-            "tipos de ",
-            "cuales son los ",
-            "historia de ",
-            "origen de ",
-            "caracteristicas de ",
-            "beneficios de ",
-            "riesgos de ",
-            "alternativas a ",
-            "precio de ",
-            "costo de ",
-            "donde comprar ",
-            "donde conseguir ",
-            "como arreglar ",
-            "como solucionar ",
-            "por que es importante ",
-            "es necesario ",
-            "es obligatorio ",
-            "es seguro ",
-            "es legal ",
-            "opiniones sobre ",
-            "reseñas de ",
-            "tutorial de ",
-            "guia de ",
-            "pasos para ",
-            "requisitos para ",
-            "mejores ",
-            "el mejor ",
-            "la mejor ",
-            "peores ",
-            "mitos sobre ",
-            "verdades sobre ",
-            "secretos de ",
-            "trucos para ",
-            "tips para ",
-        ])
-
+        prefijos_preguntas.extend(
+            [
+                "ejemplos de ",
+                "tipos de ",
+                "cuales son los ",
+                "historia de ",
+                "origen de ",
+                "caracteristicas de ",
+                "beneficios de ",
+                "riesgos de ",
+                "alternativas a ",
+                "precio de ",
+                "costo de ",
+                "donde comprar ",
+                "donde conseguir ",
+                "como arreglar ",
+                "como solucionar ",
+                "por que es importante ",
+                "es necesario ",
+                "es obligatorio ",
+                "es seguro ",
+                "es legal ",
+                "opiniones sobre ",
+                "reseñas de ",
+                "tutorial de ",
+                "guia de ",
+                "pasos para ",
+                "requisitos para ",
+                "mejores ",
+                "el mejor ",
+                "la mejor ",
+                "peores ",
+                "mitos sobre ",
+                "verdades sobre ",
+                "secretos de ",
+                "trucos para ",
+                "tips para ",
+            ]
+        )
 
     for prefijo in prefijos_preguntas:
         query = f"{prefijo}{keyword}"
@@ -381,7 +410,7 @@ def get_question_suggestions(keyword: str, search_context: dict | None = None) -
     profundidad = max(1, int(AUTOCOMPLETE_PAA_RECURSIVE_DEPTH)) * extra_factor
     limite_semillas = max(1, int(AUTOCOMPLETE_DEEP_EXPANSION_LIMIT)) * extra_factor
     # Filtrar semillas iniciales: excluir las que introducen marcas no presentes en el keyword
-    semillas = [p for p in preguntas[:limite_semillas * 3] if _es_semilla_valida(p, keyword)][:limite_semillas]
+    semillas = [p for p in preguntas[: limite_semillas * 3] if _es_semilla_valida(p, keyword)][:limite_semillas]
     for _ in range(profundidad):
         nuevas = []
         for semilla in semillas:
@@ -398,6 +427,6 @@ def get_question_suggestions(keyword: str, search_context: dict | None = None) -
         if not nuevas:
             break
         # Filtrar semillas del siguiente ciclo tambien
-        semillas = [s for s in nuevas[:limite_semillas * 3] if _es_semilla_valida(s, keyword)][:limite_semillas]
+        semillas = [s for s in nuevas[: limite_semillas * 3] if _es_semilla_valida(s, keyword)][:limite_semillas]
 
     return preguntas

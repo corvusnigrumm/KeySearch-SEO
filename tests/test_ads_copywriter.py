@@ -1,8 +1,9 @@
 """
 Test para el Generador de Copies de Ads y Hooks Virales.
 """
-import sys
+
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -19,7 +20,7 @@ def test_ads_copywriting():
     ]
 
     res = generar_copywriting_ads_y_hooks(kw, preguntas, intencion="Comercial / Transaccional", pais="Colombia")
-    
+
     print("\n[Google Ads Titulos (Max 30 car)]:")
     for t in res["google_ads"]["titulos"]:
         print(f"  - '{t}' ({len(t)} car)")
@@ -39,9 +40,8 @@ def test_ads_copywriting():
     assert len(res["google_ads"]["titulos"]) == 5, "Deben haber 5 títulos de Google Ads"
     assert len(res["google_ads"]["descripciones"]) == 3, "Deben haber 3 descripciones de Google Ads"
     assert len(res["tiktok_reels_hooks"]) == 5, "Deben haber 5 hooks de TikTok"
-    
-    print("\n>>> TEST DE ADS COPYWRITING Y HOOKS EXITOSO <<<")
 
+    print("\n>>> TEST DE ADS COPYWRITING Y HOOKS EXITOSO <<<")
 
 
 if __name__ == "__main__":

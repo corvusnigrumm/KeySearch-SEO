@@ -9,10 +9,10 @@ enriquece los terminos con:
 - pujas de top of page
 - volumen mensual por mes
 """
+
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Optional
 
 from config import (
     GOOGLE_ADS_CONFIG_PATH,
@@ -36,7 +36,7 @@ except ImportError:
 KEYWORD_BATCH_SIZE = 200
 
 
-def _existing_config_path() -> Optional[str]:
+def _existing_config_path() -> str | None:
     for path in (GOOGLE_ADS_CONFIG_PATH, GOOGLE_ADS_FALLBACK_CONFIG_PATH):
         if path and os.path.exists(path):
             return path
@@ -80,7 +80,7 @@ def _load_client(config_path: str):
     return GoogleAdsClient.load_from_storage(path=config_path)
 
 
-def _resolve_language_resource_name(client, customer_id: str, language_code: str) -> Optional[str]:
+def _resolve_language_resource_name(client, customer_id: str, language_code: str) -> str | None:
     google_ads_service = client.get_service("GoogleAdsService")
     query = (
         "SELECT language_constant.resource_name "
@@ -92,7 +92,7 @@ def _resolve_language_resource_name(client, customer_id: str, language_code: str
     return None
 
 
-def _resolve_geo_target_constants(client, target_names: List[str]) -> List[str]:
+def _resolve_geo_target_constants(client, target_names: list[str]) -> list[str]:
     if not target_names:
         return []
 
@@ -146,9 +146,7 @@ def _update_metric(metric: dict, result) -> None:
     )
     metric["google_ads_competition"] = _competition_name(result.keyword_metrics.competition)
     metric["google_ads_competition_index"] = (
-        int(result.keyword_metrics.competition_index)
-        if result.keyword_metrics.competition_index is not None
-        else None
+        int(result.keyword_metrics.competition_index) if result.keyword_metrics.competition_index is not None else None
     )
     metric["google_ads_low_top_of_page_bid_micros"] = (
         int(result.keyword_metrics.low_top_of_page_bid_micros)
@@ -163,7 +161,7 @@ def _update_metric(metric: dict, result) -> None:
     metric["google_ads_monthly_search_volumes"] = monthly_searches
 
 
-def enrich_with_google_ads_metrics(metricas: Dict[str, dict], progress_callback=None) -> dict:
+def enrich_with_google_ads_metrics(metricas: dict[str, dict], progress_callback=None) -> dict:
     """Enriquece las metricas con datos historicos reales de Google Ads."""
     status = get_google_ads_status()
     if not status["enabled"]:
@@ -186,9 +184,7 @@ def enrich_with_google_ads_metrics(metricas: Dict[str, dict], progress_callback=
 
     try:
         client = _load_client(config_path)
-        language_resource_name = _resolve_language_resource_name(
-            client, customer_id, GOOGLE_ADS_LANGUAGE_CODE
-        )
+        language_resource_name = _resolve_language_resource_name(client, customer_id, GOOGLE_ADS_LANGUAGE_CODE)
         geo_target_constants = _resolve_geo_target_constants(
             client,
             geo_targets or GOOGLE_ADS_GEO_TARGETS,
@@ -197,15 +193,15 @@ def enrich_with_google_ads_metrics(metricas: Dict[str, dict], progress_callback=
         keyword_plan_service = client.get_service("KeywordPlanIdeaService")
         network_enum = client.enums.KeywordPlanNetworkEnum.GOOGLE_SEARCH
 
-        normalized_lookup: Dict[str, List[str]] = {}
-        for original in metricas.keys():
+        normalized_lookup: dict[str, list[str]] = {}
+        for original in metricas:
             normalized_lookup.setdefault(_normalize_keyword(original), []).append(original)
 
         enriched = 0
         keywords = list(metricas.keys())
 
         for offset in range(0, len(keywords), KEYWORD_BATCH_SIZE):
-            batch = keywords[offset:offset + KEYWORD_BATCH_SIZE]
+            batch = keywords[offset : offset + KEYWORD_BATCH_SIZE]
             if progress_callback:
                 progress_callback(
                     f"Google Ads: lote {offset // KEYWORD_BATCH_SIZE + 1}/{(len(keywords) + KEYWORD_BATCH_SIZE - 1) // KEYWORD_BATCH_SIZE}..."

@@ -12,19 +12,17 @@ Extrae sugerencias en tiempo real de forma 100% gratuita y sin límites de API:
 import json
 import logging
 import random
-import requests
 import urllib.parse
-from typing import Dict, List, Set
+
+import requests
 
 from config import (
     CACHE_DIR,
     HTTP_CACHE_TTL_SECONDS,
     USER_AGENT_PROFILES,
-    LANG,
-    COUNTRY,
 )
 from scraper.http_cache import get_text, make_key, set_text
-from scraper.utils import dedupe_key, limpiar_texto, es_relevante_riguroso
+from scraper.utils import es_relevante_riguroso, limpiar_texto
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +38,9 @@ def _get_random_headers(lang: str = "es", country: str = "co") -> dict:
     }
 
 
-def fetch_google_suggestions(query: str, lang: str = "es", country: str = "co", session: requests.Session = None) -> List[str]:
+def fetch_google_suggestions(
+    query: str, lang: str = "es", country: str = "co", session: requests.Session = None
+) -> list[str]:
     """Obtiene sugerencias de autocompletado de Google Search."""
     session = session or requests.Session()
     urls = [
@@ -68,7 +68,9 @@ def fetch_google_suggestions(query: str, lang: str = "es", country: str = "co", 
     return []
 
 
-def fetch_youtube_suggestions(query: str, lang: str = "es", country: str = "co", session: requests.Session = None) -> List[str]:
+def fetch_youtube_suggestions(
+    query: str, lang: str = "es", country: str = "co", session: requests.Session = None
+) -> list[str]:
     """Obtiene sugerencias de autocompletado de YouTube (Video & Tutorial Intent)."""
     session = session or requests.Session()
     url = f"https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&hl={lang}&gl={country}&q={urllib.parse.quote(query)}"
@@ -93,7 +95,9 @@ def fetch_youtube_suggestions(query: str, lang: str = "es", country: str = "co",
     return []
 
 
-def fetch_amazon_suggestions(query: str, lang: str = "es", country: str = "co", session: requests.Session = None) -> List[str]:
+def fetch_amazon_suggestions(
+    query: str, lang: str = "es", country: str = "co", session: requests.Session = None
+) -> list[str]:
     """Obtiene sugerencias de autocompletado de Amazon (Commercial & Purchase Intent)."""
     session = session or requests.Session()
     mid = "A1RKKUPIHCS9HS" if country.lower() in ("es", "espania") else "ATVPDKIKX0DER"
@@ -120,7 +124,9 @@ def fetch_amazon_suggestions(query: str, lang: str = "es", country: str = "co", 
     return []
 
 
-def fetch_bing_suggestions(query: str, lang: str = "es", country: str = "co", session: requests.Session = None) -> List[str]:
+def fetch_bing_suggestions(
+    query: str, lang: str = "es", country: str = "co", session: requests.Session = None
+) -> list[str]:
     """Obtiene sugerencias de autocompletado de Bing Search."""
     session = session or requests.Session()
     url = f"https://api.bing.com/osjson.aspx?query={urllib.parse.quote(query)}&language={lang}&market={country}"
@@ -145,7 +151,9 @@ def fetch_bing_suggestions(query: str, lang: str = "es", country: str = "co", se
     return []
 
 
-def fetch_duckduckgo_suggestions(query: str, lang: str = "es", country: str = "co", session: requests.Session = None) -> List[str]:
+def fetch_duckduckgo_suggestions(
+    query: str, lang: str = "es", country: str = "co", session: requests.Session = None
+) -> list[str]:
     """Obtiene sugerencias de autocompletado de DuckDuckGo."""
     session = session or requests.Session()
     url = f"https://duckduckgo.com/ac/?q={urllib.parse.quote(query)}&type=list"
@@ -175,8 +183,8 @@ def fetch_multi_engine_suggestions(
     keyword: str,
     lang: str = "es",
     country: str = "co",
-    engines: List[str] = None,
-) -> Dict[str, dict]:
+    engines: list[str] = None,
+) -> dict[str, dict]:
     """
     Ejecuta la extracción multi-motor para una keyword y retorna un diccionario:
     {
@@ -193,7 +201,7 @@ def fetch_multi_engine_suggestions(
         engines = ["google", "youtube", "amazon", "bing", "duckduckgo"]
 
     session = requests.Session()
-    results: Dict[str, dict] = {}
+    results: dict[str, dict] = {}
 
     engine_fetchers = {
         "Google": (fetch_google_suggestions, "Informativo / General"),

@@ -13,14 +13,12 @@ Rangos:
   - KGR > 1.00: 🔴 Término Saturado
 """
 
-from typing import Optional
-
 
 def estimar_kgr(
     keyword: str,
     score_demanda: float = 50.0,
     exact_match_serp_count: int = 0,
-    volumen_mensual: Optional[int] = None,
+    volumen_mensual: int | None = None,
 ) -> dict:
     """
     Calcula la métrica KGR para una keyword a partir de la presencia de títulos
@@ -29,7 +27,9 @@ def estimar_kgr(
     num_palabras = len(keyword.strip().split())
     # Base de títulos exactos estimada o calculada
     # Si tenemos exact_match_serp_count de la primera página (0-10):
-    titulos_exactos_estimados = max(1, exact_match_serp_count * 12 if num_palabras >= 4 else (exact_match_serp_count + 1) * 35)
+    titulos_exactos_estimados = max(
+        1, exact_match_serp_count * 12 if num_palabras >= 4 else (exact_match_serp_count + 1) * 35
+    )
 
     base_volumen = volumen_mensual if (volumen_mensual and volumen_mensual > 0) else max(30, int(score_demanda * 10))
 
@@ -48,7 +48,9 @@ def estimar_kgr(
     else:
         veredicto = "KGR Alto (Competitivo)"
         badge_cls = "bg-slate-100 text-slate-700 border-slate-300"
-        explicacion = "Muchos sitios compiten con títulos similares. Se recomienda enfocarse en variantes con KGR < 0.25."
+        explicacion = (
+            "Muchos sitios compiten con títulos similares. Se recomienda enfocarse en variantes con KGR < 0.25."
+        )
         icono = "shield"
 
     return {

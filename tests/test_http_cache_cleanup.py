@@ -1,23 +1,26 @@
 """
 Tests para scraper/http_cache.py: limpieza automática de cache expirado.
 """
-import sys
-import os
+
 import json
+import os
+import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scraper.http_cache import make_key, get_text, set_text, cleanup_expired, _CLEANUP_DONE
+from scraper.http_cache import cleanup_expired, get_text, make_key, set_text
 
 
 class TestCleanupExpired:
     def setup_method(self):
         import scraper.http_cache as mod
+
         mod._CLEANUP_DONE = False
 
     def test_limpia_archivos_expirados(self, cache_dir):
         import scraper.http_cache as mod
+
         mod._CLEANUP_DONE = False
 
         key = make_key("https://example.com/expired")
@@ -32,6 +35,7 @@ class TestCleanupExpired:
 
     def test_no_limpia_archivos_vigentes(self, cache_dir):
         import scraper.http_cache as mod
+
         mod._CLEANUP_DONE = False
 
         key = make_key("https://example.com/fresh")
@@ -51,6 +55,7 @@ class TestCleanupExpired:
 
     def test_solo_ejecuta_una_vez(self, cache_dir):
         import scraper.http_cache as mod
+
         mod._CLEANUP_DONE = False
 
         key = make_key("https://example.com/once")
@@ -70,6 +75,7 @@ class TestHttpCacheIntegracion:
     def test_get_text_limpia_y_devuelve_none(self, cache_dir):
         """cleanup se ejecuta en get_text y limpia expirados."""
         import scraper.http_cache as mod
+
         mod._CLEANUP_DONE = False
 
         expired_key = make_key("https://example.com/exp")

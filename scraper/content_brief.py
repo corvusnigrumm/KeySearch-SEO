@@ -11,10 +11,8 @@ Genera una guía de redacción profesional (Content Brief) para redactores y cop
 
 import json
 import logging
-import re
-from typing import Dict, List, Optional
 
-from config import GROQ_API_KEY, GROQ_MODEL
+from config import GROQ_API_KEY
 from scraper.ai_client import post_groq_json as _post_groq_json
 
 logger = logging.getLogger(__name__)
@@ -22,9 +20,9 @@ logger = logging.getLogger(__name__)
 
 def generar_content_brief(
     keyword_base: str,
-    sugerencias: List[str] = None,
-    preguntas_paa: List[str] = None,
-    preguntas_ac: List[str] = None,
+    sugerencias: list[str] = None,
+    preguntas_paa: list[str] = None,
+    preguntas_ac: list[str] = None,
     pais: str = "Colombia",
     intencion: str = "Informativa",
 ) -> dict:
@@ -86,7 +84,7 @@ def generar_content_brief(
             "Responder de forma directa y concisa las preguntas PAA para aspirar a Google Featured Snippets.",
             "Usar párrafos cortos (máximo 3-4 líneas) y listas con viñetas para maximizar la legibilidad.",
             "Incluir al menos 2 enlaces internos a contenidos relacionados.",
-        ]
+        ],
     }
 
     if not GROQ_API_KEY:
@@ -110,12 +108,12 @@ def generar_content_brief(
         '  "longitud_recomendada_palabras": "1,500 - 2,000 palabras",\n'
         '  "formato_sugerido": "Guía Pilar / Comparativa",\n'
         '  "secciones_h2": [\n'
-        '    {\n'
+        "    {\n"
         '      "h2": "Encabezado H2",\n'
         '      "h3_subsecciones": ["Subsección H3 A", "Subsección H3 B"],\n'
         '      "puntos_clave": "Qué debe explicar el redactor en esta sección..."\n'
-        '    }\n'
-        '  ],\n'
+        "    }\n"
+        "  ],\n"
         '  "terminos_semanticos_obligatorios": ["termino 1", "termino 2"],\n'
         '  "preguntas_obligatorias_responder": ["pregunta 1", "pregunta 2"],\n'
         '  "checklist_redactor": ["Punto 1", "Punto 2", "Punto 3"]\n'
@@ -128,13 +126,19 @@ def generar_content_brief(
             return {
                 "keyword_principal": keyword_base,
                 "pais_objetivo": pais,
-                "longitud_recomendada_palabras": data.get("longitud_recomendada_palabras", fallback["longitud_recomendada_palabras"]),
+                "longitud_recomendada_palabras": data.get(
+                    "longitud_recomendada_palabras", fallback["longitud_recomendada_palabras"]
+                ),
                 "formato_sugerido": data.get("formato_sugerido", fallback["formato_sugerido"]),
                 "intencion_predominante": intencion,
                 "meta_h1": data.get("meta_h1", fallback["meta_h1"]),
                 "secciones_h2": data.get("secciones_h2", fallback["secciones_h2"]),
-                "terminos_semanticos_obligatorios": data.get("terminos_semanticos_obligatorios", fallback["terminos_semanticos_obligatorios"]),
-                "preguntas_obligatorias_responder": data.get("preguntas_obligatorias_responder", fallback["preguntas_obligatorias_responder"]),
+                "terminos_semanticos_obligatorios": data.get(
+                    "terminos_semanticos_obligatorios", fallback["terminos_semanticos_obligatorios"]
+                ),
+                "preguntas_obligatorias_responder": data.get(
+                    "preguntas_obligatorias_responder", fallback["preguntas_obligatorias_responder"]
+                ),
                 "checklist_redactor": data.get("checklist_redactor", fallback["checklist_redactor"]),
             }
     except Exception as e:

@@ -9,34 +9,63 @@ una oportunidad rápida para posicionar en el Top 3.
 
 import re
 import urllib.parse
-from typing import Dict, List, Optional
+
 from bs4 import BeautifulSoup
 
 from scraper.utils import limpiar_texto
 
 # Lista de dominios de foros y contenido generado por usuarios (UGC)
 FORUM_DOMAINS = {
-    "reddit.com", "quora.com", "forocoches.com", "taringa.net", "burbuja.info",
-    "forosdelweb.com", "stackexchange.com", "stackoverflow.com", "answers.yahoo.com",
-    "tripadvisor", "meneame.net", "discussions.apple.com", "community.spotify.com",
-    "foro.", "foros.", "comunidad.",
+    "reddit.com",
+    "quora.com",
+    "forocoches.com",
+    "taringa.net",
+    "burbuja.info",
+    "forosdelweb.com",
+    "stackexchange.com",
+    "stackoverflow.com",
+    "answers.yahoo.com",
+    "tripadvisor",
+    "meneame.net",
+    "discussions.apple.com",
+    "community.spotify.com",
+    "foro.",
+    "foros.",
+    "comunidad.",
 }
 
 # Redes sociales
 SOCIAL_DOMAINS = {
-    "pinterest.", "tiktok.com", "instagram.com", "facebook.com",
-    "twitter.com", "x.com", "linkedin.com/pulse", "threads.net",
+    "pinterest.",
+    "tiktok.com",
+    "instagram.com",
+    "facebook.com",
+    "twitter.com",
+    "x.com",
+    "linkedin.com/pulse",
+    "threads.net",
 }
 
 # Sitios de bajo filtro / blogs gratuitos
 LOW_BARRIER_DOMAINS = {
-    "blogspot.com", "wordpress.com", "wixsite.com", "medium.com",
-    "scribd.com", "issuu.com", "slideshare.net", "github.com/discussions",
+    "blogspot.com",
+    "wordpress.com",
+    "wixsite.com",
+    "medium.com",
+    "scribd.com",
+    "issuu.com",
+    "slideshare.net",
+    "github.com/discussions",
 }
 
 # Sitios de máxima autoridad
 MAJOR_AUTHORITY_DOMAINS = {
-    "wikipedia.org", ".gov", ".gob.", ".edu", "amazon.", "mercadolibre.",
+    "wikipedia.org",
+    ".gov",
+    ".gob.",
+    ".edu",
+    "amazon.",
+    "mercadolibre.",
 }
 
 
@@ -133,7 +162,7 @@ def analizar_debilidades_serp(soup: BeautifulSoup, keyword: str) -> dict:
         title_tag = el.find(["h3", "h2", "div"], class_=re.compile(r"DKV0Md|LC20lb|vvjwJb", re.I))
         if not title_tag:
             title_tag = a_tag.find(["h3", "h2"])
-        
+
         titulo = limpiar_texto(title_tag.get_text()) if title_tag else dominio
 
         # Buscar snippet / descripción
@@ -142,17 +171,19 @@ def analizar_debilidades_serp(soup: BeautifulSoup, keyword: str) -> dict:
 
         tipo, badge_color, icono = _clasificar_tipo_dominio(dominio, href)
 
-        competidores.append({
-            "posicion": posicion,
-            "dominio": dominio,
-            "titulo": titulo,
-            "url": href,
-            "snippet": snippet,
-            "tipo": tipo,
-            "badge_color": badge_color,
-            "icono": icono,
-            "es_debilidad": tipo in ("Foro / UGC", "Red Social", "Blog Libre / Web 2.0"),
-        })
+        competidores.append(
+            {
+                "posicion": posicion,
+                "dominio": dominio,
+                "titulo": titulo,
+                "url": href,
+                "snippet": snippet,
+                "tipo": tipo,
+                "badge_color": badge_color,
+                "icono": icono,
+                "es_debilidad": tipo in ("Foro / UGC", "Red Social", "Blog Libre / Web 2.0"),
+            }
+        )
 
         posicion += 1
         if len(competidores) >= 10:
@@ -180,17 +211,19 @@ def analizar_debilidades_serp(soup: BeautifulSoup, keyword: str) -> dict:
             titulo = limpiar_texto(h3.get_text())
             tipo, badge_color, icono = _clasificar_tipo_dominio(dominio, href)
 
-            competidores.append({
-                "posicion": len(competidores) + 1,
-                "dominio": dominio,
-                "titulo": titulo,
-                "url": href,
-                "snippet": "",
-                "tipo": tipo,
-                "badge_color": badge_color,
-                "icono": icono,
-                "es_debilidad": tipo in ("Foro / UGC", "Red Social", "Blog Libre / Web 2.0"),
-            })
+            competidores.append(
+                {
+                    "posicion": len(competidores) + 1,
+                    "dominio": dominio,
+                    "titulo": titulo,
+                    "url": href,
+                    "snippet": "",
+                    "tipo": tipo,
+                    "badge_color": badge_color,
+                    "icono": icono,
+                    "es_debilidad": tipo in ("Foro / UGC", "Red Social", "Blog Libre / Web 2.0"),
+                }
+            )
             if len(competidores) >= 10:
                 break
 
@@ -238,7 +271,9 @@ def analizar_debilidades_serp(soup: BeautifulSoup, keyword: str) -> dict:
     # Evaluación de Exact Match Titles
     if competidores and exact_match_count <= 2:
         puntos_oportunidad += 20
-        debilidades_detectadas.append(f"Solo {exact_match_count} de {len(competidores)} competidores tienen la keyword exacta en su título.")
+        debilidades_detectadas.append(
+            f"Solo {exact_match_count} de {len(competidores)} competidores tienen la keyword exacta en su título."
+        )
 
     # Clasificación final
     if puntos_oportunidad >= 45:

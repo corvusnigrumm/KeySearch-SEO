@@ -1,8 +1,8 @@
 import hashlib
 import json
+import logging
 import os
 import time
-import logging
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ def cleanup_expired(cache_dir: str, ttl_seconds: int) -> int:
                 continue
             path = os.path.join(cache_dir, filename)
             try:
-                with open(path, "r", encoding="utf-8") as fh:
+                with open(path, encoding="utf-8") as fh:
                     payload = json.load(fh)
                 ts = int(payload.get("ts", 0))
                 if ttl_seconds > 0 and (now - ts) > ttl_seconds:
@@ -84,7 +84,7 @@ def get_text(cache_dir: str, key: str, ttl_seconds: int) -> str | None:
         return None
 
     try:
-        with open(path, "r", encoding="utf-8") as file_handle:
+        with open(path, encoding="utf-8") as file_handle:
             payload = json.load(file_handle)
         ts = int(payload.get("ts", 0))
         if ttl_seconds > 0 and (int(time.time()) - ts) > ttl_seconds:

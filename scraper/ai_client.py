@@ -3,16 +3,20 @@ Infraestructura de clientes IA con fallback en cadena.
 
 Cadena: ChatGPT (OpenAI) -> GPT-OSS 120B (Groq) -> Qwen QwQ 32B (Groq) -> Llama 3.3 70B (Groq)
 """
+
 import json
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 
 from config import (
-    GROQ_API_KEY, GROQ_MODEL, OPENAI_API_KEY,
-    AI_MODEL_PRIMARY, AI_MODEL_SECONDARY, AI_MODEL_TERTIARY,
+    AI_MODEL_PRIMARY,
+    AI_MODEL_SECONDARY,
+    AI_MODEL_TERTIARY,
+    GROQ_API_KEY,
+    OPENAI_API_KEY,
 )
 
 logger = logging.getLogger(__name__)
@@ -22,6 +26,7 @@ def _get_groq_client() -> Any:
     """Retorna el cliente Groq (lazy init)."""
     try:
         from groq import Groq
+
         return Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
     except Exception:
         return None
@@ -31,6 +36,7 @@ def _get_openai_client() -> Any:
     """Retorna el cliente OpenAI (lazy init)."""
     try:
         import openai
+
         return openai.OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
     except Exception:
         return None
@@ -58,27 +64,30 @@ def limpiar_respuesta_json(raw_text: str) -> str:
     if text.startswith("```json"):
         text = text[7:]
         if "```" in text:
-            text = text[:text.rfind("```")]
+            text = text[: text.rfind("```")]
         text = text.strip()
     elif text.startswith("```"):
         text = text[3:]
         if "```" in text:
-            text = text[:text.rfind("```")]
+            text = text[: text.rfind("```")]
         text = text.strip()
     return text
 
 
-def _llamar_groq_modelo(prompt: str, model_id: str, timeout: int = 45) -> Optional[Dict[str, Any]]:
+def _llamar_groq_modelo(prompt: str, model_id: str, timeout: int = 45) -> dict[str, Any] | None:
     """Invoca un modelo especifico en Groq y retorna JSON parseado o None si falla."""
     _ensure_clients()
     if not GROQ_API_KEY or not _groq_client:
         return None
-    is_reasoning = ("gpt-oss" in model_id.lower() or "deepseek" in model_id.lower() or "qwq" in model_id.lower())
+    is_reasoning = "gpt-oss" in model_id.lower() or "deepseek" in model_id.lower() or "qwq" in model_id.lower()
     try:
         req_params = {
             "model": model_id,
             "messages": [
-                {"role": "system", "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra."},
+                {
+                    "role": "system",
+                    "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra.",
+                },
                 {"role": "user", "content": prompt},
             ],
         }
@@ -100,7 +109,7 @@ def _llamar_groq_modelo(prompt: str, model_id: str, timeout: int = 45) -> Option
         return None
 
 
-def _llamar_openai_modelo(prompt: str, timeout: int = 45) -> Optional[Dict[str, Any]]:
+def _llamar_openai_modelo(prompt: str, timeout: int = 45) -> dict[str, Any] | None:
     """Invoca ChatGPT real via OpenAI API si hay OPENAI_API_KEY. Retorna JSON o None."""
     _ensure_clients()
     if not OPENAI_API_KEY:
@@ -111,7 +120,10 @@ def _llamar_openai_modelo(prompt: str, timeout: int = 45) -> Optional[Dict[str, 
             completion = _openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra."},
+                    {
+                        "role": "system",
+                        "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.2,
@@ -130,14 +142,14 @@ def _llamar_openai_modelo(prompt: str, timeout: int = 45) -> Optional[Dict[str, 
 
     try:
         url = "https://api.openai.com/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
         payload = {
             "model": "gpt-4o-mini",
             "messages": [
-                {"role": "system", "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra."},
+                {
+                    "role": "system",
+                    "content": "Eres una API JSON estricta. Devuelves UNICAMENTE JSON valido, sin etiquetas markdown ni texto extra.",
+                },
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.2,
@@ -161,7 +173,7 @@ def _llamar_openai_modelo(prompt: str, timeout: int = 45) -> Optional[Dict[str, 
         return None
 
 
-def post_groq_json(prompt: str, timeout: int = 45, model: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def post_groq_json(prompt: str, timeout: int = 45, model: str | None = None) -> dict[str, Any] | None:
     """
     Cadena de IA con fallback automatico en 3 niveles:
       Nivel 1 -- ChatGPT (OpenAI) / GPT-OSS 120B (Groq)
@@ -205,7 +217,8 @@ def post_groq_json(prompt: str, timeout: int = 45, model: Optional[str] = None) 
             {"role": "system", "content": "Devuelve UNICAMENTE JSON valido sin markdown."},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.2, "max_tokens": 2048,
+        "temperature": 0.2,
+        "max_tokens": 2048,
     }
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=timeout)

@@ -8,12 +8,12 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scraper.editorial_ideator import (
-    obtener_tags_reales_google,
-    generar_ideas_notas_angulos,
-    redactar_nota_editorial,
-    exportar_nota_markdown,
-    exportar_nota_html,
     exportar_nota_docx,
+    exportar_nota_html,
+    exportar_nota_markdown,
+    generar_ideas_notas_angulos,
+    obtener_tags_reales_google,
+    redactar_nota_editorial,
 )
 
 

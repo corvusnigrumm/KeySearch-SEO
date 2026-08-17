@@ -1,11 +1,12 @@
 """
 Tests para los endpoints principales de FastAPI (con mocking de servicios externos).
 """
-import sys
+
 import os
-import json
+import sys
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -13,17 +14,16 @@ from fastapi.testclient import TestClient
 
 
 def _reset_rate_limiters():
-    from core.security import rate_limiter, ai_rate_limiter
+    from core.security import ai_rate_limiter, rate_limiter
+
     rate_limiter._hits.clear()
     ai_rate_limiter._hits.clear()
 
 
 def _make_authenticated_client():
+    from core.auth import create_access_token, get_password_hash
+    from core.database import SessionLocal, User, init_db
     from fastapi_app import app
-    from core.database import init_db
-    from core.database import SessionLocal
-    from core.auth import get_password_hash, create_access_token
-    from core.database import User
 
     init_db()
     client = TestClient(app, raise_server_exceptions=False)
@@ -56,14 +56,16 @@ def client():
 class TestPingEndpoint:
     def test_ping_ok(self):
         from fastapi_app import app
+
         c = TestClient(app)
         resp = c.get("/ping")
         assert resp.status_code == 200
         assert resp.json()["status"] == "ok"
 
     def test_health_ok(self):
-        from fastapi_app import app
         from core.database import init_db
+        from fastapi_app import app
+
         init_db()
         c = TestClient(app)
         resp = c.get("/health")
@@ -78,6 +80,7 @@ class TestPingEndpoint:
 class TestStatusEndpoint:
     def test_status_requiere_auth(self):
         from fastapi_app import app
+
         c = TestClient(app)
         resp = c.get("/status")
         assert resp.status_code in (200, 307, 401)
@@ -90,27 +93,38 @@ class TestStatusEndpoint:
 class TestAuthFlujo:
     def test_login_page(self):
         from fastapi_app import app
+
         c = TestClient(app)
         resp = c.get("/login")
         assert resp.status_code == 200
 
     def test_registro_y_login(self):
         from fastapi_app import app
+
         c = TestClient(app, raise_server_exceptions=False)
-        resp = c.post("/register", data={
-            "username": "test_user_prof",
-            "password": "test1234",
-        }, follow_redirects=False)
+        resp = c.post(
+            "/register",
+            data={
+                "username": "test_user_prof",
+                "password": "test1234",
+            },
+            follow_redirects=False,
+        )
         assert resp.status_code in (200, 303)
 
-        resp = c.post("/login", data={
-            "username": "test_user_prof",
-            "password": "test1234",
-        }, follow_redirects=False)
+        resp = c.post(
+            "/login",
+            data={
+                "username": "test_user_prof",
+                "password": "test1234",
+            },
+            follow_redirects=False,
+        )
         assert resp.status_code in (200, 303)
 
     def test_registro_usuario_duplicado(self):
         from fastapi_app import app
+
         c = TestClient(app, raise_server_exceptions=False)
         c.post("/register", data={"username": "dup_user_2", "password": "test1234"})
         resp = c.post("/register", data={"username": "dup_user_2", "password": "otra1234"})
@@ -119,6 +133,7 @@ class TestAuthFlujo:
 
     def test_password_corta_rechazada(self):
         from fastapi_app import app
+
         c = TestClient(app, raise_server_exceptions=False)
         resp = c.post("/register", data={"username": "short_pw_user_2", "password": "ab"})
         assert resp.status_code == 200
@@ -134,20 +149,26 @@ class TestSchemaEndpoint:
             "slug_sugerido": "test-title",
             "faq_items": [{"pregunta": "Q1?", "respuesta": "A1"}],
         }
-        resp = client.post("/api/generate-schema", json={
-            "keyword": "test keyword",
-            "questions": ["Q1?"],
-            "country": "Colombia",
-        })
+        resp = client.post(
+            "/api/generate-schema",
+            json={
+                "keyword": "test keyword",
+                "questions": ["Q1?"],
+                "country": "Colombia",
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert "meta_title" in data
 
     def test_generate_schema_sin_keyword(self, client):
-        resp = client.post("/api/generate-schema", json={
-            "keyword": "",
-            "questions": [],
-        })
+        resp = client.post(
+            "/api/generate-schema",
+            json={
+                "keyword": "",
+                "questions": [],
+            },
+        )
         # Pydantic min_length=1 rechaza string vacío
         assert resp.status_code == 422
 
@@ -164,33 +185,45 @@ class TestAdsCopyEndpoint:
             "tiktok_reels_hooks": ["hook1"],
             "guion_video_30s": {"gancho": "test"},
         }
-        resp = client.post("/api/generate-ads-copy", json={
-            "keyword": "test keyword",
-            "questions": [],
-            "intent": "Informativa",
-            "country": "Colombia",
-        })
+        resp = client.post(
+            "/api/generate-ads-copy",
+            json={
+                "keyword": "test keyword",
+                "questions": [],
+                "intent": "Informativa",
+                "country": "Colombia",
+            },
+        )
         assert resp.status_code == 200
 
     def test_generate_ads_copy_sin_keyword(self, client):
-        resp = client.post("/api/generate-ads-copy", json={
-            "keyword": "",
-        })
+        resp = client.post(
+            "/api/generate-ads-copy",
+            json={
+                "keyword": "",
+            },
+        )
         # Pydantic min_length=1 rechaza string vacío
         assert resp.status_code == 422
 
 
 class TestSetGroqModel:
     def test_set_model_ok(self, client):
-        resp = client.post("/api/set-groq-model", json={
-            "model": "llama-3.3-70b-versatile",
-        })
+        resp = client.post(
+            "/api/set-groq-model",
+            json={
+                "model": "llama-3.3-70b-versatile",
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "ok"
 
     def test_set_model_vacio(self, client):
-        resp = client.post("/api/set-groq-model", json={
-            "model": "",
-        })
+        resp = client.post(
+            "/api/set-groq-model",
+            json={
+                "model": "",
+            },
+        )
         # Pydantic min_length=1 rechaza string vacío
         assert resp.status_code == 422

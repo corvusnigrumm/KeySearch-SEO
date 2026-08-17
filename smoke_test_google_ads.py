@@ -1,6 +1,7 @@
 """
 Prueba rapida de Google Ads API usando la integracion del proyecto.
 """
+
 from scraper.google_ads_metrics import enrich_with_google_ads_metrics, get_google_ads_status
 
 

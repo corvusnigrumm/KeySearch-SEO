@@ -4,29 +4,32 @@ tests/test_security_penetration.py - Bateria completa de penetracion y hardening
 Cada test intenta explotar una vulnerabilidad real. Si el test PASS, la vulnerabilidad
 esta correctamente mitigada. Si FAIL, la app esta vulnerable.
 """
-import sys
+
 import os
+import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiters():
-    from core.security import rate_limiter, ai_rate_limiter
+    from core.security import ai_rate_limiter, rate_limiter
+
     rate_limiter._hits.clear()
     ai_rate_limiter._hits.clear()
 
 
 @pytest.fixture
 def client():
+    from core.auth import create_access_token, get_password_hash
+    from core.database import SessionLocal, User, init_db
     from fastapi_app import app
-    from core.database import init_db, SessionLocal, User
-    from core.auth import get_password_hash, create_access_token
 
     init_db()
     c = TestClient(app, raise_server_exceptions=False)
@@ -55,39 +58,54 @@ def client():
 # ══════════════════════════════════════════════════════════════════════════════
 class TestSQLInjection:
     def test_login_sqli_union(self, client):
-        resp = client.post("/login", data={
-            "username": "admin' UNION SELECT 1,2,3--",
-            "password": "anything",
-        })
+        resp = client.post(
+            "/login",
+            data={
+                "username": "admin' UNION SELECT 1,2,3--",
+                "password": "anything",
+            },
+        )
         assert resp.status_code in (200, 302, 307)
 
     def test_login_sqli_or_true(self, client):
-        resp = client.post("/login", data={
-            "username": "admin' OR '1'='1",
-            "password": "anything",
-        })
+        resp = client.post(
+            "/login",
+            data={
+                "username": "admin' OR '1'='1",
+                "password": "anything",
+            },
+        )
         assert resp.status_code in (200, 302, 307)
 
     def test_register_sqli(self, client):
-        resp = client.post("/register", data={
-            "username": "test'; DROP TABLE users;--",
-            "password": "pass1234",
-        })
+        resp = client.post(
+            "/register",
+            data={
+                "username": "test'; DROP TABLE users;--",
+                "password": "pass1234",
+            },
+        )
         assert resp.status_code in (200, 302, 307)
 
     def test_keyword_sqli_in_run(self, client):
-        resp = client.post("/run", data={
-            "keywords": "test'; SELECT * FROM users--",
-            "country": "co",
-            "profile": "normal",
-        })
+        resp = client.post(
+            "/run",
+            data={
+                "keywords": "test'; SELECT * FROM users--",
+                "country": "co",
+                "profile": "normal",
+            },
+        )
         assert resp.status_code in (200, 302, 307, 400, 429)
 
     def test_sqli_in_schema_api(self, client):
-        resp = client.post("/api/generate-schema", json={
-            "keyword": "test' OR 1=1 UNION SELECT username,password_hash FROM users--",
-            "questions": [],
-        })
+        resp = client.post(
+            "/api/generate-schema",
+            json={
+                "keyword": "test' OR 1=1 UNION SELECT username,password_hash FROM users--",
+                "questions": [],
+            },
+        )
         assert resp.status_code in (200, 422, 429)
 
 
@@ -101,24 +119,35 @@ class TestXSS:
         assert "<script>alert(1)</script>" not in body, "Reflected XSS in OAuth callback error"
 
     def test_xss_stored_in_register_username(self, client):
-        resp = client.post("/register", data={
-            "username": "<img src=x onerror=alert(1)>",
-            "password": "pass1234",
-        }, follow_redirects=True)
+        resp = client.post(
+            "/register",
+            data={
+                "username": "<img src=x onerror=alert(1)>",
+                "password": "pass1234",
+            },
+            follow_redirects=True,
+        )
         assert b"<img src=x onerror=" not in resp.content
 
     def test_xss_in_error_context(self, client):
-        resp = client.post("/register", data={
-            "username": "<svg onload=alert(1)>",
-            "password": "pass1234",
-        }, follow_redirects=True)
+        resp = client.post(
+            "/register",
+            data={
+                "username": "<svg onload=alert(1)>",
+                "password": "pass1234",
+            },
+            follow_redirects=True,
+        )
         assert b"<svg onload=" not in resp.content
 
     def test_xss_in_api_error_response(self, client):
-        resp = client.post("/api/generate-schema", json={
-            "keyword": "<script>alert('xss')</script>",
-            "questions": [],
-        })
+        resp = client.post(
+            "/api/generate-schema",
+            json={
+                "keyword": "<script>alert('xss')</script>",
+                "questions": [],
+            },
+        )
         if resp.status_code == 500:
             body = resp.json().get("error", "")
             assert "<script>" not in body
@@ -130,12 +159,14 @@ class TestXSS:
 class TestAuthBypass:
     def test_no_cookie_cannot_access_status(self):
         from fastapi_app import app
+
         c = TestClient(app)
         resp = c.get("/status", follow_redirects=False)
         assert resp.status_code in (307, 401, 403)
 
     def test_invalid_jwt_rejected(self):
         from fastapi_app import app
+
         c = TestClient(app)
         c.cookies.set("access_token", "fake.jwt.token")
         resp = c.get("/status", follow_redirects=False)
@@ -143,15 +174,18 @@ class TestAuthBypass:
 
     def test_tampered_jwt_sub(self, client):
         from core.auth import create_access_token
+
         token = create_access_token({"sub": "99999"})
         client.cookies.set("access_token", token)
         resp = client.get("/status")
         assert resp.status_code in (200, 307, 401, 403)
 
     def test_expired_jwt_rejected(self):
-        from fastapi_app import app
-        from core.auth import create_access_token
         from datetime import timedelta
+
+        from core.auth import create_access_token
+        from fastapi_app import app
+
         token = create_access_token({"sub": "1"}, expires_delta=timedelta(seconds=-1))
         c = TestClient(app)
         c.cookies.set("access_token", token)
@@ -165,6 +199,7 @@ class TestAuthBypass:
 class TestCookieSecurity:
     def test_session_cookie_has_httponly(self):
         from fastapi_app import app
+
         c = TestClient(app)
         c.get("/ping")
         for cookie in c.cookies.jar:
@@ -173,9 +208,10 @@ class TestCookieSecurity:
                 break
 
     def test_access_token_cookie_httponly(self):
-        from fastapi_app import app
-        from core.database import init_db, SessionLocal, User
         from core.auth import get_password_hash
+        from core.database import SessionLocal, User, init_db
+        from fastapi_app import app
+
         init_db()
         c = TestClient(app, raise_server_exceptions=False)
         db = SessionLocal()
@@ -187,10 +223,14 @@ class TestCookieSecurity:
                 db.commit()
         finally:
             db.close()
-        resp = c.post("/login", data={
-            "username": "cookie_test_user",
-            "password": "test1234",
-        }, follow_redirects=False)
+        resp = c.post(
+            "/login",
+            data={
+                "username": "cookie_test_user",
+                "password": "test1234",
+            },
+            follow_redirects=False,
+        )
         if resp.status_code in (303, 200):
             for header in resp.headers.get_list("set-cookie"):
                 if "access_token" in header:
@@ -203,8 +243,9 @@ class TestCookieSecurity:
 # ══════════════════════════════════════════════════════════════════════════════
 class TestRateLimiting:
     def test_general_rate_limit_enforced(self):
-        from fastapi_app import app
         from core.security import rate_limiter
+        from fastapi_app import app
+
         rate_limiter._hits.clear()
         c = TestClient(app)
         # /status requires auth but /ping is exempted. Use a non-exempted path.
@@ -218,6 +259,7 @@ class TestRateLimiting:
 
     def test_ai_rate_limit_enforced(self, client):
         from core.security import ai_rate_limiter
+
         ai_rate_limiter._hits.clear()
         for _ in range(5):
             client.post("/api/set-groq-model", json={"model": "test"})
@@ -230,11 +272,17 @@ class TestRateLimiting:
 # ══════════════════════════════════════════════════════════════════════════════
 class TestInfoDisclosure:
     def test_no_stack_traces_in_500(self, client):
-        with patch("scraper.ai_generator.post_groq_json", side_effect=Exception("DB connection string: postgres://user:pass@host")):
-            resp = client.post("/api/generate-schema", json={
-                "keyword": "test",
-                "questions": [],
-            })
+        with patch(
+            "scraper.ai_generator.post_groq_json",
+            side_effect=Exception("DB connection string: postgres://user:pass@host"),
+        ):
+            resp = client.post(
+                "/api/generate-schema",
+                json={
+                    "keyword": "test",
+                    "questions": [],
+                },
+            )
             if resp.status_code == 500:
                 body = resp.json().get("error", "")
                 assert "postgres://" not in body, "Stack trace leaked in 500 response"
@@ -246,10 +294,13 @@ class TestInfoDisclosure:
         assert "password" not in body.lower()
 
     def test_error_messages_safe(self, client):
-        resp = client.post("/register", data={
-            "username": "x" * 200,
-            "password": "short",
-        })
+        resp = client.post(
+            "/register",
+            data={
+                "username": "x" * 200,
+                "password": "short",
+            },
+        )
         assert resp.status_code in (200, 400, 422)
 
 
@@ -289,31 +340,43 @@ class TestSecurityHeaders:
 # ══════════════════════════════════════════════════════════════════════════════
 class TestInputValidation:
     def test_username_length_limit(self, client):
-        resp = client.post("/register", data={
-            "username": "a" * 300,
-            "password": "pass1234",
-        })
+        resp = client.post(
+            "/register",
+            data={
+                "username": "a" * 300,
+                "password": "pass1234",
+            },
+        )
         assert resp.status_code in (200, 400, 422)
 
     def test_password_minimum_length(self, client):
-        resp = client.post("/register", data={
-            "username": "shortpw_user_123",
-            "password": "ab",
-        })
+        resp = client.post(
+            "/register",
+            data={
+                "username": "shortpw_user_123",
+                "password": "ab",
+            },
+        )
         assert resp.status_code == 200
         assert "4 caracteres" in resp.text.lower() or "contrasena" in resp.text.lower()
 
     def test_keyword_max_length(self, client):
-        resp = client.post("/api/generate-schema", json={
-            "keyword": "x" * 10000,
-            "questions": [],
-        })
+        resp = client.post(
+            "/api/generate-schema",
+            json={
+                "keyword": "x" * 10000,
+                "questions": [],
+            },
+        )
         assert resp.status_code in (422, 400, 429)
 
     def test_model_name_validation(self, client):
-        resp = client.post("/api/set-groq-model", json={
-            "model": "a" * 5000,
-        })
+        resp = client.post(
+            "/api/set-groq-model",
+            json={
+                "model": "a" * 5000,
+            },
+        )
         assert resp.status_code in (422, 400, 429)
 
 
@@ -323,6 +386,7 @@ class TestInputValidation:
 class TestPasswordSecurity:
     def test_password_not_stored_plaintext(self):
         from core.database import SessionLocal, User
+
         db = SessionLocal()
         try:
             users = db.query(User).all()
@@ -334,19 +398,22 @@ class TestPasswordSecurity:
 
     def test_same_password_different_hashes(self):
         from core.auth import get_password_hash
+
         h1 = get_password_hash("same_password")
         h2 = get_password_hash("same_password")
         assert h1 != h2
 
     def test_password_hash_not_reversible(self):
         from core.auth import get_password_hash
+
         h = get_password_hash("secret123")
         assert "secret123" not in h
 
     def test_password_comparison_constant_time(self):
-        from core.auth import verify_password, get_password_hash
+        from core.auth import get_password_hash, verify_password
+
         h = get_password_hash("test")
-        import time
+
         t1 = time.perf_counter()
         for _ in range(100):
             verify_password("wrong_password", h)
@@ -360,11 +427,13 @@ class TestPasswordSecurity:
 class TestSessionSecurity:
     def test_session_id_is_uuid_format(self):
         from fastapi_app import app
+
         c = TestClient(app)
         c.get("/ping")
         for cookie in c.cookies.jar:
             if cookie.name == "session_id":
                 import uuid
+
                 try:
                     uuid.UUID(cookie.value)
                 except ValueError:
@@ -378,7 +447,7 @@ class TestSessionSecurity:
         assert resp.status_code in (200, 302, 303)
         # After logout, cookie should be deleted. Create fresh client to verify.
         from fastapi_app import app
-        from core.auth import create_access_token
+
         fresh = TestClient(app)
         # No access_token cookie => should redirect
         resp = fresh.get("/status", follow_redirects=False)
@@ -391,11 +460,14 @@ class TestSessionSecurity:
 class TestDoSProtection:
     def test_keyword_limit_enforced(self, client):
         many_keywords = "\n".join([f"keyword_{i}" for i in range(200)])
-        resp = client.post("/run", data={
-            "keywords": many_keywords,
-            "country": "co",
-            "profile": "normal",
-        })
+        resp = client.post(
+            "/run",
+            data={
+                "keywords": many_keywords,
+                "country": "co",
+                "profile": "normal",
+            },
+        )
         assert resp.status_code in (200, 302, 307, 400, 413, 429)
 
 
@@ -418,14 +490,18 @@ class TestPathTraversal:
 class TestGlobalConfigMutation:
     def test_model_mutation_requires_auth(self):
         from fastapi_app import app
+
         c = TestClient(app)
         resp = c.post("/api/set-groq-model", json={"model": "evil-model"})
         assert resp.status_code in (307, 401, 403, 422, 429)
 
     def test_model_mutation_validated(self, client):
-        resp = client.post("/api/set-groq-model", json={
-            "model": "a" * 1000,
-        })
+        resp = client.post(
+            "/api/set-groq-model",
+            json={
+                "model": "a" * 1000,
+            },
+        )
         assert resp.status_code in (422, 400, 429)
 
 
@@ -435,18 +511,21 @@ class TestGlobalConfigMutation:
 class TestLogProtection:
     def test_logs_require_auth(self):
         from fastapi_app import app
+
         c = TestClient(app)
         resp = c.get("/api/logs", follow_redirects=False)
         assert resp.status_code in (307, 401, 403)
 
     def test_status_requires_auth(self):
         from fastapi_app import app
+
         c = TestClient(app)
         resp = c.get("/status", follow_redirects=False)
         assert resp.status_code in (307, 401, 403)
 
     def test_download_json_requires_auth(self):
         from fastapi_app import app
+
         c = TestClient(app)
         resp = c.get("/download/json", follow_redirects=False)
         assert resp.status_code in (307, 401, 403)

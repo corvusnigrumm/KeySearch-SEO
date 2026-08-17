@@ -1,28 +1,35 @@
 """
 Test para el Generador de Content Brief Editorial y el Estimador de KGR.
 """
-import sys
+
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scraper.content_brief import generar_content_brief, exportar_content_brief_markdown
+from scraper.content_brief import exportar_content_brief_markdown, generar_content_brief
 from scraper.kgr_estimator import estimar_kgr
 
 
 def test_content_brief_and_kgr():
     print("--> Testeando Generador de Content Brief Editorial...")
     kw = "como crear una pagina web"
-    sugs = ["como crear una pagina web gratis", "como crear una pagina web profesional", "como crear una pagina web con wordpress"]
+    sugs = [
+        "como crear una pagina web gratis",
+        "como crear una pagina web profesional",
+        "como crear una pagina web con wordpress",
+    ]
     paas = ["cuanto cuesta crear una pagina web", "que se necesita para crear una pagina web"]
 
-    brief = generar_content_brief(kw, sugerencias=sugs, preguntas_paa=paas, pais="Colombia", intencion="Informativa / Comercial")
+    brief = generar_content_brief(
+        kw, sugerencias=sugs, preguntas_paa=paas, pais="Colombia", intencion="Informativa / Comercial"
+    )
 
     print(f"\n[Meta H1]: {brief['meta_h1']}")
     print(f"[Longitud]: {brief['longitud_recomendada_palabras']}")
     print(f"[Formato]: {brief['formato_sugerido']}")
     print(f"[Total H2]: {len(brief['secciones_h2'])}")
-    for sec in brief['secciones_h2']:
+    for sec in brief["secciones_h2"]:
         print(f"  - H2: {sec['h2']} (H3s: {len(sec.get('h3_subsecciones', []))})")
 
     md_brief = exportar_content_brief_markdown(brief)

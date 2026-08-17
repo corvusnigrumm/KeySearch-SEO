@@ -7,25 +7,26 @@ Proporciona:
 - Health check endpoint con DB, cache, uptime
 - Prometheus metrics: request count, latency histogram, active sessions, AI calls
 """
-import time
-import uuid
+
+import datetime
 import json
 import logging
-import datetime
-from typing import Any, Dict, Optional
+import time
+import uuid
+from typing import Any
 
 from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
 
 # ── Prometheus Metrics ───────────────────────────────────────────────────────
 from prometheus_client import (
+    CONTENT_TYPE_LATEST,
     Counter,
-    Histogram,
     Gauge,
+    Histogram,
     Info,
     generate_latest,
-    CONTENT_TYPE_LATEST,
 )
+from starlette.middleware.base import BaseHTTPMiddleware
 
 APP_INFO = Info("keysearch", "KeySearch V10 Ultra application metadata")
 APP_INFO.info({"version": "10.0"})
@@ -85,7 +86,7 @@ class StructuredFormatter(logging.Formatter):
     """Formatter que genera logs en formato JSON estructurado."""
 
     def format(self, record: logging.LogRecord) -> str:
-        log_data: Dict[str, Any] = {
+        log_data: dict[str, Any] = {
             "ts": datetime.datetime.now(datetime.UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
@@ -133,7 +134,7 @@ def setup_structured_logging():
 
 
 # ── Request ID Middleware ────────────────────────────────────────────────────
-_request_id_ctx: Dict[str, str] = {}
+_request_id_ctx: dict[str, str] = {}
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -170,7 +171,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def get_current_request_id() -> Optional[str]:
+def get_current_request_id() -> str | None:
     return _request_id_ctx.get("current")
 
 
@@ -235,9 +236,9 @@ def compute_uptime() -> float:
     return time.time() - _start_time
 
 
-def health_check_data() -> Dict[str, Any]:
+def health_check_data() -> dict[str, Any]:
     """Genera el payload completo de health check."""
-    from core.database import SessionLocal, User, SearchHistory, PipelineSession
+    from core.database import PipelineSession, SearchHistory, SessionLocal, User
 
     db_ok = False
     db_error = ""
@@ -257,6 +258,7 @@ def health_check_data() -> Dict[str, Any]:
         db_error = str(e)
 
     import config
+
     api_configured = bool(getattr(config, "GROQ_API_KEY", ""))
 
     return {

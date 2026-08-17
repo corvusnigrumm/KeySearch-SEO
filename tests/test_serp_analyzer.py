@@ -1,13 +1,15 @@
 """
 Test para el Analizador de Debilidades de la SERP y Oportunidades de Oro.
 """
-import sys
+
 import os
+import sys
+
 from bs4 import BeautifulSoup
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scraper.serp_analyzer import analizar_debilidades_serp, _clasificar_tipo_dominio
+from scraper.serp_analyzer import _clasificar_tipo_dominio, analizar_debilidades_serp
 
 
 def test_domain_classification():
@@ -70,10 +72,9 @@ def test_serp_weakness_detector():
     print(f"  - Es oportunidad de oro: {res['es_oportunidad_oro']}")
     print(f"  - Debilidades encontradas: {len(res['debilidades_detectadas'])}")
 
-    assert res['total_analizados'] >= 4, "No extrajo todos los competidores"
-    assert res['es_oportunidad_oro'] == True, "Debería ser Oportunidad de Oro por tener Reddit en #1 y Quora en #2"
+    assert res["total_analizados"] >= 4, "No extrajo todos los competidores"
+    assert res["es_oportunidad_oro"] is True, "Debería ser Oportunidad de Oro por tener Reddit en #1 y Quora en #2"
     print("\n>>> TEST DE SERP WEAKNESS DETECTOR EXITOSO <<<")
-
 
 
 if __name__ == "__main__":

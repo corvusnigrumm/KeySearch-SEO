@@ -7,14 +7,14 @@ Hardening:
 - Rate limiter con limpieza de keys vacias
 - Validacion de session_id como UUID
 """
-import uuid
-import time
-import secrets
-import logging
-from collections import defaultdict
-from typing import Dict, Tuple, Optional
 
-from fastapi import Request, Response
+import logging
+import secrets
+import time
+import uuid
+from collections import defaultdict
+
+from fastapi import Request
 from fastapi.responses import JSONResponse
 
 logger = logging.getLogger("keysearch.security")
@@ -27,7 +27,7 @@ class RateLimiter:
     def __init__(self, max_requests: int = 30, window_seconds: int = 60):
         self._max = max_requests
         self._window = window_seconds
-        self._hits: Dict[str, list] = defaultdict(list)
+        self._hits: dict[str, list] = defaultdict(list)
 
     def _clean(self, ip: str, now: float) -> None:
         cutoff = now - self._window
@@ -35,7 +35,7 @@ class RateLimiter:
         if not self._hits[ip]:
             del self._hits[ip]
 
-    def is_allowed(self, ip: str) -> Tuple[bool, int]:
+    def is_allowed(self, ip: str) -> tuple[bool, int]:
         now = time.time()
         self._clean(ip, now)
         count = len(self._hits[ip])
@@ -45,7 +45,7 @@ class RateLimiter:
         self._hits[ip].append(now)
         return True, 0
 
-    def is_allowed_strict(self, ip: str) -> Tuple[bool, int]:
+    def is_allowed_strict(self, ip: str) -> tuple[bool, int]:
         return self.is_allowed(ip)
 
 

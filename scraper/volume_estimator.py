@@ -8,21 +8,21 @@ Proporciona señales reales, transparentes y 100% gratuitas:
 4. Clasificación de Intención de Búsqueda (Informativa, Comercial, Transaccional, Navegacional)
 5. Etapa del Embudo de Conversión (ToFU, MoFU, BoFU)
 """
+
 import random
 import re
 import time
-from typing import Dict, List, Optional
 
 from config import COUNTRY, LANG
 
 try:
     from pytrends.request import TrendReq
+
     HAS_PYTRENDS = True
 except ImportError:
     HAS_PYTRENDS = False
 
 from scraper.wikipedia_metrics import enriquecer_con_wikipedia
-
 
 SOURCE_LABELS = {
     "autocomplete": "Autocompletado",
@@ -53,23 +53,61 @@ TRENDS_BATCH_SIZE = 5
 # ─── Heurística de Intención y Funnel ─────────────────────────────────────────
 
 _PATRONES_TRANSACCIONAL = [
-    r"\bcomprar\b", r"\bprecio\b", r"\bprecios\b", r"\bcosto\b", r"\bcuanto cuesta\b",
-    r"\bcuanto vale\b", r"\bbarato\b", r"\bdescuento\b", r"\boferta\b", r"\bpromocion\b",
-    r"\btienda\b", r"\bventa\b", r"\bdonde comprar\b", r"\bplanes\b", r"\bpedir\b",
-    r"\bcotizar\b", r"\bcotizacion\b", r"\btarifa\b", r"\bsuscripcion\b", r"\bordenar\b",
+    r"\bcomprar\b",
+    r"\bprecio\b",
+    r"\bprecios\b",
+    r"\bcosto\b",
+    r"\bcuanto cuesta\b",
+    r"\bcuanto vale\b",
+    r"\bbarato\b",
+    r"\bdescuento\b",
+    r"\boferta\b",
+    r"\bpromocion\b",
+    r"\btienda\b",
+    r"\bventa\b",
+    r"\bdonde comprar\b",
+    r"\bplanes\b",
+    r"\bpedir\b",
+    r"\bcotizar\b",
+    r"\bcotizacion\b",
+    r"\btarifa\b",
+    r"\bsuscripcion\b",
+    r"\bordenar\b",
 ]
 
 _PATRONES_COMERCIAL = [
-    r"\bmejor(es)?\b", r"\btop\b", r"\bcomparativa\b", r"\bvs\b", r"\breseña(s)?\b",
-    r"\breview(s)?\b", r"\bopiniones\b", r"\bventajas\b", r"\bdesventajas\b",
-    r"\bbeneficios\b", r"\bmarcas\b", r"\brecomendados\b", r"\bcual elegir\b",
+    r"\bmejor(es)?\b",
+    r"\btop\b",
+    r"\bcomparativa\b",
+    r"\bvs\b",
+    r"\breseña(s)?\b",
+    r"\breview(s)?\b",
+    r"\bopiniones\b",
+    r"\bventajas\b",
+    r"\bdesventajas\b",
+    r"\bbeneficios\b",
+    r"\bmarcas\b",
+    r"\brecomendados\b",
+    r"\bcual elegir\b",
 ]
 
 _PATRONES_INFORMATIVO = [
-    r"\bque es\b", r"\bcomo\b", r"\bpor que\b", r"\bcuando\b", r"\bdonde\b",
-    r"\bquien\b", r"\bpara que sirve\b", r"\bsignificado\b", r"\btutorial\b",
-    r"\bguia\b", r"\bpasos a paso\b", r"\bdefinicion\b", r"\bejemplos\b",
-    r"\btipos de\b", r"\bhistoria\b", r"\bcaracteristicas\b",
+    r"\bque es\b",
+    r"\bcomo\b",
+    r"\bpor que\b",
+    r"\bcuando\b",
+    r"\bdonde\b",
+    r"\bquien\b",
+    r"\bpara que sirve\b",
+    r"\bsignificado\b",
+    r"\btutorial\b",
+    r"\bguia\b",
+    r"\bpasos a paso\b",
+    r"\bdefinicion\b",
+    r"\bejemplos\b",
+    r"\btipos de\b",
+    r"\bhistoria\b",
+    r"\bcaracteristicas\b",
 ]
 
 
@@ -123,8 +161,8 @@ def _categorizar_prioridad(score: float) -> str:
 
 
 def _registrar_items(
-    metricas: Dict[str, dict],
-    items: List[str],
+    metricas: dict[str, dict],
+    items: list[str],
     source_key: str,
     metadata: dict | None = None,
 ) -> None:
@@ -190,9 +228,9 @@ def _registrar_items(
 
 
 def _obtener_trends_batch_contextual(
-    keywords: List[str],
+    keywords: list[str],
     search_context: dict | None = None,
-) -> Dict[str, dict]:
+) -> dict[str, dict]:
     """Consulta Google Trends e identifica promedios y consultas en aumento (rising / breakout)."""
     if not HAS_PYTRENDS:
         return {}
@@ -249,20 +287,20 @@ def _obtener_trends_batch_contextual(
 
 def estimar_volumenes(
     keyword_principal: str,
-    sugerencias: List[str],
-    preguntas_paa: List[str],
-    preguntas_autocompletado: List[str],
-    busquedas_relacionadas: List[str],
+    sugerencias: list[str],
+    preguntas_paa: list[str],
+    preguntas_autocompletado: list[str],
+    busquedas_relacionadas: list[str],
     usar_trends: bool = True,
     progress_callback=None,
     metadata: dict | None = None,
     search_context: dict | None = None,
-) -> Dict[str, dict]:
+) -> dict[str, dict]:
     """
     Analiza y cuantifica keywords combinando señales reales multi-motor,
     Google Trends y visitas cuantitativas reales de Wikipedia.
     """
-    metricas: Dict[str, dict] = {}
+    metricas: dict[str, dict] = {}
     contexto = search_context or {}
     lang = contexto.get("language_code", LANG)
 
@@ -307,11 +345,11 @@ def estimar_volumenes(
             reverse=True,
         )[:25]
 
-        trends_data: Dict[str, dict] = {}
+        trends_data: dict[str, dict] = {}
         total_batches = (len(top_keywords) + TRENDS_BATCH_SIZE - 1) // TRENDS_BATCH_SIZE
 
         for batch_index in range(0, len(top_keywords), TRENDS_BATCH_SIZE):
-            batch = top_keywords[batch_index:batch_index + TRENDS_BATCH_SIZE]
+            batch = top_keywords[batch_index : batch_index + TRENDS_BATCH_SIZE]
             if progress_callback:
                 progress_callback(
                     f"Google Trends: lote {batch_index // TRENDS_BATCH_SIZE + 1}/{max(total_batches, 1)}..."
@@ -335,10 +373,7 @@ def estimar_volumenes(
                 multi_engine_bonus = min(15, (metricas[keyword].get("engines_count", 1) - 1) * 5)
 
                 combined_score = (
-                    (trend_normalized * 0.5)
-                    + (metricas[keyword]["score"] * 0.35)
-                    + rising_bonus
-                    + multi_engine_bonus
+                    (trend_normalized * 0.5) + (metricas[keyword]["score"] * 0.35) + rising_bonus + multi_engine_bonus
                 )
 
                 metricas[keyword]["score"] = round(min(100, max(0, combined_score)), 1)
@@ -359,7 +394,7 @@ def estimar_volumenes(
     return metricas
 
 
-def ordenar_por_volumen(items: List[str], volumenes: Dict[str, dict]) -> List[str]:
+def ordenar_por_volumen(items: list[str], volumenes: dict[str, dict]) -> list[str]:
     """Ordena priorizando Google Ads si existe; si no, usa el score compuesto de oportunidad."""
     return sorted(
         items,

@@ -1,13 +1,14 @@
 """
 Test para la integración de OpenAI / GPT-OSS 120B con Groq SDK.
 """
-import sys
+
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import GROQ_MODEL, GROQ_AVAILABLE_MODELS
-from scraper.ai_client import post_groq_json as _post_groq_json, limpiar_respuesta_json as _limpiar_respuesta_json
+from config import GROQ_AVAILABLE_MODELS, GROQ_MODEL
+from scraper.ai_client import limpiar_respuesta_json as _limpiar_respuesta_json
 
 
 def test_groq_gpt_oss_model_config():
@@ -20,7 +21,7 @@ def test_groq_gpt_oss_model_config():
     assert "openai/gpt-oss-120b" in model_ids, "openai/gpt-oss-120b debe estar disponible"
 
     print("\n--> Testeando Limpieza de Tokens de Razonamiento (<think> y ```json)...")
-    sample_reasoning_output = "<think>Analizando la mejor estructura de respuesta...</think>\n```json\n{\"resultado\": \"ok\", \"modelo\": \"gpt-oss-120b\"}\n```"
+    sample_reasoning_output = '<think>Analizando la mejor estructura de respuesta...</think>\n```json\n{"resultado": "ok", "modelo": "gpt-oss-120b"}\n```'
     cleaned = _limpiar_respuesta_json(sample_reasoning_output)
     print(f"  - Salida limpia: {cleaned}")
     assert "<think>" not in cleaned, "No debe contener etiquetas <think>"

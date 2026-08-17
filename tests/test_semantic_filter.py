@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scraper.ai_filter import filtrar_con_ia, _filtro_determinista
+from scraper.ai_filter import _filtro_determinista, filtrar_con_ia
 
 
 def test_semantic_sense_filter():
@@ -17,10 +17,10 @@ def test_semantic_sense_filter():
         "terremoto en colombia donde fue",
         "terremoto en colombia magnitud",
         "terremoto en colombia gratis online",  # Incongruente / absurdo
-        "terremoto en colombia precio",         # Incongruente / absurdo
-        "terremoto en colombia comprar",        # Incongruente / absurdo
-        "terremoto en colombia barato",         # Incongruente / absurdo
-        "terremoto en colombia descargar pdf gratis", # Incongruente / absurdo
+        "terremoto en colombia precio",  # Incongruente / absurdo
+        "terremoto en colombia comprar",  # Incongruente / absurdo
+        "terremoto en colombia barato",  # Incongruente / absurdo
+        "terremoto en colombia descargar pdf gratis",  # Incongruente / absurdo
         "terremoto en colombia ultimas noticias",
         "terremoto en colombia servicio geologico nacional",
     ]
@@ -31,9 +31,13 @@ def test_semantic_sense_filter():
     for q in det_filtered:
         print(f"  [OK] Conservada: {q}")
 
-    assert "terremoto en colombia gratis online" not in det_filtered, "Falló: 'terremoto en colombia gratis online' no fue eliminada"
+    assert "terremoto en colombia gratis online" not in det_filtered, (
+        "Falló: 'terremoto en colombia gratis online' no fue eliminada"
+    )
     assert "terremoto en colombia precio" not in det_filtered, "Falló: 'terremoto en colombia precio' no fue eliminada"
-    assert "terremoto en colombia comprar" not in det_filtered, "Falló: 'terremoto en colombia comprar' no fue eliminada"
+    assert "terremoto en colombia comprar" not in det_filtered, (
+        "Falló: 'terremoto en colombia comprar' no fue eliminada"
+    )
     assert "terremoto en colombia hoy" in det_filtered, "Falló: 'terremoto en colombia hoy' debió ser conservada"
     assert "terremoto en colombia donde fue" in det_filtered, "Falló: 'donde fue' debió ser conservada"
 

@@ -4,37 +4,34 @@ Key Search V 10.0 Ultra - FastAPI Web Server
 Suite Profesional de SEO, Keyword Research, Content Briefs, Schema FAQ y Ads Copywriting.
 """
 
-import os
-import io
-import re
-import csv
-import json
-import html as html_mod
 import asyncio
-import logging
 import datetime
-import uuid
+import html as html_mod
+import json
+import logging
+import os
+import re
 import secrets
 import urllib.parse
-from typing import List, Optional, Dict, Any
+import uuid
 from contextlib import asynccontextmanager
 
 # Cargar .env local si existe
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
 
-from fastapi import FastAPI, Request, Form, BackgroundTasks, Depends, HTTPException, status, Response
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, RedirectResponse
+from fastapi import BackgroundTasks, Depends, FastAPI, Form, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
-
 from sqlalchemy.orm import Session
-from core.database import init_db, get_db, User, SearchHistory, PipelineSession, SessionLocal
 
 import config
-from core.auth import verify_password, get_password_hash, create_access_token, decode_access_token
+from core.auth import create_access_token, decode_access_token, get_password_hash, verify_password
+from core.database import PipelineSession, SearchHistory, SessionLocal, User, get_db, init_db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("keysearch")
@@ -42,14 +39,15 @@ logger = logging.getLogger("keysearch")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 
 # ── Keep-alive loop ───────────────────────────────────────────────────────────
 async def _keepalive_loop():
     """Hace ping interno cada 10 minutos para mantener el servidor despierto."""
     import httpx
+
     await asyncio.sleep(60)
     while True:
         try:
@@ -79,16 +77,19 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), na
 
 from pydantic import BaseModel, Field
 
+
 class SchemaRequest(BaseModel):
     keyword: str = Field(..., min_length=1, max_length=500)
     questions: list = Field(default_factory=list)
     country: str = Field(default="Colombia", max_length=100)
+
 
 class AdsCopyRequest(BaseModel):
     keyword: str = Field(..., min_length=1, max_length=500)
     questions: list = Field(default_factory=list)
     intent: str = Field(default="Informativa / Comercial", max_length=100)
     country: str = Field(default="Colombia", max_length=100)
+
 
 class GroqModelRequest(BaseModel):
     model: str = Field(..., min_length=1, max_length=200)
@@ -125,13 +126,11 @@ class HealthResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
 
+
 from core.security import (
-    security_headers_middleware,
     rate_limit_middleware,
     register_exception_handlers,
-    ai_rate_limiter,
-    generate_csrf_token,
-    validate_csrf_token,
+    security_headers_middleware,
 )
 
 security_headers_middleware(app)
@@ -144,11 +143,13 @@ app.add_middleware(RequestIDMiddleware)
 setup_structured_logging()
 
 from core.monitoring import PrometheusMiddleware
+
 app.add_middleware(PrometheusMiddleware)
 
 
 # ── Gzip Compression Middleware ──────────────────────────────────────────────
 import gzip as _gzip
+
 
 @app.middleware("http")
 async def gzip_middleware(request: Request, call_next):
@@ -160,6 +161,7 @@ async def gzip_middleware(request: Request, call_next):
             compressed = _gzip.compress(body, compresslevel=5)
             if len(compressed) < len(body):
                 from starlette.responses import Response
+
                 return Response(
                     content=compressed,
                     status_code=response.status_code,
@@ -172,9 +174,11 @@ async def gzip_middleware(request: Request, call_next):
 # ── LRU Cache for repeated queries ───────────────────────────────────────────
 from functools import lru_cache
 
+
 @lru_cache(maxsize=128)
 def _cached_country_names() -> dict:
     return {c: c for c in ["Colombia", "Mexico", "España", "Argentina", "Chile", "Peru", "USA"]}
+
 
 @app.get("/logo-dorado.png")
 async def serve_logo_dorado():
@@ -193,10 +197,10 @@ class SessionState:
 
     def __init__(self, db_session: PipelineSession = None):
         self._db = db_session
-        self.logs: List[Dict[str, str]] = []
+        self.logs: list[dict[str, str]] = []
 
     @property
-    def keywords(self) -> List[str]:
+    def keywords(self) -> list[str]:
         if self._db and self._db.keywords_json:
             try:
                 return json.loads(self._db.keywords_json)
@@ -205,7 +209,7 @@ class SessionState:
         return []
 
     @keywords.setter
-    def keywords(self, value: List[str]):
+    def keywords(self, value: list[str]):
         if self._db:
             self._db.keywords_json = json.dumps(value, ensure_ascii=False)
 
@@ -237,7 +241,7 @@ class SessionState:
             self._db.status_msg = value
 
     @property
-    def last_run_data(self) -> Optional[List[dict]]:
+    def last_run_data(self) -> list[dict] | None:
         if self._db and self._db.last_run_data_json:
             try:
                 return json.loads(self._db.last_run_data_json)
@@ -251,7 +255,7 @@ class SessionState:
             self._db.last_run_data_json = json.dumps(value, ensure_ascii=False) if value else None
 
     @property
-    def error_msg(self) -> Optional[str]:
+    def error_msg(self) -> str | None:
         return self._db.error_msg if self._db else None
 
     @error_msg.setter
@@ -278,7 +282,7 @@ class SessionState:
             self._db.profile = value
 
     @property
-    def started_at(self) -> Optional[str]:
+    def started_at(self) -> str | None:
         if self._db and self._db.started_at:
             return self._db.started_at.strftime("%Y-%m-%d %H:%M:%S")
         return None
@@ -289,7 +293,7 @@ class SessionState:
             self._db.started_at = datetime.datetime.now()
 
     @property
-    def finished_at(self) -> Optional[str]:
+    def finished_at(self) -> str | None:
         if self._db and self._db.finished_at:
             return self._db.finished_at.strftime("%Y-%m-%d %H:%M:%S")
         return None
@@ -300,7 +304,7 @@ class SessionState:
             self._db.finished_at = datetime.datetime.now()
 
     @property
-    def user_id(self) -> Optional[int]:
+    def user_id(self) -> int | None:
         return self._db.user_id if self._db else None
 
     @user_id.setter
@@ -395,7 +399,7 @@ def get_session(request: Request) -> SessionState:
 
 
 # ── Helpers de contexto e Identidad ──────────────────────────────────────────
-def get_current_user(request: Request, db: Session) -> Optional[User]:
+def get_current_user(request: Request, db: Session) -> User | None:
     token = request.cookies.get("access_token")
     if not token:
         return None
@@ -410,18 +414,18 @@ def get_current_user(request: Request, db: Session) -> Optional[User]:
     except Exception:
         return None
 
+
 def get_current_user_or_redirect(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
-            headers={"Location": "/login"}
-        )
+        raise HTTPException(status_code=status.HTTP_307_TEMPORARY_REDIRECT, headers={"Location": "/login"})
     return user
+
 
 def _get_google_ads_detail() -> dict:
     """Devuelve diagnostico detallado de Google Ads para la UI. Sin secretos expuestos."""
-    from scraper.google_ads_metrics import get_google_ads_status, HAS_GOOGLE_ADS_LIB
+    from scraper.google_ads_metrics import HAS_GOOGLE_ADS_LIB, get_google_ads_status
+
     status = get_google_ads_status()
     yaml_path = getattr(config, "GOOGLE_ADS_CONFIG_PATH", "")
     yaml_vals = config.parse_yaml_simple(yaml_path) if yaml_path and os.path.exists(yaml_path) else {}
@@ -446,6 +450,7 @@ def _base_ctx(request: Request, user: User = None) -> dict:
     """Contexto base para todos los templates."""
     gads = _get_google_ads_detail()
     from scraper.volume_estimator import HAS_PYTRENDS
+
     return {
         "state": get_session(request),
         "groq_active": bool(os.getenv("GROQ_API_KEY", "")),
@@ -481,29 +486,33 @@ async def login_page(request: Request):
 
 @app.post("/register")
 async def register(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
+    request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)
 ):
     try:
         username = username.strip()
         if not username or not password:
             return templates.TemplateResponse(
-                request=request, name="login.html",
-                context={"request": request, "error": "Usuario y contrasena requeridos.", "show_register": True}
+                request=request,
+                name="login.html",
+                context={"request": request, "error": "Usuario y contrasena requeridos.", "show_register": True},
             )
         if len(password) < 4:
             return templates.TemplateResponse(
-                request=request, name="login.html",
-                context={"request": request, "error": "La contrasena debe tener al menos 4 caracteres.", "show_register": True}
+                request=request,
+                name="login.html",
+                context={
+                    "request": request,
+                    "error": "La contrasena debe tener al menos 4 caracteres.",
+                    "show_register": True,
+                },
             )
 
         existing = db.query(User).filter(User.username == username).first()
         if existing:
             return templates.TemplateResponse(
-                request=request, name="login.html",
-                context={"request": request, "error": "El perfil ya existe. Intenta ingresar.", "show_register": True}
+                request=request,
+                name="login.html",
+                context={"request": request, "error": "El perfil ya existe. Intenta ingresar.", "show_register": True},
             )
 
         new_user = User(username=username, password_hash=get_password_hash(password))
@@ -528,25 +537,22 @@ async def register(
         logger.error("Error en /register: %s", exc)
         db.rollback()
         return templates.TemplateResponse(
-            request=request, name="login.html",
-            context={"request": request, "error": "Error al crear la cuenta. Intenta de nuevo.", "show_register": True}
+            request=request,
+            name="login.html",
+            context={"request": request, "error": "Error al crear la cuenta. Intenta de nuevo.", "show_register": True},
         )
 
 
 @app.post("/login")
-async def login(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
-):
+async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     try:
         username = username.strip()
         user = db.query(User).filter(User.username == username).first()
         if not user or not verify_password(password, user.password_hash):
             return templates.TemplateResponse(
-                request=request, name="login.html",
-                context={"request": request, "error": "Usuario o contrasena incorrectos."}
+                request=request,
+                name="login.html",
+                context={"request": request, "error": "Usuario o contrasena incorrectos."},
             )
 
         token = create_access_token({"sub": str(user.id)})
@@ -565,8 +571,9 @@ async def login(
     except Exception as exc:
         logger.error("Error en /login: %s", exc)
         return templates.TemplateResponse(
-            request=request, name="login.html",
-            context={"request": request, "error": "Error al iniciar sesion. Intenta de nuevo."}
+            request=request,
+            name="login.html",
+            context={"request": request, "error": "Error al iniciar sesion. Intenta de nuevo."},
         )
 
 
@@ -627,7 +634,6 @@ async def ia_page(request: Request, user: User = Depends(get_current_user_or_red
     return templates.TemplateResponse(request=request, name="ia.html", context=_base_ctx(request, user))
 
 
-
 @app.get("/export", response_class=HTMLResponse)
 async def export_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
     return templates.TemplateResponse(request=request, name="export.html", context=_base_ctx(request, user))
@@ -651,6 +657,7 @@ async def ping_endpoint():
 @app.get("/health")
 async def health_endpoint():
     from core.monitoring import health_check_data
+
     data = health_check_data()
     status_code = 200 if data["status"] == "healthy" else 503
     return JSONResponse(data, status_code=status_code)
@@ -659,6 +666,7 @@ async def health_endpoint():
 @app.get("/metrics")
 async def metrics_endpoint():
     from core.monitoring import metrics_response
+
     return metrics_response()
 
 
@@ -692,7 +700,7 @@ async def run_pipeline(
     keywords: str = Form(...),
     country: str = Form("co"),
     profile: str = Form("normal"),
-    user: User = Depends(get_current_user_or_redirect)
+    user: User = Depends(get_current_user_or_redirect),
 ):
     user_state = get_session(request)
     if user_state.is_running:
@@ -724,7 +732,9 @@ async def run_pipeline(
     user_state.progress = 0
     user_state.status_msg = f"Iniciando pipeline para {len(kw_list)} keyword(s)..."
     user_state.started_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    user_state.add_log("INFO", f"Pipeline iniciado por {user.username}: {len(kw_list)} keywords | País: {country} | Perfil: {profile}")
+    user_state.add_log(
+        "INFO", f"Pipeline iniciado por {user.username}: {len(kw_list)} keywords | País: {country} | Perfil: {profile}"
+    )
 
     background_tasks.add_task(_run_pipeline_task, user_state, kw_list, country, profile)
     return JSONResponse({"status": "success", "message": "Pipeline iniciado."})
@@ -735,19 +745,25 @@ async def run_pipeline(
 async def historial_page(request: Request, user: User = Depends(get_current_user_or_redirect)):
     return templates.TemplateResponse(request=request, name="historial.html", context=_base_ctx(request, user))
 
+
 @app.get("/api/history")
 async def api_history(user: User = Depends(get_current_user_or_redirect), db: Session = Depends(get_db)):
-    searches = db.query(SearchHistory).filter(SearchHistory.user_id == user.id).order_by(SearchHistory.created_at.desc()).all()
+    searches = (
+        db.query(SearchHistory).filter(SearchHistory.user_id == user.id).order_by(SearchHistory.created_at.desc()).all()
+    )
     history_list = []
     for s in searches:
-        history_list.append({
-            "id": s.id,
-            "keyword": s.keyword,
-            "country": s.country,
-            "profile": s.profile,
-            "created_at": s.created_at.isoformat()
-        })
+        history_list.append(
+            {
+                "id": s.id,
+                "keyword": s.keyword,
+                "country": s.country,
+                "profile": s.profile,
+                "created_at": s.created_at.isoformat(),
+            }
+        )
     return {"history": history_list}
+
 
 @app.post("/api/generate-schema")
 async def api_generate_schema(body: SchemaRequest, user: User = Depends(get_current_user_or_redirect)):
@@ -760,11 +776,13 @@ async def api_generate_schema(body: SchemaRequest, user: User = Depends(get_curr
             return JSONResponse({"error": "Keyword requerida"}, status_code=400)
 
         from scraper.ai_generator import generar_schema_y_meta_tags
+
         schema_data = generar_schema_y_meta_tags(kw, questions, pais=country)
         return JSONResponse(schema_data)
     except Exception as e:
         logger.error("Error generando schema: %s", e)
         return JSONResponse({"error": "Error generando schema. Intenta de nuevo."}, status_code=500)
+
 
 @app.post("/api/generate-ads-copy")
 async def api_generate_ads_copy(body: AdsCopyRequest, user: User = Depends(get_current_user_or_redirect)):
@@ -778,6 +796,7 @@ async def api_generate_ads_copy(body: AdsCopyRequest, user: User = Depends(get_c
             return JSONResponse({"error": "Keyword requerida"}, status_code=400)
 
         from scraper.ai_generator import generar_copywriting_ads_y_hooks as generar_ads_copy
+
         ads_data = generar_ads_copy(kw, preguntas=questions, intencion=intent, pais=country)
         return JSONResponse(ads_data)
     except Exception as e:
@@ -786,6 +805,7 @@ async def api_generate_ads_copy(body: AdsCopyRequest, user: User = Depends(get_c
 
 
 # NOTE: /api/generate-brief eliminado — reemplazado por el Estudio Editorial & Notas (/editorial)
+
 
 @app.post("/api/set-groq-model")
 async def api_set_groq_model(body: GroqModelRequest, user: User = Depends(get_current_user_or_redirect)):
@@ -796,6 +816,7 @@ async def api_set_groq_model(body: GroqModelRequest, user: User = Depends(get_cu
             return JSONResponse({"error": "Modelo requerido"}, status_code=400)
 
         import config
+
         allowed_models = [m["id"] for m in getattr(config, "GROQ_AVAILABLE_MODELS", [])]
         if allowed_models and model_id not in allowed_models:
             return JSONResponse({"error": "Modelo no permitido."}, status_code=400)
@@ -806,6 +827,7 @@ async def api_set_groq_model(body: GroqModelRequest, user: User = Depends(get_cu
         logger.error("Error cambiando modelo Groq: %s", e)
         return JSONResponse({"error": "Error cambiando modelo."}, status_code=500)
 
+
 @app.get("/api/tags-data")
 async def api_tags_data(request: Request, user: User = Depends(get_current_user_or_redirect)):
     """Devuelve los mejores tags de la sesión activa pre-calculados por el pipeline."""
@@ -814,14 +836,16 @@ async def api_tags_data(request: Request, user: User = Depends(get_current_user_
         return JSONResponse({"data": [], "has_data": False})
     items = []
     for item in user_state.last_run_data:
-        items.append({
-            "keyword": item.get("keyword", ""),
-            "category": item.get("category", ""),
-            "suggestions": item.get("suggestions", []),
-            "paa": item.get("paa", []),
-            "related": item.get("related", []),
-            "editorial_tags": item.get("editorial_tags", {}),
-        })
+        items.append(
+            {
+                "keyword": item.get("keyword", ""),
+                "category": item.get("category", ""),
+                "suggestions": item.get("suggestions", []),
+                "paa": item.get("paa", []),
+                "related": item.get("related", []),
+                "editorial_tags": item.get("editorial_tags", {}),
+            }
+        )
     return JSONResponse({"data": items, "has_data": True})
 
 
@@ -837,6 +861,7 @@ async def api_tags_generate(request: Request, user: User = Depends(get_current_u
         if not kw:
             return JSONResponse({"error": "Keyword requerida"}, status_code=400)
         from scraper.editorial_ideator import obtener_tags_reales_google
+
         tags_data = obtener_tags_reales_google(kw, sugerencias=suggestions, preguntas_paa=paa, pais=country)
         return JSONResponse({"keyword": kw, "tags": tags_data, "has_data": bool(tags_data)})
     except Exception as e:
@@ -852,19 +877,22 @@ async def api_editorial_session_data(request: Request, user: User = Depends(get_
         return JSONResponse({"data": [], "has_data": False})
     items = []
     for item in user_state.last_run_data:
-        items.append({
-            "keyword": item.get("keyword", ""),
-            "category": item.get("category", ""),
-            "suggestions": item.get("suggestions", []),
-            "paa": item.get("paa", []),
-            "related": item.get("related", []),
-            "editorial_tags": item.get("editorial_tags"),
-            "editorial_ideas": item.get("editorial_ideas"),
-            "editorial_nota": item.get("editorial_nota"),
-            "seo_schema": item.get("seo_schema"),
-            "ads_copy": item.get("ads_copy"),
-        })
+        items.append(
+            {
+                "keyword": item.get("keyword", ""),
+                "category": item.get("category", ""),
+                "suggestions": item.get("suggestions", []),
+                "paa": item.get("paa", []),
+                "related": item.get("related", []),
+                "editorial_tags": item.get("editorial_tags"),
+                "editorial_ideas": item.get("editorial_ideas"),
+                "editorial_nota": item.get("editorial_nota"),
+                "seo_schema": item.get("seo_schema"),
+                "ads_copy": item.get("ads_copy"),
+            }
+        )
     return JSONResponse({"data": items, "has_data": True})
+
 
 # ── API Editorial: Ideas, Redacción y Tags Reales ────────────────────────────
 @app.post("/api/editorial/tags-reales")
@@ -880,11 +908,13 @@ async def api_editorial_tags_reales(request: Request, user: User = Depends(get_c
             return JSONResponse({"error": "Keyword requerida"}, status_code=400)
 
         from scraper.editorial_ideator import obtener_tags_reales_google
+
         tags_data = obtener_tags_reales_google(kw, sugerencias=suggestions, preguntas_paa=paa, pais=country)
         return JSONResponse(tags_data)
     except Exception as e:
         logger.error("Error obteniendo tags reales: %s", e)
         return JSONResponse({"error": "Error obteniendo tags reales."}, status_code=500)
+
 
 @app.post("/api/editorial/idear")
 async def api_editorial_idear(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -898,13 +928,19 @@ async def api_editorial_idear(request: Request, user: User = Depends(get_current
         if not kw:
             return JSONResponse({"error": "Keyword requerida"}, status_code=400)
 
-        from scraper.editorial_ideator import obtener_tags_reales_google, generar_ideas_notas_angulos
-        tags_data = data.get("tags_reales") or obtener_tags_reales_google(kw, sugerencias=suggestions, preguntas_paa=paa, pais=country)
-        ideas = generar_ideas_notas_angulos(kw, sugerencias=suggestions, preguntas_paa=paa, pais=country, tags_reales=tags_data)
+        from scraper.editorial_ideator import generar_ideas_notas_angulos, obtener_tags_reales_google
+
+        tags_data = data.get("tags_reales") or obtener_tags_reales_google(
+            kw, sugerencias=suggestions, preguntas_paa=paa, pais=country
+        )
+        ideas = generar_ideas_notas_angulos(
+            kw, sugerencias=suggestions, preguntas_paa=paa, pais=country, tags_reales=tags_data
+        )
         return JSONResponse({"ideas": ideas, "tags_reales": tags_data})
     except Exception as e:
         logger.error("Error ideando notas editoriales: %s", e)
         return JSONResponse({"error": "Error generando ideas editoriales."}, status_code=500)
+
 
 @app.post("/api/editorial/redactar")
 async def api_editorial_redactar(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -922,6 +958,7 @@ async def api_editorial_redactar(request: Request, user: User = Depends(get_curr
             return JSONResponse({"error": "Keyword requerida"}, status_code=400)
 
         from scraper.editorial_ideator import redactar_nota_editorial
+
         nota = redactar_nota_editorial(
             keyword_base=kw,
             angulo=angulo,
@@ -936,6 +973,7 @@ async def api_editorial_redactar(request: Request, user: User = Depends(get_curr
         logger.error("Error redactando nota editorial: %s", e)
         return JSONResponse({"error": "Error redactando nota editorial."}, status_code=500)
 
+
 @app.post("/api/editorial/exportar-docx")
 async def api_editorial_exportar_docx(request: Request, user: User = Depends(get_current_user_or_redirect)):
     """Genera y descarga un archivo .docx profesional de la nota redactada."""
@@ -946,36 +984,41 @@ async def api_editorial_exportar_docx(request: Request, user: User = Depends(get
             return JSONResponse({"error": "Datos de nota requeridos"}, status_code=400)
 
         from scraper.editorial_ideator import exportar_nota_docx
+
         doc_stream = exportar_nota_docx(nota_data)
-        
+
         # Nombre de archivo limpio (prevenir header injection)
         h1_raw = nota_data.get("titular_h1", "Nota_Editorial")
-        clean_name = re.sub(r'[^\w\s-]', "", h1_raw).strip().replace(" ", "_")[:60]
+        clean_name = re.sub(r"[^\w\s-]", "", h1_raw).strip().replace(" ", "_")[:60]
         if not clean_name:
             clean_name = "Nota_Editorial"
         # Prevenir path traversal en filename
-        clean_name = re.sub(r'\.\.', "", clean_name)
+        clean_name = re.sub(r"\.\.", "", clean_name)
         filename = f"{clean_name}.docx"
 
         return StreamingResponse(
             doc_stream,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
     except Exception as e:
         logger.error("Error exportando docx: %s", e)
         return JSONResponse({"error": "Error exportando documento."}, status_code=500)
 
+
 @app.get("/download/history/{item_id}")
-async def download_history_excel(item_id: int, user: User = Depends(get_current_user_or_redirect), db: Session = Depends(get_db)):
+async def download_history_excel(
+    item_id: int, user: User = Depends(get_current_user_or_redirect), db: Session = Depends(get_db)
+):
     search = db.query(SearchHistory).filter(SearchHistory.id == item_id, SearchHistory.user_id == user.id).first()
     if not search:
         return JSONResponse({"error": "Búsqueda no encontrada o no tienes permisos."}, status_code=404)
-    
+
     try:
         from exporters.excel_export import exportar_excel
+
         item = json.loads(search.json_data)
-        
+
         datos = {
             "volumenes": item.get("metrics", {}),
             "language_code": search.country.split("-")[0] if "-" in search.country else search.country,
@@ -992,13 +1035,13 @@ async def download_history_excel(item_id: int, user: User = Depends(get_current_
             "editorial_ideas": item.get("editorial_ideas", []),
             "editorial_nota": item.get("editorial_nota", {}),
         }
-        
+
         ruta_archivo = exportar_excel(search.keyword, datos)
         filename = os.path.basename(ruta_archivo)
         return FileResponse(
-            ruta_archivo, 
+            ruta_archivo,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            filename=filename
+            filename=filename,
         )
     except Exception as e:
         logger.exception("Error generando Excel histórico")
@@ -1006,7 +1049,7 @@ async def download_history_excel(item_id: int, user: User = Depends(get_current_
 
 
 # ── Descarga de resultados ────────────────────────────────────────────────────
-from fastapi.responses import FileResponse
+
 
 @app.get("/download/excel")
 async def download_excel(request: Request, user: User = Depends(get_current_user_or_redirect)):
@@ -1038,18 +1081,18 @@ async def download_excel(request: Request, user: User = Depends(get_current_user
             ruta_archivo = exportar_excel(item["keyword"], datos)
             filename = os.path.basename(ruta_archivo)
             return FileResponse(
-                ruta_archivo, 
+                ruta_archivo,
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                filename=filename
+                filename=filename,
             )
         except Exception as e:
             logger.exception("Error generando Excel")
             return JSONResponse({"error": "Error generando Excel."}, status_code=500)
     else:
         # Modo Batch: generar un ZIP con un Excel por cada keyword
-        import zipfile
         import io
-        
+        import zipfile
+
         zip_buffer = io.BytesIO()
         try:
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -1057,7 +1100,9 @@ async def download_excel(request: Request, user: User = Depends(get_current_user
                     kw = item["keyword"]
                     datos = {
                         "volumenes": item.get("metrics", {}),
-                        "language_code": user_state.country.split("-")[0] if "-" in user_state.country else user_state.country,
+                        "language_code": user_state.country.split("-")[0]
+                        if "-" in user_state.country
+                        else user_state.country,
                         "sugerencias": item.get("suggestions", []),
                         "preguntas_paa": item.get("paa", []),
                         "preguntas_autocompletado": item.get("preguntas_autocompletado", []),
@@ -1071,18 +1116,17 @@ async def download_excel(request: Request, user: User = Depends(get_current_user
                     ruta_archivo = exportar_excel(kw, datos)
                     filename = os.path.basename(ruta_archivo)
                     zip_file.write(ruta_archivo, arcname=filename)
-            
+
             zip_buffer.seek(0)
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             return StreamingResponse(
                 zip_buffer,
                 media_type="application/zip",
-                headers={"Content-Disposition": f"attachment; filename=resultados_lote_{timestamp}.zip"}
+                headers={"Content-Disposition": f"attachment; filename=resultados_lote_{timestamp}.zip"},
             )
         except Exception as e:
             logger.exception("Error generando ZIP de Excel")
             return JSONResponse({"error": "Error generando ZIP."}, status_code=500)
-
 
 
 @app.get("/download/json")
@@ -1110,7 +1154,7 @@ async def download_json(request: Request, user: User = Depends(get_current_user_
 
 
 # ── Google Ads: Configuración, Test y OAuth ──────────────────────────────────
-_oauth_states: Dict[str, dict] = {}  # state → {client_id, client_secret, redirect_uri}
+_oauth_states: dict[str, dict] = {}  # state → {client_id, client_secret, redirect_uri}
 
 
 @app.post("/api/config/google-ads")
@@ -1132,13 +1176,31 @@ async def save_google_ads_config(
     existing = config.parse_yaml_simple(yaml_path) if os.path.exists(yaml_path) else {}
 
     def _sanitize_yaml_val(val: str) -> str:
-        return re.sub(r'[\n\r"\\]', '', val).strip()[:500]
+        return re.sub(r'[\n\r"\\]', "", val).strip()[:500]
 
-    final_dev = _sanitize_yaml_val(developer_token) if developer_token.strip() else _sanitize_yaml_val(existing.get("developer_token", ""))
-    final_cid = _sanitize_yaml_val(client_id) if client_id.strip() else _sanitize_yaml_val(existing.get("client_id", ""))
-    final_csec = _sanitize_yaml_val(client_secret) if client_secret.strip() else _sanitize_yaml_val(existing.get("client_secret", ""))
-    final_refresh = _sanitize_yaml_val(refresh_token) if refresh_token.strip() else _sanitize_yaml_val(existing.get("refresh_token", ""))
-    final_login = _sanitize_yaml_val(login_customer_id.replace("-", "")) if login_customer_id.strip() else _sanitize_yaml_val(existing.get("login_customer_id", ""))
+    final_dev = (
+        _sanitize_yaml_val(developer_token)
+        if developer_token.strip()
+        else _sanitize_yaml_val(existing.get("developer_token", ""))
+    )
+    final_cid = (
+        _sanitize_yaml_val(client_id) if client_id.strip() else _sanitize_yaml_val(existing.get("client_id", ""))
+    )
+    final_csec = (
+        _sanitize_yaml_val(client_secret)
+        if client_secret.strip()
+        else _sanitize_yaml_val(existing.get("client_secret", ""))
+    )
+    final_refresh = (
+        _sanitize_yaml_val(refresh_token)
+        if refresh_token.strip()
+        else _sanitize_yaml_val(existing.get("refresh_token", ""))
+    )
+    final_login = (
+        _sanitize_yaml_val(login_customer_id.replace("-", ""))
+        if login_customer_id.strip()
+        else _sanitize_yaml_val(existing.get("login_customer_id", ""))
+    )
 
     yaml_content = (
         f'developer_token: "{final_dev}"\n'
@@ -1146,12 +1208,12 @@ async def save_google_ads_config(
         f'client_secret: "{final_csec}"\n'
         f'refresh_token: "{final_refresh}"\n'
         f'login_customer_id: "{final_login}"\n'
-        f'use_proto_plus: true\n'
+        f"use_proto_plus: true\n"
     )
     try:
         with open(yaml_path, "w", encoding="utf-8") as f:
             f.write(yaml_content)
-        clean_cid = re.sub(r'[^0-9]', '', customer_id)[:20]
+        clean_cid = re.sub(r"[^0-9]", "", customer_id)[:20]
         with open(cid_path, "w", encoding="utf-8") as f:
             f.write(clean_cid)
         logger.info("Google Ads config guardada por %s", user.username)
@@ -1168,17 +1230,24 @@ async def test_google_ads_connection(
 ):
     """Ejecuta una prueba de conexión con Google Ads API."""
     loop = asyncio.get_event_loop()
+
     def _test():
         from scraper.google_ads_metrics import enrich_with_google_ads_metrics, get_google_ads_status
+
         status = get_google_ads_status()
         if not status.get("enabled"):
             return {"success": False, "detail": status.get("reason", "Google Ads no habilitado."), "status": status}
         metricas_prueba = {
             "marketing digital": {
-                "score": 100.0, "categoria": "Test", "fuente": "Test",
-                "posicion_fuente": 1, "fuentes": ["Test"],
-                "google_ads_keyword_text": None, "google_ads_close_variants": [],
-                "google_ads_avg_monthly_searches": None, "google_ads_competition": None,
+                "score": 100.0,
+                "categoria": "Test",
+                "fuente": "Test",
+                "posicion_fuente": 1,
+                "fuentes": ["Test"],
+                "google_ads_keyword_text": None,
+                "google_ads_close_variants": [],
+                "google_ads_avg_monthly_searches": None,
+                "google_ads_competition": None,
                 "google_ads_competition_index": None,
                 "google_ads_low_top_of_page_bid_micros": None,
                 "google_ads_high_top_of_page_bid_micros": None,
@@ -1200,6 +1269,7 @@ async def test_google_ads_connection(
                 "detail": result.get("reason", "No se pudieron obtener métricas."),
                 "result": result,
             }
+
     try:
         res = await loop.run_in_executor(None, _test)
         return JSONResponse(res)
@@ -1225,15 +1295,17 @@ async def google_ads_oauth_start(request: Request):
 
     _oauth_states[state] = {"client_id": cid, "client_secret": csecret, "redirect_uri": redirect_uri}
 
-    params = urllib.parse.urlencode({
-        "client_id": cid,
-        "redirect_uri": redirect_uri,
-        "response_type": "code",
-        "scope": "https://www.googleapis.com/auth/adwords",
-        "access_type": "offline",
-        "prompt": "consent",
-        "state": state,
-    })
+    params = urllib.parse.urlencode(
+        {
+            "client_id": cid,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "https://www.googleapis.com/auth/adwords",
+            "access_type": "offline",
+            "prompt": "consent",
+            "state": state,
+        }
+    )
     auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{params}"
     return RedirectResponse(auth_url)
 
@@ -1243,36 +1315,51 @@ async def google_ads_oauth_callback(request: Request, code: str = "", state: str
     """Callback de OAuth. Intercambia el code por refresh_token y lo guarda."""
     if error:
         safe_error = html_mod.escape(error[:200])
-        return HTMLResponse(f"<h2>Error de Google: {safe_error}</h2><p><a href='/api-status'>Volver</a></p>", status_code=400)
+        return HTMLResponse(
+            f"<h2>Error de Google: {safe_error}</h2><p><a href='/api-status'>Volver</a></p>", status_code=400
+        )
     if state not in _oauth_states:
-        return HTMLResponse("<h2>Estado invalido o expirado.</h2><p><a href='/api-status'>Volver</a></p>", status_code=400)
+        return HTMLResponse(
+            "<h2>Estado invalido o expirado.</h2><p><a href='/api-status'>Volver</a></p>", status_code=400
+        )
 
     ctx = _oauth_states.pop(state)
     import requests as http_requests
+
     try:
-        resp = http_requests.post("https://oauth2.googleapis.com/token", data={
-            "client_id": ctx["client_id"],
-            "client_secret": ctx["client_secret"],
-            "code": code,
-            "grant_type": "authorization_code",
-            "redirect_uri": ctx["redirect_uri"],
-        }, timeout=30)
+        resp = http_requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": ctx["client_id"],
+                "client_secret": ctx["client_secret"],
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": ctx["redirect_uri"],
+            },
+            timeout=30,
+        )
         resp.raise_for_status()
         token_data = resp.json()
     except Exception as exc:
         logger.exception("Error intercambiando code por tokens")
-        return HTMLResponse("<h2>Error obteniendo tokens. Reintenta el flujo.</h2><p><a href='/api-status'>Volver</a></p>", status_code=500)
+        return HTMLResponse(
+            "<h2>Error obteniendo tokens. Reintenta el flujo.</h2><p><a href='/api-status'>Volver</a></p>",
+            status_code=500,
+        )
 
     new_refresh = token_data.get("refresh_token", "")
     if not new_refresh:
-        return HTMLResponse("<h2>No se recibio refresh_token. Reintenta el flujo.</h2><p><a href='/api-status'>Volver</a></p>", status_code=400)
+        return HTMLResponse(
+            "<h2>No se recibio refresh_token. Reintenta el flujo.</h2><p><a href='/api-status'>Volver</a></p>",
+            status_code=400,
+        )
 
     # Leer yaml actual y sobrescribir refresh_token
     yaml_path = getattr(config, "GOOGLE_ADS_CONFIG_PATH", os.path.join(BASE_DIR, "google-ads.yaml"))
     vals = config.parse_yaml_simple(yaml_path)
 
     def _sanitize_yaml_val(val: str) -> str:
-        return re.sub(r'[\n\r"\\]', '', str(val)).strip()[:500]
+        return re.sub(r'[\n\r"\\]', "", str(val)).strip()[:500]
 
     yaml_content = (
         f'developer_token: "{_sanitize_yaml_val(vals.get("developer_token", ""))}"\n'
@@ -1280,7 +1367,7 @@ async def google_ads_oauth_callback(request: Request, code: str = "", state: str
         f'client_secret: "{_sanitize_yaml_val(vals.get("client_secret", ""))}"\n'
         f'refresh_token: "{_sanitize_yaml_val(new_refresh)}"\n'
         f'login_customer_id: "{_sanitize_yaml_val(vals.get("login_customer_id", ""))}"\n'
-        f'use_proto_plus: true\n'
+        f"use_proto_plus: true\n"
     )
     try:
         with open(yaml_path, "w", encoding="utf-8") as f:
@@ -1294,13 +1381,11 @@ async def google_ads_oauth_callback(request: Request, code: str = "", state: str
 
 
 # ── Tarea asíncrona del pipeline ──────────────────────────────────────────────
-async def _run_pipeline_task(user_state: SessionState, keywords: List[str], country_code: str, profile: str):
+async def _run_pipeline_task(user_state: SessionState, keywords: list[str], country_code: str, profile: str):
     try:
         user_state.add_log("INFO", "Cargando modulos del motor de scraping...")
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None, _blocking_pipeline, user_state, keywords, country_code, profile
-        )
+        result = await loop.run_in_executor(None, _blocking_pipeline, user_state, keywords, country_code, profile)
         user_state.last_run_data = result
         user_state.status_msg = f"Completado. {len(result)} keyword(s) procesadas."
         user_state.progress = 100
@@ -1330,7 +1415,7 @@ async def _run_pipeline_task(user_state: SessionState, keywords: List[str], coun
                             keyword=res["keyword"],
                             country=country_code,
                             profile=profile,
-                            json_data=json.dumps(res, ensure_ascii=False)
+                            json_data=json.dumps(res, ensure_ascii=False),
                         )
                         db.add(history_entry)
                 db.commit()
@@ -1358,13 +1443,13 @@ async def _run_pipeline_task(user_state: SessionState, keywords: List[str], coun
             pass
 
 
-def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_code: str, profile: str) -> List[dict]:
+def _blocking_pipeline(user_state: SessionState, keywords: list[str], country_code: str, profile: str) -> list[dict]:
     """Motor de scraping sincrónico (se corre en thread pool)."""
     from config import normalize_country
     from scraper.autocomplete import get_autocomplete_suggestions, get_question_suggestions
+    from scraper.categorizer import auto_categorizar
     from scraper.google_serp import scrape_google
     from scraper.volume_estimator import estimar_volumenes
-    from scraper.categorizer import auto_categorizar
 
     ctx = normalize_country(country_code)
     ctx["scrape_profile"] = profile
@@ -1375,12 +1460,12 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
         try:
             base_prog = int(((idx - 1) / total) * 90)
             step_size = int(90 / total)
-            
+
             user_state.add_log("INFO", f"[{idx}/{total}] Procesando: {kw}")
 
             user_state.status_msg = f"[{idx}/{total}] 🔍 Multi-Motor (Google/YT/Amazon/Bing): {kw}"
             user_state.progress = max(1, base_prog + int(step_size * 0.15))
-            es_extremo = (profile.lower() == "extreme")
+            es_extremo = profile.lower() == "extreme"
             sug = get_autocomplete_suggestions(kw, expandir=es_extremo, search_context=ctx)
             user_state.add_log("INFO", f"  → {len(sug)} sugerencias multi-motor obtenidas")
 
@@ -1390,14 +1475,18 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
             serp = scrape_google(kw, search_context=ctx)
             paa = serp.get("preguntas_paa", [])
             rel = serp.get("busquedas_relacionadas", [])
-            user_state.add_log("INFO", f"  → {len(preg_ac)} preguntas autocompletado, {len(paa)} PAA, {len(rel)} relacionadas")
+            user_state.add_log(
+                "INFO", f"  → {len(preg_ac)} preguntas autocompletado, {len(paa)} PAA, {len(rel)} relacionadas"
+            )
 
             from config import GROQ_API_KEY
+
             ai_clusters = []
             ai_intents = {}
             if GROQ_API_KEY:
                 from scraper.ai_filter import filtrar_con_ia
                 from scraper.ai_generator import clasificar_intencion_ia, generar_clusters_tematicos
+
                 country_name = ctx.get("country_name", "Colombia")
                 sug = filtrar_con_ia(sug, kw, country_name) if sug else sug
                 preg_ac = filtrar_con_ia(preg_ac, kw, country_name) if preg_ac else preg_ac
@@ -1405,7 +1494,7 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
                 rel = filtrar_con_ia(rel, kw, country_name) if rel else rel
 
                 user_state.status_msg = f"[{idx}/{total}] 🤖 IA Groq (Clustering & Intención): {kw}"
-                top_for_ai = (sug[:15] + paa[:10] + rel[:10])
+                top_for_ai = sug[:15] + paa[:10] + rel[:10]
                 ai_intents = clasificar_intencion_ia(top_for_ai, kw, country_name)
                 ai_clusters = generar_clusters_tematicos(top_for_ai, kw)
                 user_state.add_log("INFO", f"  → {len(ai_clusters)} clusters semánticos generados con IA")
@@ -1439,6 +1528,7 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
             google_ads_res = {"enabled": False, "reason": "No configurado (usando suite gratuita)"}
             try:
                 from scraper.google_ads_metrics import enrich_with_google_ads_metrics
+
                 google_ads_res = enrich_with_google_ads_metrics(vol)
                 if google_ads_res.get("enabled"):
                     user_state.add_log("INFO", "  → Google Ads OK")
@@ -1446,19 +1536,25 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
                 pass
 
             # Generar Meta Tags, Schema FAQPage, Copies de Ads, KGR y Estudio Editorial
-            from scraper.ai_generator import generar_schema_y_meta_tags, generar_copywriting_ads_y_hooks
+            from scraper.ai_generator import generar_copywriting_ads_y_hooks, generar_schema_y_meta_tags
+            from scraper.editorial_ideator import (
+                generar_ideas_notas_angulos,
+                obtener_tags_reales_google,
+                redactar_nota_editorial,
+            )
             from scraper.kgr_estimator import estimar_kgr
-            from scraper.editorial_ideator import obtener_tags_reales_google, generar_ideas_notas_angulos, redactar_nota_editorial
 
             c_name = ctx.get("country_name", "Colombia")
-            all_questions = (paa + preg_ac)
+            all_questions = paa + preg_ac
             seo_schema = generar_schema_y_meta_tags(kw, all_questions, pais=c_name)
             ads_copy = generar_copywriting_ads_y_hooks(kw, all_questions, intencion=cat, pais=c_name)
 
             # Generación automática del módulo editorial en el Pipeline
             user_state.status_msg = f"[{idx}/{total}] ✍️ Estudio Editorial & Tags Google Trends: {kw}"
             editorial_tags = obtener_tags_reales_google(kw, sugerencias=sug, preguntas_paa=paa, pais=c_name)
-            editorial_ideas = generar_ideas_notas_angulos(kw, sugerencias=sug, preguntas_paa=paa, pais=c_name, tags_reales=editorial_tags)
+            editorial_ideas = generar_ideas_notas_angulos(
+                kw, sugerencias=sug, preguntas_paa=paa, pais=c_name, tags_reales=editorial_tags
+            )
             editorial_nota = redactar_nota_editorial(
                 kw,
                 angulo=editorial_ideas[0]["angulo"] if editorial_ideas else "Trucos y Hacks Cotidianos",
@@ -1466,9 +1562,9 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
                 sugerencias=sug,
                 preguntas_paa=paa,
                 pais=c_name,
-                tags_reales=editorial_tags
+                tags_reales=editorial_tags,
             )
-            user_state.add_log("INFO", f"  → 5 ideas de notas, tags reales y artículo editorial listos")
+            user_state.add_log("INFO", "  → 5 ideas de notas, tags reales y artículo editorial listos")
 
             serp_analysis = serp.get("serp_analysis", {})
             exact_count = serp_analysis.get("exact_match_count", 1) if serp_analysis else 1
@@ -1476,55 +1572,56 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
             kgr_data = estimar_kgr(kw, score_demanda=main_kw_score, exact_match_serp_count=exact_count)
 
             if serp_analysis.get("es_oportunidad_oro"):
-                user_state.add_log("SUCCESS", f"  ⭐ Oportunidad de Oro en '{kw}': {serp_analysis.get('dificultad_estimada')}")
+                user_state.add_log(
+                    "SUCCESS", f"  ⭐ Oportunidad de Oro en '{kw}': {serp_analysis.get('dificultad_estimada')}"
+                )
 
             user_state.progress = base_prog + step_size
-            all_results.append({
-                "keyword": kw,
-                "country_name": c_name,
-                "country_code": ctx.get("country_code", "CO").upper(),
-                "category": cat,
-                "subcategory": sub,
-                "metrics": vol,
-                "suggestions_count": len(sug),
-                "paa_count": len(paa),
-                "related_count": len(rel),
-                "suggestions": sug,
-                "paa": paa,
-                "related": rel,
-                "preguntas_autocompletado": preg_ac,
-                "seo_schema": seo_schema,
-                "ads_copy": ads_copy,
-                "kgr_data": kgr_data,
-                "serp_analysis": serp_analysis,
-                "google_ads": google_ads_res,
-                "editorial_tags": editorial_tags,
-                "editorial_ideas": editorial_ideas,
-                "editorial_nota": editorial_nota,
-            })
-
-
-
-
-
+            all_results.append(
+                {
+                    "keyword": kw,
+                    "country_name": c_name,
+                    "country_code": ctx.get("country_code", "CO").upper(),
+                    "category": cat,
+                    "subcategory": sub,
+                    "metrics": vol,
+                    "suggestions_count": len(sug),
+                    "paa_count": len(paa),
+                    "related_count": len(rel),
+                    "suggestions": sug,
+                    "paa": paa,
+                    "related": rel,
+                    "preguntas_autocompletado": preg_ac,
+                    "seo_schema": seo_schema,
+                    "ads_copy": ads_copy,
+                    "kgr_data": kgr_data,
+                    "serp_analysis": serp_analysis,
+                    "google_ads": google_ads_res,
+                    "editorial_tags": editorial_tags,
+                    "editorial_ideas": editorial_ideas,
+                    "editorial_nota": editorial_nota,
+                }
+            )
 
         except Exception as e:
             user_state.add_log("ERROR", f"  Error procesando '{kw}'.")
-            all_results.append({
-                "keyword": kw,
-                "category": "Error",
-                "subcategory": "Error",
-                "metrics": {},
-                "suggestions_count": 0,
-                "paa_count": 0,
-                "related_count": 0,
-                "suggestions": [],
-                "paa": [],
-                "related": [],
-                "preguntas_autocompletado": [],
-                "error": str(e),
-                "google_ads": {},
-            })
+            all_results.append(
+                {
+                    "keyword": kw,
+                    "category": "Error",
+                    "subcategory": "Error",
+                    "metrics": {},
+                    "suggestions_count": 0,
+                    "paa_count": 0,
+                    "related_count": 0,
+                    "suggestions": [],
+                    "paa": [],
+                    "related": [],
+                    "preguntas_autocompletado": [],
+                    "error": str(e),
+                    "google_ads": {},
+                }
+            )
 
     return all_results
 
@@ -1532,5 +1629,6 @@ def _blocking_pipeline(user_state: SessionState, keywords: List[str], country_co
 # ── Punto de entrada ──────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
+
     port = int(os.environ.get("PORT", 8001))
     uvicorn.run(app, host="0.0.0.0", port=port)

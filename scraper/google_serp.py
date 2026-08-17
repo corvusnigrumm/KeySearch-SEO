@@ -11,50 +11,50 @@ Extrae:
   - Preguntas frecuentes ("Más preguntas" / People Also Ask)
   - Búsquedas relacionadas
 """
-import time
-import random
+
 import json
 import logging
+import random
 import re
-from typing import Dict, List, Optional
+import time
 
 import requests
 from bs4 import BeautifulSoup
 
 from config import (
-    GOOGLE_SEARCH_URL,
-    AUTOCOMPLETE_URL,
-    LANG,
-    COUNTRY,
-    USER_AGENTS,
-    USER_AGENT_PROFILES,
-    HTTP_TIMEOUT,
-    HTTP_MAX_RETRIES,
-    HTTP_RETRY_DELAY,
-    DELAY_BETWEEN_REQUESTS,
-    SERP_NUM_RESULTS,
-    SERP_PAGES,
-    SERP_DEEP_MODE,
-    SERP_QUERY_VARIANT_LIMIT,
-    SERP_TBM_MODES,
-    QUESTION_MODIFIERS,
-    SEARCH_SUFFIXES,
-    CACHE_DIR,
-    HTTP_CACHE_TTL_SECONDS,
-    SERP_MIN_REQUEST_INTERVAL,
-    SERP_429_BREAKER_THRESHOLD,
-    SERP_429_BREAKER_COOLDOWN,
     AUTOCOMPLETE_DEEP_EXPANSION_LIMIT,
-    AUTOCOMPLETE_DEEP_RELATED_ROUNDS,
-    AUTOCOMPLETE_DEEP_MIN_DELAY,
     AUTOCOMPLETE_DEEP_MAX_DELAY,
+    AUTOCOMPLETE_DEEP_MIN_DELAY,
+    AUTOCOMPLETE_DEEP_RELATED_ROUNDS,
+    AUTOCOMPLETE_DEEP_SEED_LIMIT,
     AUTOCOMPLETE_PAA_RECURSIVE_DEPTH,
     AUTOCOMPLETE_RELATED_RECURSIVE_DEPTH,
-    AUTOCOMPLETE_DEEP_SEED_LIMIT,
+    AUTOCOMPLETE_URL,
+    CACHE_DIR,
+    COUNTRY,
+    DELAY_BETWEEN_REQUESTS,
+    GOOGLE_SEARCH_URL,
+    HTTP_CACHE_TTL_SECONDS,
+    HTTP_MAX_RETRIES,
+    HTTP_RETRY_DELAY,
+    HTTP_TIMEOUT,
+    LANG,
+    QUESTION_MODIFIERS,
     SCRAPE_PROFILE,
+    SEARCH_SUFFIXES,
+    SERP_429_BREAKER_COOLDOWN,
+    SERP_429_BREAKER_THRESHOLD,
+    SERP_DEEP_MODE,
+    SERP_MIN_REQUEST_INTERVAL,
+    SERP_NUM_RESULTS,
+    SERP_PAGES,
+    SERP_QUERY_VARIANT_LIMIT,
+    SERP_TBM_MODES,
+    USER_AGENT_PROFILES,
+    USER_AGENTS,
 )
-from scraper.utils import dedupe_key, limpiar_texto, es_relevante_riguroso
 from scraper.http_cache import get_text, make_key, set_text
+from scraper.utils import dedupe_key, es_relevante_riguroso, limpiar_texto
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ def _hacer_request(
     search_context: dict | None = None,
     session: requests.Session | None = None,
     rate_state: dict | None = None,
-) -> Optional[str]:
+) -> str | None:
     """
     Realiza una petición HTTP GET con reintentos, backoff exponencial y
     headers anti-detección completos.
@@ -202,9 +202,7 @@ def _hacer_request(
                             )
                         return None
                 if progress_callback:
-                    progress_callback(
-                        f"  Advertencia Google limito peticiones (429). Esperando {espera:.0f}s..."
-                    )
+                    progress_callback(f"  Advertencia Google limito peticiones (429). Esperando {espera:.0f}s...")
                 time.sleep(espera)
                 continue
 
@@ -252,12 +250,11 @@ def _hacer_request(
     return None
 
 
-
 def _fetch_autocomplete(
     query: str,
     search_context: dict | None = None,
     session: requests.Session | None = None,
-) -> List[str]:
+) -> list[str]:
     """Obtiene sugerencias de autocompletado de Google."""
     contexto = _resolver_contexto(search_context)
     url = AUTOCOMPLETE_URL.format(
@@ -268,8 +265,7 @@ def _fetch_autocomplete(
     headers = {
         "User-Agent": random.choice(USER_AGENTS),
         "Accept-Language": (
-            f"{contexto['language_code']}-{contexto['country_code'].upper()},"
-            f"{contexto['language_code']};q=0.9"
+            f"{contexto['language_code']}-{contexto['country_code'].upper()},{contexto['language_code']};q=0.9"
         ),
     }
     try:
@@ -296,7 +292,8 @@ def _fetch_autocomplete(
 # Extracción de PAA via HTML SERP
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _extraer_preguntas_paa_html(soup: BeautifulSoup, keyword: str) -> List[str]:
+
+def _extraer_preguntas_paa_html(soup: BeautifulSoup, keyword: str) -> list[str]:
     """
     Extrae las preguntas PAA del HTML de la SERP parseado.
     Múltiples estrategias para adaptarse a los cambios de Google.
@@ -346,6 +343,7 @@ def _extraer_preguntas_paa_html(soup: BeautifulSoup, keyword: str) -> List[str]:
             try:
                 # Buscar patrones JSON con preguntas
                 import re
+
                 matches = re.findall(r'"question"\s*:\s*"([^"]+)"', text, re.IGNORECASE)
                 for m in matches:
                     _agregar(m)
@@ -359,16 +357,17 @@ def _extraer_preguntas_paa_html(soup: BeautifulSoup, keyword: str) -> List[str]:
 # Extracción de PAA via Autocomplete (fallback potente)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _extraer_preguntas_paa_autocomplete(
     keyword: str,
     progress_callback=None,
     search_context: dict | None = None,
     session: requests.Session | None = None,
     deep_mode: bool = False,
-) -> List[str]:
+) -> list[str]:
     """
     Extrae preguntas tipo PAA usando el autocompletado de Google.
-    
+
     Técnica: buscar 'keyword + palabra_interrogativa' genera las mismas
     preguntas que aparecen en el bloque PAA de la SERP.
     """
@@ -439,90 +438,92 @@ def _extraer_preguntas_paa_autocomplete(
     if extreme_mode:
         # Patrones adicionales exclusivos del modo extremo
         # Temporales y situacionales
-        patrones_paa.extend([
-            "{keyword} 2024",
-            "{keyword} 2025",
-            "{keyword} en Colombia",
-            "{keyword} en Mexico",
-            "{keyword} en España",
-            "{keyword} en Argentina",
-            "{keyword} en Chile",
-            "{keyword} hoy",
-            "{keyword} este año",
-            "{keyword} recientemente",
-            # Comparativas y elección
-            "{keyword} diferencias",
-            "{keyword} comparacion",
-            "mejor {keyword}",
-            "el mejor {keyword}",
-            "{keyword} recomendaciones",
-            "{keyword} cual elegir",
-            # Información y verificación
-            "información sobre {keyword}",
-            "últimas noticias de {keyword}",
-            "reporte oficial de {keyword}",
-            "qué pasó con {keyword}",
-            "dónde consultar {keyword}",
-            # Intención práctica e informativa
-            "qué hacer en caso de {keyword}",
-            "cómo prepararse para {keyword}",
-            "protocolo de {keyword}",
-            "cómo saber sobre {keyword}",
-            "curso de {keyword}",
-            "como usar {keyword}",
-            "como instalar {keyword}",
-            "como configurar {keyword}",
-            "como empezar con {keyword}",
-            # Reviews y experiencias
-            "{keyword} review",
-            "{keyword} reseña",
-            "{keyword} experiencia",
-            "{keyword} testimonio",
-            "{keyword} real",
-            "{keyword} confiable",
-            # Profesional y negocios
-            "{keyword} para negocios",
-            "{keyword} para profesionales",
-            "{keyword} empresarial",
-            "{keyword} freelance",
-            # Técnico y avanzado
-            "como funciona {keyword}",
-            "{keyword} tecnico",
-            "{keyword} avanzado",
-            "{keyword} experto",
-            # Salud / seguridad (aplica según temática)
-            "{keyword} seguro",
-            "{keyword} peligros",
-            "{keyword} contraindicaciones",
-            "{keyword} efectos secundarios",
-            # Redes sociales y tendencias
-            "{keyword} tendencia",
-            "{keyword} viral",
-            "{keyword} red social",
-            # Combinaciones de intención mixta
-            "por qué es importante {keyword}",
-            "cuáles son los tipos de {keyword}",
-            "historia de {keyword}",
-            "origen de {keyword}",
-            "futuro de {keyword}",
-            "principales {keyword}",
-            "características de {keyword}",
-            "componentes de {keyword}",
-            "elementos de {keyword}",
-            "fases de {keyword}",
-            "etapas de {keyword}",
-            "pasos para {keyword}",
-            "requisitos para {keyword}",
-            "todo sobre {keyword}",
-            "guía completa de {keyword}",
-            "manual de {keyword}",
-            # Variaciones de escritura sin acento (mayor cobertura)
-            "{keyword} como funciona",
-            "{keyword} para que sirve",
-            "{keyword} que es",
-            "{keyword} cuanto cuesta",
-            "{keyword} como se hace",
-        ])
+        patrones_paa.extend(
+            [
+                "{keyword} 2024",
+                "{keyword} 2025",
+                "{keyword} en Colombia",
+                "{keyword} en Mexico",
+                "{keyword} en España",
+                "{keyword} en Argentina",
+                "{keyword} en Chile",
+                "{keyword} hoy",
+                "{keyword} este año",
+                "{keyword} recientemente",
+                # Comparativas y elección
+                "{keyword} diferencias",
+                "{keyword} comparacion",
+                "mejor {keyword}",
+                "el mejor {keyword}",
+                "{keyword} recomendaciones",
+                "{keyword} cual elegir",
+                # Información y verificación
+                "información sobre {keyword}",
+                "últimas noticias de {keyword}",
+                "reporte oficial de {keyword}",
+                "qué pasó con {keyword}",
+                "dónde consultar {keyword}",
+                # Intención práctica e informativa
+                "qué hacer en caso de {keyword}",
+                "cómo prepararse para {keyword}",
+                "protocolo de {keyword}",
+                "cómo saber sobre {keyword}",
+                "curso de {keyword}",
+                "como usar {keyword}",
+                "como instalar {keyword}",
+                "como configurar {keyword}",
+                "como empezar con {keyword}",
+                # Reviews y experiencias
+                "{keyword} review",
+                "{keyword} reseña",
+                "{keyword} experiencia",
+                "{keyword} testimonio",
+                "{keyword} real",
+                "{keyword} confiable",
+                # Profesional y negocios
+                "{keyword} para negocios",
+                "{keyword} para profesionales",
+                "{keyword} empresarial",
+                "{keyword} freelance",
+                # Técnico y avanzado
+                "como funciona {keyword}",
+                "{keyword} tecnico",
+                "{keyword} avanzado",
+                "{keyword} experto",
+                # Salud / seguridad (aplica según temática)
+                "{keyword} seguro",
+                "{keyword} peligros",
+                "{keyword} contraindicaciones",
+                "{keyword} efectos secundarios",
+                # Redes sociales y tendencias
+                "{keyword} tendencia",
+                "{keyword} viral",
+                "{keyword} red social",
+                # Combinaciones de intención mixta
+                "por qué es importante {keyword}",
+                "cuáles son los tipos de {keyword}",
+                "historia de {keyword}",
+                "origen de {keyword}",
+                "futuro de {keyword}",
+                "principales {keyword}",
+                "características de {keyword}",
+                "componentes de {keyword}",
+                "elementos de {keyword}",
+                "fases de {keyword}",
+                "etapas de {keyword}",
+                "pasos para {keyword}",
+                "requisitos para {keyword}",
+                "todo sobre {keyword}",
+                "guía completa de {keyword}",
+                "manual de {keyword}",
+                # Variaciones de escritura sin acento (mayor cobertura)
+                "{keyword} como funciona",
+                "{keyword} para que sirve",
+                "{keyword} que es",
+                "{keyword} cuanto cuesta",
+                "{keyword} como se hace",
+            ]
+        )
 
     for patron in patrones_paa:
         query = patron.format(keyword=keyword)
@@ -572,7 +573,8 @@ def _extraer_preguntas_paa_autocomplete(
 # Extracción de búsquedas relacionadas
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _extraer_busquedas_relacionadas_html(soup: BeautifulSoup, keyword: str) -> List[str]:
+
+def _extraer_busquedas_relacionadas_html(soup: BeautifulSoup, keyword: str) -> list[str]:
     """Extrae búsquedas relacionadas del HTML de la SERP."""
     relacionadas = []
     vistas = set()
@@ -587,9 +589,18 @@ def _extraer_busquedas_relacionadas_html(soup: BeautifulSoup, keyword: str) -> L
         "div.oIk2Cb a",
     ]
 
-    filtros = {"siguiente", "anterior", "next", "previous",
-               "más resultados", "more results", "iniciar sesión",
-               "sign in", "google", ""}
+    filtros = {
+        "siguiente",
+        "anterior",
+        "next",
+        "previous",
+        "más resultados",
+        "more results",
+        "iniciar sesión",
+        "sign in",
+        "google",
+        "",
+    }
     filtros_norm = {dedupe_key(item) for item in filtros if item is not None}
 
     for selector in selectores:
@@ -608,7 +619,7 @@ def _extraer_busquedas_relacionadas_html(soup: BeautifulSoup, keyword: str) -> L
     return relacionadas
 
 
-def _extraer_people_also_search_for_html(soup: BeautifulSoup, keyword: str) -> List[str]:
+def _extraer_people_also_search_for_html(soup: BeautifulSoup, keyword: str) -> list[str]:
     relacionadas = []
     vistas = set()
 
@@ -650,7 +661,7 @@ def _extraer_busquedas_relacionadas_autocomplete(
     search_context: dict | None = None,
     session: requests.Session | None = None,
     deep_mode: bool = False,
-) -> List[str]:
+) -> list[str]:
     """Extrae búsquedas relacionadas usando autocompletado."""
     relacionadas = []
     vistas = set()
@@ -658,9 +669,21 @@ def _extraer_busquedas_relacionadas_autocomplete(
 
     # Buscar variaciones con sufijos comunes y conectores naturales
     sufijos = [
-        " a", " b", " c", " d", " e",
-        " para", " en", " de", " con", " sin",
-        " hoy", " que", " como", " cuando", " donde",
+        " a",
+        " b",
+        " c",
+        " d",
+        " e",
+        " para",
+        " en",
+        " de",
+        " con",
+        " sin",
+        " hoy",
+        " que",
+        " como",
+        " cuando",
+        " donde",
     ]
 
     for suf in sufijos:
@@ -709,7 +732,8 @@ def _extraer_busquedas_relacionadas_autocomplete(
 # Función principal
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _generar_variantes_serp(keyword: str) -> List[str]:
+
+def _generar_variantes_serp(keyword: str) -> list[str]:
     if not SERP_DEEP_MODE:
         return [keyword]
 
@@ -730,7 +754,7 @@ def _generar_variantes_serp(keyword: str) -> List[str]:
     return variantes
 
 
-def scrape_google(keyword: str, progress_callback=None, search_context: dict | None = None) -> Dict[str, List[str]]:
+def scrape_google(keyword: str, progress_callback=None, search_context: dict | None = None) -> dict[str, list[str]]:
     """
     Realiza una búsqueda en Google y extrae preguntas PAA y búsquedas relacionadas.
 
@@ -794,9 +818,7 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
                 if blocked_until > time.time():
                     if progress_callback:
                         restante = blocked_until - time.time()
-                        progress_callback(
-                            f"SERP en cooldown por bloqueo 429 ({restante:.0f}s restantes)."
-                        )
+                        progress_callback(f"SERP en cooldown por bloqueo 429 ({restante:.0f}s restantes).")
                     continue
 
                 start = page_index * int(SERP_NUM_RESULTS)
@@ -844,6 +866,7 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
                 # Extraer análisis de debilidades y competidores de la primera página orgánica
                 if not resultado.get("serp_analysis"):
                     from scraper.serp_analyzer import analizar_debilidades_serp
+
                     resultado["serp_analysis"] = analizar_debilidades_serp(soup, keyword)
                     if progress_callback and resultado["serp_analysis"].get("es_oportunidad_oro"):
                         progress_callback("⭐ ¡Oportunidad de Oro detectada! (Foros o resultados débiles en Top 10)")
@@ -879,13 +902,9 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
     deep_autocomplete_mode = is_extreme or (serp_pages_ok == 0)
 
     if serp_pages_ok == 0 and progress_callback:
-        progress_callback(
-            "SERP no disponible o bloqueada. Activando autocomplete profundo (mas cobertura, mas lento)."
-        )
+        progress_callback("SERP no disponible o bloqueada. Activando autocomplete profundo (mas cobertura, mas lento).")
     elif is_extreme and progress_callback:
-        progress_callback(
-            "Modo extremo activo: forzando expansion profunda de autocomplete para maxima cobertura."
-        )
+        progress_callback("Modo extremo activo: forzando expansion profunda de autocomplete para maxima cobertura.")
 
     paa_auto = _extraer_preguntas_paa_autocomplete(
         keyword,

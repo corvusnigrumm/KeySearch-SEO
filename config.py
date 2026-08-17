@@ -6,6 +6,7 @@ El proyecto puede trabajar con:
 2. Google Trends via pytrends
 3. Google Ads API para metricas historicas reales, si esta configurada
 """
+
 import os
 import sys
 
@@ -31,7 +32,7 @@ def _read_optional_value(path: str) -> str:
     if not path or not os.path.exists(path):
         return ""
 
-    with open(path, "r", encoding="utf-8") as file_handle:
+    with open(path, encoding="utf-8") as file_handle:
         return file_handle.read().strip()
 
 
@@ -89,26 +90,55 @@ COUNTRY_CATALOG = {
 }
 
 COUNTRY_ALIASES = {
-    "colombia": "co", "co": "co",
-    "mexico": "mx", "méxico": "mx", "mx": "mx",
-    "espana": "es", "españa": "es", "es": "es", "spain": "es",
-    "argentina": "ar", "ar": "ar",
-    "chile": "cl", "cl": "cl",
-    "peru": "pe", "perú": "pe", "pe": "pe",
-    "estados unidos": "us", "usa": "us", "us": "us", "united states": "us",
-    "el salvador": "sv", "sv": "sv",
-    "guatemala": "gt", "gt": "gt",
-    "honduras": "hn", "hn": "hn",
-    "nicaragua": "ni", "ni": "ni",
-    "costa rica": "cr", "cr": "cr",
-    "panama": "pa", "panamá": "pa", "pa": "pa",
-    "republica dominicana": "do", "república dominicana": "do", "do": "do", "dominicana": "do",
-    "ecuador": "ec", "ec": "ec",
-    "bolivia": "bo", "bo": "bo",
-    "paraguay": "py", "py": "py",
-    "uruguay": "uy", "uy": "uy",
-    "venezuela": "ve", "ve": "ve",
-    "puerto rico": "pr", "pr": "pr",
+    "colombia": "co",
+    "co": "co",
+    "mexico": "mx",
+    "méxico": "mx",
+    "mx": "mx",
+    "espana": "es",
+    "españa": "es",
+    "es": "es",
+    "spain": "es",
+    "argentina": "ar",
+    "ar": "ar",
+    "chile": "cl",
+    "cl": "cl",
+    "peru": "pe",
+    "perú": "pe",
+    "pe": "pe",
+    "estados unidos": "us",
+    "usa": "us",
+    "us": "us",
+    "united states": "us",
+    "el salvador": "sv",
+    "sv": "sv",
+    "guatemala": "gt",
+    "gt": "gt",
+    "honduras": "hn",
+    "hn": "hn",
+    "nicaragua": "ni",
+    "ni": "ni",
+    "costa rica": "cr",
+    "cr": "cr",
+    "panama": "pa",
+    "panamá": "pa",
+    "pa": "pa",
+    "republica dominicana": "do",
+    "república dominicana": "do",
+    "do": "do",
+    "dominicana": "do",
+    "ecuador": "ec",
+    "ec": "ec",
+    "bolivia": "bo",
+    "bo": "bo",
+    "paraguay": "py",
+    "py": "py",
+    "uruguay": "uy",
+    "uy": "uy",
+    "venezuela": "ve",
+    "ve": "ve",
+    "puerto rico": "pr",
+    "pr": "pr",
 }
 
 # HTTP / Requests
@@ -199,10 +229,7 @@ USER_AGENT_PROFILES = [
 ]
 
 # Autocomplete
-AUTOCOMPLETE_URL = (
-    "https://suggestqueries.google.com/complete/search"
-    "?client=firefox&hl={lang}&gl={country}&q={query}"
-)
+AUTOCOMPLETE_URL = "https://suggestqueries.google.com/complete/search?client=firefox&hl={lang}&gl={country}&q={query}"
 
 QUESTION_MODIFIERS = [
     "que ",
@@ -239,21 +266,15 @@ AUTOCOMPLETE_DEEP_EXPANSION_LIMIT = int(
 AUTOCOMPLETE_DEEP_RELATED_ROUNDS = int(
     os.getenv("AUTOCOMPLETE_DEEP_RELATED_ROUNDS", "8" if IS_EXTREME_PROFILE else "4")
 )
-AUTOCOMPLETE_DEEP_MIN_DELAY = float(
-    os.getenv("AUTOCOMPLETE_DEEP_MIN_DELAY", "0.4" if IS_EXTREME_PROFILE else "0.3")
-)
-AUTOCOMPLETE_DEEP_MAX_DELAY = float(
-    os.getenv("AUTOCOMPLETE_DEEP_MAX_DELAY", "1.0" if IS_EXTREME_PROFILE else "0.95")
-)
+AUTOCOMPLETE_DEEP_MIN_DELAY = float(os.getenv("AUTOCOMPLETE_DEEP_MIN_DELAY", "0.4" if IS_EXTREME_PROFILE else "0.3"))
+AUTOCOMPLETE_DEEP_MAX_DELAY = float(os.getenv("AUTOCOMPLETE_DEEP_MAX_DELAY", "1.0" if IS_EXTREME_PROFILE else "0.95"))
 AUTOCOMPLETE_PAA_RECURSIVE_DEPTH = int(
     os.getenv("AUTOCOMPLETE_PAA_RECURSIVE_DEPTH", "5" if IS_EXTREME_PROFILE else "2")
 )
 AUTOCOMPLETE_RELATED_RECURSIVE_DEPTH = int(
     os.getenv("AUTOCOMPLETE_RELATED_RECURSIVE_DEPTH", "5" if IS_EXTREME_PROFILE else "2")
 )
-AUTOCOMPLETE_DEEP_SEED_LIMIT = int(
-    os.getenv("AUTOCOMPLETE_DEEP_SEED_LIMIT", "400" if IS_EXTREME_PROFILE else "80")
-)
+AUTOCOMPLETE_DEEP_SEED_LIMIT = int(os.getenv("AUTOCOMPLETE_DEEP_SEED_LIMIT", "400" if IS_EXTREME_PROFILE else "80"))
 
 # Google Search URL
 # IMPORTANTE: Mantener SERP_NUM_RESULTS bajo y SERP_PAGES en 1.
@@ -291,6 +312,7 @@ GOOGLE_ADS_CUSTOMER_ID = (
     or _read_optional_value(GOOGLE_ADS_CUSTOMER_ID_FILE).replace("-", "").strip()
 )
 
+
 def get_dynamic_google_ads_customer_id() -> str:
     """Obtiene el Customer ID de Google Ads recargándolo en caliente."""
     val = os.getenv("GOOGLE_ADS_CUSTOMER_ID", "").replace("-", "").strip()
@@ -298,13 +320,14 @@ def get_dynamic_google_ads_customer_id() -> str:
         val = _read_optional_value(GOOGLE_ADS_CUSTOMER_ID_FILE).replace("-", "").strip()
     return val
 
+
 def parse_yaml_simple(path: str) -> dict:
     """Parsea archivos yaml simples de clave-valor sin dependencias."""
     res = {}
     if not path or not os.path.exists(path):
         return res
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"):
@@ -318,6 +341,7 @@ def parse_yaml_simple(path: str) -> dict:
         pass
     return res
 
+
 GOOGLE_ADS_LANGUAGE_CODE = LANG
 GOOGLE_ADS_GEO_TARGETS = COUNTRY_CATALOG.get(COUNTRY.lower(), {}).get("google_ads_geo_targets", [])
 
@@ -330,17 +354,17 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 
 # Jerarquía de modelos: primario → secundario → terciario
-AI_MODEL_PRIMARY   = "openai/gpt-oss-120b"       # Nivel 1 — GPT-OSS 120B vía Groq (o gpt-4o-mini si hay OPENAI_API_KEY)
-AI_MODEL_SECONDARY = "qwen-qwq-32b"               # Nivel 2 — Qwen QwQ 32B vía Groq
-AI_MODEL_TERTIARY  = "llama-3.3-70b-versatile"    # Nivel 3 — Llama 3.3 70B vía Groq (fallback final)
+AI_MODEL_PRIMARY = "openai/gpt-oss-120b"  # Nivel 1 — GPT-OSS 120B vía Groq (o gpt-4o-mini si hay OPENAI_API_KEY)
+AI_MODEL_SECONDARY = "qwen-qwq-32b"  # Nivel 2 — Qwen QwQ 32B vía Groq
+AI_MODEL_TERTIARY = "llama-3.3-70b-versatile"  # Nivel 3 — Llama 3.3 70B vía Groq (fallback final)
 
 # Compatibilidad hacia atrás: GROQ_MODEL sigue apuntando al modelo primario
 GROQ_MODEL = os.getenv("GROQ_MODEL", AI_MODEL_PRIMARY).strip() or AI_MODEL_PRIMARY
 
 GROQ_AVAILABLE_MODELS = [
-    {"id": AI_MODEL_PRIMARY,   "name": "GPT-OSS 120B — Nivel 1 (Primario)",  "badge": "ChatGPT / Alta Potencia"},
+    {"id": AI_MODEL_PRIMARY, "name": "GPT-OSS 120B — Nivel 1 (Primario)", "badge": "ChatGPT / Alta Potencia"},
     {"id": AI_MODEL_SECONDARY, "name": "Qwen QwQ 32B — Nivel 2 (Secundario)", "badge": "Qwen / Alibaba"},
-    {"id": AI_MODEL_TERTIARY,  "name": "Llama 3.3 70B — Nivel 3 (Terciario)", "badge": "Meta / Ultra Rápido"},
+    {"id": AI_MODEL_TERTIARY, "name": "Llama 3.3 70B — Nivel 3 (Terciario)", "badge": "Meta / Ultra Rápido"},
 ]
 
 

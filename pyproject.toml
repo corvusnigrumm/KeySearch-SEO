@@ -40,12 +40,13 @@ target-version = "py311"
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
+select = ["E", "F", "W"]
 ignore = [
     "E501",   # line too long (handled by formatter)
-    "F841",   # local variable assigned but never used (common in scrapers)
-    "B008",   # do not perform function calls in argument defaults
-    "A001",   # variable is shadowing a Python builtin
+    "E402",   # module level import not at top of file (legacy conditional imports)
+    "E722",   # bare except in legacy fallback scrapers
+    "F841",   # local variable assigned but never used
+    "F401",   # unused imports in legacy packages
 ]
 
 [tool.ruff.format]

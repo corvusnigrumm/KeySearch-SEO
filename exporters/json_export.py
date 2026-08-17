@@ -4,16 +4,16 @@ Exportador de resultados a JSON.
 El JSON expone solo datos trazables y separa claramente la prioridad interna
 de las metricas reales de Google.
 """
+
 import json
 import os
 from datetime import datetime
-from typing import Dict, List
 
 from config import OUTPUT_DIR
 from scraper.utils import generar_nombre_archivo
 
 
-def exportar_json(keyword: str, datos: Dict[str, List[str]]) -> str:
+def exportar_json(keyword: str, datos: dict[str, list[str]]) -> str:
     """Exporta los resultados a un archivo JSON estructurado."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -21,7 +21,7 @@ def exportar_json(keyword: str, datos: Dict[str, List[str]]) -> str:
     google_ads = datos.get("google_ads", {}) or {}
     google_ads_activo = google_ads.get("enabled") and google_ads.get("keywords_enriched", 0) > 0
 
-    def _con_metricas(items: List[str]) -> List[dict]:
+    def _con_metricas(items: list[str]) -> list[dict]:
         resultado = []
         for item in items:
             vol = volumenes.get(item, {})
@@ -57,7 +57,8 @@ def exportar_json(keyword: str, datos: Dict[str, List[str]]) -> str:
                     "google_trends_rising": vol.get("google_trends_rising"),
                     "google_trends_timeframe": vol.get("google_trends_timeframe"),
                     "google_trends_geo": vol.get("google_trends_geo"),
-                    "volumen_mensual_exacto": vol.get("wikipedia_visitas_mensuales") or vol.get("google_ads_avg_monthly_searches"),
+                    "volumen_mensual_exacto": vol.get("wikipedia_visitas_mensuales")
+                    or vol.get("google_ads_avg_monthly_searches"),
                 }
             )
 
@@ -71,11 +72,7 @@ def exportar_json(keyword: str, datos: Dict[str, List[str]]) -> str:
         "pais_codigo": datos.get("country_code"),
         "categoria": datos.get("category_name"),
         "subcategoria": datos.get("subcategory_name"),
-        "modo_reporte": (
-            "google_ads_trends_observable_signals"
-            if google_ads_activo
-            else "trends_observable_signals"
-        ),
+        "modo_reporte": ("google_ads_trends_observable_signals" if google_ads_activo else "trends_observable_signals"),
         "metodologia": {
             "usa_datos_reales_de_google": True,
             "incluye_volumen_mensual_exacto": False,

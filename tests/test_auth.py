@@ -1,18 +1,19 @@
 """
 Tests para core/auth.py: hashing de passwords y JWT tokens.
 """
-import sys
+
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.auth import (
-    get_password_hash,
-    verify_password,
+    ALGORITHM,
+    SECRET_KEY,
     create_access_token,
     decode_access_token,
-    SECRET_KEY,
-    ALGORITHM,
+    get_password_hash,
+    verify_password,
 )
 
 
