@@ -355,16 +355,16 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 
 # Jerarquía de modelos: primario → secundario → terciario
 AI_MODEL_PRIMARY = "openai/gpt-oss-120b"  # Nivel 1 — GPT-OSS 120B vía Groq (o gpt-4o-mini si hay OPENAI_API_KEY)
-AI_MODEL_SECONDARY = "qwen-qwq-32b"  # Nivel 2 — Qwen QwQ 32B vía Groq
-AI_MODEL_TERTIARY = "llama-3.3-70b-versatile"  # Nivel 3 — Llama 3.3 70B vía Groq (fallback final)
+AI_MODEL_SECONDARY = "qwen/qwen3.6-27b"   # Nivel 2 — Qwen 3.6 27B vía Groq
+AI_MODEL_TERTIARY = "openai/gpt-oss-20b"  # Nivel 3 — GPT-OSS 20B vía Groq (fallback final)
 
 # Compatibilidad hacia atrás: GROQ_MODEL sigue apuntando al modelo primario
 GROQ_MODEL = os.getenv("GROQ_MODEL", AI_MODEL_PRIMARY).strip() or AI_MODEL_PRIMARY
 
 GROQ_AVAILABLE_MODELS = [
     {"id": AI_MODEL_PRIMARY, "name": "GPT-OSS 120B — Nivel 1 (Primario)", "badge": "ChatGPT / Alta Potencia"},
-    {"id": AI_MODEL_SECONDARY, "name": "Qwen QwQ 32B — Nivel 2 (Secundario)", "badge": "Qwen / Alibaba"},
-    {"id": AI_MODEL_TERTIARY, "name": "Llama 3.3 70B — Nivel 3 (Terciario)", "badge": "Meta / Ultra Rápido"},
+    {"id": AI_MODEL_SECONDARY, "name": "Qwen 3.6 27B — Nivel 2 (Secundario)", "badge": "Qwen / Alibaba"},
+    {"id": AI_MODEL_TERTIARY, "name": "GPT-OSS 20B — Nivel 3 (Terciario)", "badge": "OpenAI / Ultra Rápido"},
 ]
 
 
