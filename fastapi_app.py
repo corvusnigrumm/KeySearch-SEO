@@ -180,6 +180,11 @@ def _cached_country_names() -> dict:
     return {c: c for c in ["Colombia", "Mexico", "España", "Argentina", "Chile", "Peru", "USA"]}
 
 
+# ── Registro global de logs de pipeline (por session_id, en memoria) ─────────
+# Permite que /api/logs acceda a los logs escritos por el hilo de fondo
+_PIPELINE_LOGS: dict[str, list[dict]] = {}
+
+
 @app.get("/logo-dorado.png")
 async def serve_logo_dorado():
     logo_root = os.path.join(BASE_DIR, "LOGO DORADO.png")
@@ -688,6 +693,9 @@ async def get_status(request: Request, user: User = Depends(get_current_user_or_
 
 @app.get("/api/logs")
 async def get_logs(request: Request, user: User = Depends(get_current_user_or_redirect)):
+    session_id = getattr(request.state, "session_id", None)
+    if session_id and session_id in _PIPELINE_LOGS:
+        return {"logs": _PIPELINE_LOGS[session_id]}
     user_state = get_session(request)
     return {"logs": user_state.logs}
 
@@ -736,7 +744,10 @@ async def run_pipeline(
         "INFO", f"Pipeline iniciado por {user.username}: {len(kw_list)} keywords | País: {country} | Perfil: {profile}"
     )
 
-    background_tasks.add_task(_run_pipeline_task, user_state, kw_list, country, profile)
+    session_id = request.state.session_id
+    # Sembrar logs iniciales en el registro global
+    _PIPELINE_LOGS[session_id] = list(user_state.logs)
+    background_tasks.add_task(_run_pipeline_task, session_id, user_state.logs, kw_list, country, profile)
     return JSONResponse({"status": "success", "message": "Pipeline iniciado."})
 
 
@@ -1380,67 +1391,217 @@ async def google_ads_oauth_callback(request: Request, code: str = "", state: str
     return RedirectResponse("/api-status?oauth=success")
 
 
-# ── Tarea asíncrona del pipeline ──────────────────────────────────────────────
-async def _run_pipeline_task(user_state: SessionState, keywords: list[str], country_code: str, profile: str):
+# ── Helpers para persistencia de progreso en pipeline ──────────────────────────
+def _db_update_pipeline(
+    session_id: str,
+    *,
+    is_running: bool | None = None,
+    progress: int | None = None,
+    status_msg: str | None = None,
+    error_msg: str | None = None,
+    last_run_data: list | None = None,
+    finished_at=None,
+) -> None:
+    """Abre su propia conexion DB, actualiza la sesion y la cierra. Seguro desde hilos."""
+    db = SessionLocal()
     try:
-        user_state.add_log("INFO", "Cargando modulos del motor de scraping...")
+        ps = db.query(PipelineSession).filter(PipelineSession.session_id == session_id).first()
+        if not ps:
+            return
+        if is_running is not None:
+            ps.is_running = is_running
+        if progress is not None:
+            ps.progress = progress
+        if status_msg is not None:
+            ps.status_msg = status_msg[:500]
+        if error_msg is not None:
+            ps.error_msg = error_msg
+        if last_run_data is not None:
+            ps.last_run_data_json = json.dumps(last_run_data, ensure_ascii=False)
+        if finished_at is not None:
+            ps.finished_at = datetime.datetime.now()
+        db.commit()
+    except Exception as e:
+        logger.error("Error en _db_update_pipeline: %s", e)
+        db.rollback()
+    finally:
+        db.close()
+
+
+# ── Tarea asíncrona del pipeline ──────────────────────────────────────────────
+async def _run_pipeline_task(
+    session_id: str,
+    initial_logs: list,
+    keywords: list[str],
+    country_code: str,
+    profile: str,
+):
+    """Corre el pipeline en un executor con su propia sesion DB."""
+    # Crear un SessionState standalone que persiste directamente via session_id
+    standalone_state = _StandaloneSessionState(session_id, initial_logs)
+    try:
+        standalone_state.add_log("INFO", "Cargando modulos del motor de scraping...")
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, _blocking_pipeline, user_state, keywords, country_code, profile)
-        user_state.last_run_data = result
-        user_state.status_msg = f"Completado. {len(result)} keyword(s) procesadas."
-        user_state.progress = 100
-        user_state.finished_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        user_state.add_log("SUCCESS", f"Pipeline completado exitosamente. {len(result)} resultados.")
+        result = await loop.run_in_executor(
+            None, _blocking_pipeline, standalone_state, keywords, country_code, profile
+        )
+        standalone_state.flush(
+            is_running=False,
+            progress=100,
+            status_msg=f"Completado. {len(result)} keyword(s) procesadas.",
+            last_run_data=result,
+            finished_at=True,
+        )
+        standalone_state.add_log("SUCCESS", f"Pipeline completado exitosamente. {len(result)} resultados.")
 
-        # Commit estado de sesion a DB
+        # Guardar historial
+        db = SessionLocal()
         try:
-            if user_state._db:
-                db_gen = get_db()
-                db = next(db_gen)
-                db.merge(user_state._db)
-                db.commit()
-                db_gen.close()
-        except Exception as se:
-            logger.error("Error guardando estado de sesion: %s", se)
-
-        # Guardar historial de busqueda
-        if user_state.user_id:
-            try:
-                db_gen = get_db()
-                db = next(db_gen)
+            ps = db.query(PipelineSession).filter(PipelineSession.session_id == session_id).first()
+            user_id = ps.user_id if ps else None
+            if user_id:
                 for res in result:
                     if res.get("category") != "Error":
-                        history_entry = SearchHistory(
-                            user_id=user_state.user_id,
+                        db.add(SearchHistory(
+                            user_id=user_id,
                             keyword=res["keyword"],
                             country=country_code,
                             profile=profile,
                             json_data=json.dumps(res, ensure_ascii=False),
-                        )
-                        db.add(history_entry)
+                        ))
                 db.commit()
-                db_gen.close()
-                user_state.add_log("INFO", "Resultados guardados en tu Historial.")
-            except Exception as dbe:
-                logger.error("Error guardando historial en BD: %s", dbe)
-                user_state.add_log("WARNING", "Error guardando en historial de BD.")
+                standalone_state.add_log("INFO", "Resultados guardados en tu Historial.")
+        except Exception as dbe:
+            logger.error("Error guardando historial en BD: %s", dbe)
+            standalone_state.add_log("WARNING", "Error guardando en historial de BD.")
+        finally:
+            db.close()
 
     except Exception as exc:
         logger.exception("Error en pipeline")
-        user_state.error_msg = "Error en el pipeline."
-        user_state.status_msg = "Error: hubo un problema procesando las keywords."
-        user_state.add_log("ERROR", "Pipeline fallo. Revisa los logs del servidor.")
-    finally:
-        user_state.is_running = False
-        # Commit final del estado
+        standalone_state.flush(
+            is_running=False,
+            status_msg="Error: hubo un problema procesando las keywords.",
+            error_msg="Error en el pipeline.",
+        )
+        standalone_state.add_log("ERROR", "Pipeline fallo. Revisa los logs del servidor.")
+
+
+class _StandaloneSessionState:
+    """Estado de pipeline que persiste cambios via session_id con sesiones DB propias."""
+
+    def __init__(self, session_id: str, initial_logs: list):
+        self._session_id = session_id
+        self.logs: list[dict] = list(initial_logs)
+        # Cache local de valores mutable sin depender del ORM
+        self._progress = 0
+        self._status_msg = "Iniciando..."
+        self._is_running = True
+        self._last_run_data = None
+        self._error_msg = None
+        self._user_id = None
+        # Leer user_id inicial
         try:
-            if user_state._db:
-                db = SessionLocal()
-                db.merge(user_state._db)
-                db.commit()
-                db.close()
+            db = SessionLocal()
+            ps = db.query(PipelineSession).filter(PipelineSession.session_id == session_id).first()
+            if ps:
+                self._user_id = ps.user_id
+            db.close()
         except Exception:
             pass
+
+    # ── Propiedades de compatibilidad con _blocking_pipeline ────────────────
+    @property
+    def user_id(self):
+        return self._user_id
+
+    @property
+    def keywords(self):
+        return []
+
+    @property
+    def is_running(self) -> bool:
+        return self._is_running
+
+    @is_running.setter
+    def is_running(self, value: bool):
+        self._is_running = value
+        self.flush(is_running=value)
+
+    @property
+    def progress(self) -> int:
+        return self._progress
+
+    @progress.setter
+    def progress(self, value: int):
+        self._progress = value
+        self.flush(progress=value)
+
+    @property
+    def status_msg(self) -> str:
+        return self._status_msg
+
+    @status_msg.setter
+    def status_msg(self, value: str):
+        self._status_msg = value
+        self.flush(status_msg=value)
+
+    @property
+    def error_msg(self):
+        return self._error_msg
+
+    @error_msg.setter
+    def error_msg(self, value):
+        self._error_msg = value
+        self.flush(error_msg=value)
+
+    @property
+    def last_run_data(self):
+        return self._last_run_data
+
+    @last_run_data.setter
+    def last_run_data(self, value):
+        self._last_run_data = value
+
+    @property
+    def country(self):
+        return "co"
+
+    @property
+    def profile(self):
+        return "normal"
+
+    @property
+    def started_at(self):
+        return None
+
+    @started_at.setter
+    def started_at(self, value):
+        pass
+
+    @property
+    def finished_at(self):
+        return None
+
+    @finished_at.setter
+    def finished_at(self, value):
+        pass
+
+    def add_log(self, level: str, message: str):
+        entry = {
+            "time": datetime.datetime.now().strftime("%H:%M:%S"),
+            "level": level,
+            "msg": message,
+        }
+        self.logs.append(entry)
+        if len(self.logs) > 200:
+            self.logs = self.logs[-200:]
+        # Sincronizar con registro global para que /api/logs lo vea
+        _PIPELINE_LOGS[self._session_id] = self.logs
+
+    def flush(self, **kwargs):
+        """Escribe el estado actual a DB con una conexion propia."""
+        _db_update_pipeline(self._session_id, **kwargs)
 
 
 def _blocking_pipeline(user_state: SessionState, keywords: list[str], country_code: str, profile: str) -> list[dict]:
