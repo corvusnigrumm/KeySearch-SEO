@@ -55,19 +55,26 @@
 </main>
 {% if state.is_running %}
 <script>
-setInterval(async () => {
-  const r = await fetch('/api/logs');
-  const d = await r.json();
-  const container = document.getElementById('logContainer');
-  if (!container) return;
-  const lines = d.logs.slice().reverse();
-  container.innerHTML = lines.map(e => `
-    <div class="flex items-start gap-md text-[13px]">
-      <span class="text-inverse-on-surface opacity-40 shrink-0 font-label-sm">${e.time}</span>
-      <span class="shrink-0 w-16 ${e.level==='ERROR'?'text-red-400':e.level==='WARNING'?'text-yellow-400':e.level==='SUCCESS'?'text-emerald-400':'text-secondary-container'} font-bold font-label-sm">${e.level}</span>
-      <span class="text-inverse-on-surface opacity-80">${e.msg}</span>
-    </div>`).join('');
-  document.getElementById('logCount').innerText = d.logs.length + ' entradas';
+let logsPoll = setInterval(async () => {
+  try {
+    const r = await fetch('/api/logs');
+    if (!r.ok) return;
+    const d = await r.json();
+    const container = document.getElementById('logContainer');
+    if (!container || !d || !Array.isArray(d.logs)) return;
+    const lines = d.logs.slice().reverse();
+    container.innerHTML = lines.map(e => `
+      <div class="flex items-start gap-md text-[13px]">
+        <span class="text-inverse-on-surface opacity-40 shrink-0 font-label-sm">${e.time || ''}</span>
+        <span class="shrink-0 w-16 ${e.level==='ERROR'?'text-red-400':e.level==='WARNING'?'text-yellow-400':e.level==='SUCCESS'?'text-emerald-400':'text-secondary-container'} font-bold font-label-sm">${e.level || 'INFO'}</span>
+        <span class="text-inverse-on-surface opacity-80">${e.msg || ''}</span>
+      </div>`).join('');
+    if (document.getElementById('logCount')) {
+      document.getElementById('logCount').innerText = d.logs.length + ' entradas';
+    }
+  } catch (err) {
+    console.warn("Logs polling warning:", err);
+  }
 }, 2000);
 </script>
 {% endif %}

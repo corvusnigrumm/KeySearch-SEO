@@ -49,11 +49,27 @@ class RateLimiter:
         return self.is_allowed(ip)
 
 
-rate_limiter = RateLimiter(max_requests=30, window_seconds=60)
+import os
+
+RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("RATE_LIMIT_MAX_REQUESTS", "300"))
+AI_RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("AI_RATE_LIMIT_MAX_REQUESTS", "60"))
+
+rate_limiter = RateLimiter(max_requests=RATE_LIMIT_MAX_REQUESTS, window_seconds=60)
 
 
 # ── Rate Limiters Especiales (para endpoints de IA) ──────────────────────────
-ai_rate_limiter = RateLimiter(max_requests=5, window_seconds=60)
+ai_rate_limiter = RateLimiter(max_requests=AI_RATE_LIMIT_MAX_REQUESTS, window_seconds=60)
+
+EXEMPT_PREFIXES = ("/static", "/favicon.ico")
+EXEMPT_EXACT_PATHS = {"/ping", "/health", "/metrics", "/status", "/api/logs", "/api/history", "/logo-dorado.png"}
+AI_ENDPOINTS = (
+    "/api/generate-schema",
+    "/api/generate-ads",
+    "/api/set-groq-model",
+    "/api/editorial/generate",
+    "/api/editorial/generate-all",
+    "/api/editorial/write-note",
+)
 
 
 # ── Security Headers Middleware ──────────────────────────────────────────────
@@ -95,7 +111,8 @@ def rate_limit_middleware(app):
         client_ip = request.client.host if request.client else "unknown"
         path = request.url.path
 
-        if path.startswith("/static") or path in ("/ping", "/metrics"):
+        # Rutas exentas de rate limiting (assets estaticos, polling de estado/logs y healthchecks)
+        if any(path.startswith(prefix) for prefix in EXEMPT_PREFIXES) or path in EXEMPT_EXACT_PATHS:
             return await call_next(request)
 
         allowed, retry_after = rate_limiter.is_allowed(client_ip)
@@ -106,7 +123,8 @@ def rate_limit_middleware(app):
                 headers={"Retry-After": str(retry_after)},
             )
 
-        if path.startswith("/api/"):
+        # Rate limit especializado unicamente para generacion pesada de IA
+        if any(path.startswith(ai_path) for ai_path in AI_ENDPOINTS):
             allowed_ai, retry_after_ai = ai_rate_limiter.is_allowed(client_ip)
             if not allowed_ai:
                 return JSONResponse(

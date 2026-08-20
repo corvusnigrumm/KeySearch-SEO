@@ -87,6 +87,21 @@ class PipelineSession(Base):
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    try:
+        from sqlalchemy import text
+
+        with engine.connect() as conn:
+            if DATABASE_URL.startswith("sqlite"):
+                res = conn.execute(text("PRAGMA table_info(users)")).fetchall()
+                col_names = [r[1] for r in res]
+                if "token_version" not in col_names:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 0 NOT NULL"))
+                    conn.commit()
+            else:
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0 NOT NULL"))
+                conn.commit()
+    except Exception as exc:
+        logger.debug("Database migration note: %s", exc)
 
 
 def get_db() -> Generator[Session, None, None]:

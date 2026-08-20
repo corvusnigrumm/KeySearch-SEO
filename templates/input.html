@@ -299,16 +299,16 @@ document.getElementById('pipelineForm').addEventListener('submit', async (e) => 
     const resp = await fetch('/run', { method: 'POST', body: formData });
     const data = await resp.json();
 
-    if (data.status === 'success') {
+    if (resp.ok && data.status === 'success') {
       document.getElementById('modal').style.display = 'flex';
     } else {
-      document.getElementById('errorMsg').innerText = data.message || 'Error desconocido.';
+      document.getElementById('errorMsg').innerText = data.error || data.message || 'No se pudo iniciar el pipeline. Intenta de nuevo.';
       document.getElementById('errorModal').style.display = 'flex';
       btn.disabled = false;
       btn.innerHTML = '<span class="material-symbols-outlined">play_arrow</span> INICIAR PIPELINE';
     }
   } catch(err) {
-    document.getElementById('errorMsg').innerText = 'Error de conexión: ' + err.message;
+    document.getElementById('errorMsg').innerText = 'Error de conexión: ' + (err.message || 'Error inesperado.');
     document.getElementById('errorModal').style.display = 'flex';
     btn.disabled = false;
     btn.innerHTML = '<span class="material-symbols-outlined">play_arrow</span> INICIAR PIPELINE';

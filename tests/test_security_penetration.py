@@ -248,21 +248,19 @@ class TestRateLimiting:
 
         rate_limiter._hits.clear()
         c = TestClient(app)
-        # /status requires auth but /ping is exempted. Use a non-exempted path.
-        # We'll test by pre-filling the rate limiter
-        for _ in range(31):
+        for _ in range(rate_limiter._max):
             rate_limiter.is_allowed("testclient")
         resp = c.get("/ping")
         # Rate limiter exempts /ping, so test with a direct rate limiter check
         allowed, _ = rate_limiter.is_allowed("testclient")
-        assert not allowed, "Rate limiter should block after 30 requests"
+        assert not allowed, f"Rate limiter should block after {rate_limiter._max} requests"
 
     def test_ai_rate_limit_enforced(self, client):
         from core.security import ai_rate_limiter
 
         ai_rate_limiter._hits.clear()
-        for _ in range(5):
-            client.post("/api/set-groq-model", json={"model": "test"})
+        for _ in range(ai_rate_limiter._max):
+            ai_rate_limiter.is_allowed("testclient")
         resp = client.post("/api/set-groq-model", json={"model": "test2"})
         assert resp.status_code == 429
 

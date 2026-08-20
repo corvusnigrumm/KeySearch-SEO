@@ -430,15 +430,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 {% if state.is_running %}
 <script>
-setInterval(async () => {
-  const r = await fetch('/status');
-  const d = await r.json();
-  document.getElementById('mainStatus').innerText = d.status_msg;
-  if (document.getElementById('progressBar')) {
-    document.getElementById('progressBar').style.width = d.progress + '%';
-    document.getElementById('progressPct').innerText = d.progress + '% Completado';
+let dashboardPoll = setInterval(async () => {
+  try {
+    const r = await fetch('/status');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && typeof d === 'object') {
+      if (d.status_msg && document.getElementById('mainStatus')) {
+        document.getElementById('mainStatus').innerText = d.status_msg;
+      }
+      if (document.getElementById('progressBar') && d.progress !== undefined) {
+        document.getElementById('progressBar').style.width = d.progress + '%';
+      }
+      if (document.getElementById('progressPct') && d.progress !== undefined) {
+        document.getElementById('progressPct').innerText = d.progress + '% Completado';
+      }
+      if (d.is_running === false) {
+        clearInterval(dashboardPoll);
+        location.reload();
+      }
+    }
+  } catch (err) {
+    console.warn("Status polling warning:", err);
   }
-  if (!d.is_running) location.reload();
 }, 2000);
 </script>
 {% endif %}
