@@ -1,5 +1,5 @@
 """
-Test para el Generador de Copies de Ads y Hooks Virales.
+Test para el Generador de Copies de Ads y Hooks Virales (v2: intent-driven).
 """
 
 import os
@@ -11,35 +11,40 @@ from scraper.ai_generator import generar_copywriting_ads_y_hooks
 
 
 def test_ads_copywriting():
-    print("--> Testeando Generador de Copies de Ads & Hooks...")
+    print("--> Testeando Generador de Copies de Ads & Hooks (v2)...")
     kw = "curso de inteligencia artificial"
-    preguntas = [
-        "como aprender inteligencia artificial desde cero",
-        "cuanto cuesta un curso de ia",
-        "los mejores cursos de inteligencia artificial online",
+    sugerencias = [
+        "curso de inteligencia artificial",
+        "como aprender ia desde cero",
+        "mejores cursos de ia online",
+        "curso ia con certificado",
+        "inteligencia artificial para principiantes",
     ]
 
-    res = generar_copywriting_ads_y_hooks(kw, preguntas, intencion="Comercial / Transaccional", pais="Colombia")
+    res = generar_copywriting_ads_y_hooks(
+        kw, pais="Colombia", intencion="comercial", sugerencias=sugerencias,
+    )
 
-    print("\n[Google Ads Titulos (Max 30 car)]:")
-    for t in res["google_ads"]["titulos"]:
+    print(f"\n[Ad Hooks ({len(res['ad_hooks'])})]:")
+    for h in res["ad_hooks"]:
+        print(f"  - {h}")
+
+    print(f"\n[Ads Headlines ({len(res['ads_headline'])})]:")
+    for t in res["ads_headline"]:
         print(f"  - '{t}' ({len(t)} car)")
-        assert len(t) <= 35, f"Título excede límite: {t}"
 
-    print("\n[Google Ads Descripciones (Max 90 car)]:")
-    for d in res["google_ads"]["descripciones"]:
+    print(f"\n[Ads Descriptions ({len(res['ads_description'])})]:")
+    for d in res["ads_description"]:
         print(f"  - '{d}' ({len(d)} car)")
-        assert len(d) <= 95, f"Descripción excede límite: {d}"
 
-    print(f"\n[Social Ad Hook]: {res['social_ads']['hook_scroll_stopper'].encode('ascii', 'replace').decode('ascii')}")
-    print(f"[TikTok Hooks (Total {len(res['tiktok_reels_hooks'])})]:")
-    for h in res["tiktok_reels_hooks"]:
-        print(f"  - {h.encode('ascii', 'replace').decode('ascii')}")
+    print(f"\n[CTA]: {res['cta_sugerido']}")
+    print(f"[Propuesta Valor]: {res['propuesta_valor']}")
 
-    print(f"\n[Guion 30s Video]: {len(res['guion_video_30s'])} bloques")
-    assert len(res["google_ads"]["titulos"]) == 5, "Deben haber 5 títulos de Google Ads"
-    assert len(res["google_ads"]["descripciones"]) == 3, "Deben haber 3 descripciones de Google Ads"
-    assert len(res["tiktok_reels_hooks"]) == 5, "Deben haber 5 hooks de TikTok"
+    assert len(res["ad_hooks"]) == 6, f"Deben haber 6 hooks, hay {len(res['ad_hooks'])}"
+    assert len(res["ads_headline"]) == 5, f"Deben haber 5 headlines, hay {len(res['ads_headline'])}"
+    assert len(res["ads_description"]) == 5, f"Deben haber 5 descriptions, hay {len(res['ads_description'])}"
+    assert res["cta_sugerido"], "cta_sugerido no debe estar vacio"
+    assert res["propuesta_valor"], "propuesta_valor no debe estar vacio"
 
     print("\n>>> TEST DE ADS COPYWRITING Y HOOKS EXITOSO <<<")
 

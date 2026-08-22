@@ -12,6 +12,7 @@ import json
 import logging
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
@@ -244,33 +245,57 @@ def get_autocomplete_suggestions(
         _agregar(_fetch_suggestions(keyword, search_context, session=session))
 
     if expandir:
-        # 2. Expansión por modificadores de preguntas y comparativas multi-motor
+        # 2. Expansión por modificadores de preguntas y comparativas multi-motor (paralelo)
         modificadores_clave = QUESTION_MODIFIERS + [" vs ", " precio ", " opiniones ", " comprar ", " mejor "]
-        for mod in modificadores_clave[: 12 if _perfil_extremo(search_context) else 6]:
+        mods_to_use = modificadores_clave[: 12 if _perfil_extremo(search_context) else 6]
+
+        def _fetch_modifier(mod):
             q_mod = f"{mod}{keyword}" if not mod.startswith(" ") else f"{keyword}{mod}"
+            results = []
             try:
                 m_res = fetch_multi_engine_suggestions(
                     q_mod, lang=ctx["language_code"], country=ctx["country_code"], engines=engines
                 )
                 if m_res:
-                    _agregar(list(m_res.keys()))
+                    results.extend(list(m_res.keys()))
             except Exception:
                 pass
-            _agregar(_fetch_suggestions(q_mod, search_context, session=session))
+            results.extend(_fetch_suggestions(q_mod, search_context, session=session))
+            return results
 
-        # 3. Expansión Alfabética (a-z) multi-motor
+        with ThreadPoolExecutor(max_workers=min(4, len(mods_to_use))) as executor:
+            futures = {executor.submit(_fetch_modifier, mod): mod for mod in mods_to_use}
+            for future in as_completed(futures):
+                try:
+                    _agregar(future.result())
+                except Exception:
+                    pass
+
+        # 3. Expansión Alfabética (a-z) multi-motor (paralelo)
         limite_alfabeto = len(ALPHABET_EXPANSION) if _perfil_extremo(search_context) else AUTOCOMPLETE_ALPHABET_LIMIT
-        for letra in ALPHABET_EXPANSION[:limite_alfabeto]:
+        letters_to_use = ALPHABET_EXPANSION[:limite_alfabeto]
+
+        def _fetch_letter(letra):
             q_letra = f"{keyword} {letra}"
+            results = []
             try:
                 m_res = fetch_multi_engine_suggestions(
                     q_letra, lang=ctx["language_code"], country=ctx["country_code"], engines=engines
                 )
                 if m_res:
-                    _agregar(list(m_res.keys()))
+                    results.extend(list(m_res.keys()))
             except Exception:
                 pass
-            _agregar(_fetch_suggestions(q_letra, search_context, session=session))
+            results.extend(_fetch_suggestions(q_letra, search_context, session=session))
+            return results
+
+        with ThreadPoolExecutor(max_workers=min(6, len(letters_to_use))) as executor:
+            futures = {executor.submit(_fetch_letter, letra): letra for letra in letters_to_use}
+            for future in as_completed(futures):
+                try:
+                    _agregar(future.result())
+                except Exception:
+                    pass
 
     # 4. Modo Extremo Ultra-Profundo: rondas recursivas multi-motor sobre las mejores semillas
     if _perfil_extremo(search_context) and todas:

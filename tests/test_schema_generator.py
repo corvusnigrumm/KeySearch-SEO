@@ -1,5 +1,5 @@
 """
-Test para el Generador de Schema JSON-LD y Meta Tags de Alto CTR.
+Test para el Generador de Schema JSON-LD y Meta Tags de Alto CTR (v2: multi-type schemas).
 """
 
 import os
@@ -11,26 +11,35 @@ from scraper.ai_generator import generar_schema_y_meta_tags
 
 
 def test_schema_generation():
-    print("--> Testeando Generador de Schema JSON-LD & Meta Tags...")
+    print("--> Testeando Generador de Schema JSON-LD & Meta Tags (v2)...")
     kw = "curso de marketing digital"
-    preguntas = [
-        "que se aprende en un curso de marketing digital",
-        "cuanto dura un curso de marketing digital",
-        "cuanto cuesta un curso de marketing digital",
-        "vale la pena estudiar marketing digital",
+    top_kws = [
+        "curso de marketing digital",
+        "como aprender marketing digital",
+        "mejor curso de marketing digital",
+        "curso marketing digital online",
+        "cuanto cuesta curso marketing digital",
     ]
 
-    res = generar_schema_y_meta_tags(kw, preguntas, pais="Colombia")
+    res = generar_schema_y_meta_tags(kw, pais="Colombia", top_keywords=top_kws, intencion="comercial")
     print(f"\n[Meta Title]: {res['meta_title']} ({len(res['meta_title'])} caracteres)")
     print(f"[Meta Desc]: {res['meta_description']} ({len(res['meta_description'])} caracteres)")
-    print(f"[Slug]: {res['slug_sugerido']}")
-    print(f"[Títulos Alternativos]: {res['meta_titles_alternativos']}")
-    print(f"[FAQs en Schema]: {len(res['faq_items'])}")
-    print(f"\n[Schema String Sample]:\n{res['schema_faq_string'][:200]}...")
+    print(f"[Slug]: {res['slug']}")
+    print(f"[Schema All String length]: {len(res['schema_all_string'])}")
 
+    assert res["meta_title"], "meta_title no debe estar vacio"
+    assert res["meta_description"], "meta_description no debe estar vacio"
+    assert res["slug"], "slug no debe estar vacio"
     assert len(res["meta_title"]) <= 65, "Meta Title demasiado largo"
     assert len(res["meta_description"]) <= 165, "Meta Description demasiado larga"
-    assert "FAQPage" in res["schema_faq_string"], "El Schema no contiene FAQPage"
+
+    has_any_schema = (
+        res.get("schema_faq_json") is not None
+        or res.get("schema_article_json") is not None
+        or res.get("schema_breadcrumb_json") is not None
+    )
+    print(f"[Has any schema]: {has_any_schema}")
+    assert has_any_schema, "Debe generar al menos un schema (Article o FAQPage)"
     print("\n>>> TEST DE SCHEMA Y META TAGS EXITOSO <<<")
 
 

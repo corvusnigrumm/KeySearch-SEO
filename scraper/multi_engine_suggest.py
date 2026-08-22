@@ -13,6 +13,7 @@ import json
 import logging
 import random
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
@@ -211,33 +212,54 @@ def fetch_multi_engine_suggestions(
         "DuckDuckGo": (fetch_duckduckgo_suggestions, "Búsqueda Web"),
     }
 
-    for engine_name, (fetcher_func, intent_tag) in engine_fetchers.items():
-        if engine_name.lower() not in [e.lower() for e in engines]:
-            continue
-
+    def _fetch_engine(engine_name, fetcher_func, intent_tag):
         try:
             sugs = fetcher_func(keyword, lang=lang, country=country, session=session)
+            engine_results = {}
             for pos, sug in enumerate(sugs, start=1):
                 if not es_relevante_riguroso(keyword, sug):
                     continue
-
-                if sug not in results:
-                    results[sug] = {
+                if sug not in engine_results:
+                    engine_results[sug] = {
                         "engines": [engine_name],
                         "engine_count": 1,
                         "intents": [intent_tag],
                         "primary_engine": engine_name,
                         "best_pos": pos,
                     }
-                else:
-                    if engine_name not in results[sug]["engines"]:
-                        results[sug]["engines"].append(engine_name)
-                        results[sug]["engine_count"] += 1
-                    if intent_tag not in results[sug]["intents"]:
-                        results[sug]["intents"].append(intent_tag)
-                    if pos < results[sug]["best_pos"]:
-                        results[sug]["best_pos"] = pos
+            return engine_results
         except Exception as err:
             logger.debug("Error procesando motor %s: %s", engine_name, err)
+            return {}
+
+    active_engines = [
+        (name, func, intent)
+        for name, (func, intent) in engine_fetchers.items()
+        if name.lower() in [e.lower() for e in engines]
+    ]
+
+    with ThreadPoolExecutor(max_workers=min(5, len(active_engines))) as executor:
+        futures = {
+            executor.submit(_fetch_engine, name, func, intent): name
+            for name, func, intent in active_engines
+        }
+        for future in as_completed(futures):
+            try:
+                engine_results = future.result()
+                for sug, meta in engine_results.items():
+                    if sug not in results:
+                        results[sug] = meta
+                    else:
+                        for eng in meta["engines"]:
+                            if eng not in results[sug]["engines"]:
+                                results[sug]["engines"].append(eng)
+                                results[sug]["engine_count"] += 1
+                        for intent in meta["intents"]:
+                            if intent not in results[sug]["intents"]:
+                                results[sug]["intents"].append(intent)
+                        if meta["best_pos"] < results[sug]["best_pos"]:
+                            results[sug]["best_pos"] = meta["best_pos"]
+            except Exception:
+                pass
 
     return results

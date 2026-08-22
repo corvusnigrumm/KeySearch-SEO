@@ -17,6 +17,7 @@ import logging
 import random
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from bs4 import BeautifulSoup
@@ -754,6 +755,42 @@ def _generar_variantes_serp(keyword: str) -> list[str]:
     return variantes
 
 
+def _fetch_single_serp_page(
+    url: str,
+    keyword: str,
+    search_context: dict | None,
+    session: requests.Session,
+    rate_state: dict,
+    progress_callback=None,
+) -> dict | None:
+    """Fetch a single SERP page and extract PAA + related + serp_analysis."""
+    now = time.time()
+    elapsed = now - float(rate_state.get("last_request_ts", 0.0))
+    min_interval = random.uniform(*SERP_MIN_REQUEST_INTERVAL)
+    if elapsed < min_interval:
+        time.sleep(min_interval - elapsed)
+
+    blocked_until = float(rate_state.get("blocked_until", 0.0))
+    if blocked_until > time.time():
+        return None
+
+    html = _hacer_request(url, progress_callback, search_context, session=session, rate_state=rate_state)
+    rate_state["last_request_ts"] = time.time()
+    if not html:
+        return None
+
+    soup = BeautifulSoup(html, "lxml")
+    page_paa = _extraer_preguntas_paa_html(soup, keyword)
+    page_rel = _extraer_busquedas_relacionadas_html(soup, keyword)
+    page_rel.extend(_extraer_people_also_search_for_html(soup, keyword))
+
+    serp_analysis = None
+    from scraper.serp_analyzer import analizar_debilidades_serp
+    serp_analysis = analizar_debilidades_serp(soup, keyword)
+
+    return {"paa": page_paa, "rel": page_rel, "serp_analysis": serp_analysis}
+
+
 def scrape_google(keyword: str, progress_callback=None, search_context: dict | None = None) -> dict[str, list[str]]:
     """
     Realiza una búsqueda en Google y extrae preguntas PAA y búsquedas relacionadas.
@@ -795,32 +832,13 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
 
     variantes = _generar_variantes_serp(keyword)
     modos_tbm = SERP_TBM_MODES or [""]
-
     total_pages = max(1, int(SERP_PAGES))
+
+    # Build all URLs to fetch (variant × tbm × page)
+    fetch_tasks = []
     for q_index, query in enumerate(variantes):
-        # Pausa entre variantes de query (simula que el usuario piensa antes de buscar otra cosa)
-        if q_index > 0:
-            time.sleep(random.uniform(5.0, 10.0))
-
         for tbm_index, tbm in enumerate(modos_tbm):
-            # Pausa entre modos TBM
-            if tbm_index > 0:
-                time.sleep(random.uniform(3.0, 7.0))
-
             for page_index in range(total_pages):
-                now = time.time()
-                elapsed = now - float(rate_state.get("last_request_ts", 0.0))
-                min_interval = random.uniform(*SERP_MIN_REQUEST_INTERVAL)
-                if elapsed < min_interval:
-                    time.sleep(min_interval - elapsed)
-
-                blocked_until = float(rate_state.get("blocked_until", 0.0))
-                if blocked_until > time.time():
-                    if progress_callback:
-                        restante = blocked_until - time.time()
-                        progress_callback(f"SERP en cooldown por bloqueo 429 ({restante:.0f}s restantes).")
-                    continue
-
                 start = page_index * int(SERP_NUM_RESULTS)
                 url = GOOGLE_SEARCH_URL.format(
                     query=requests.utils.quote(query),
@@ -831,61 +849,70 @@ def scrape_google(keyword: str, progress_callback=None, search_context: dict | N
                 )
                 if tbm:
                     url = f"{url}&tbm={requests.utils.quote(tbm)}"
+                fetch_tasks.append((url, q_index, tbm_index, page_index, query, tbm))
 
-                if progress_callback:
-                    etiqueta_tbm = f" | tbm={tbm}" if tbm else ""
-                    etiqueta_var = f" | variante {q_index + 1}/{len(variantes)}" if len(variantes) > 1 else ""
-                    progress_callback(
-                        f"Consultando SERP pagina {page_index + 1}/{total_pages}{etiqueta_var}{etiqueta_tbm}..."
-                    )
+    # Parallel fetch pages (up to 3 concurrent to avoid rate limiting)
+    max_workers = min(3, len(fetch_tasks))
+    serp_pages_ok = 0
+    first_serp_analysis = None
 
-                request_key = make_key(url)
-                if request_key in seen_request_keys:
-                    continue
-                seen_request_keys.add(request_key)
+    def _do_fetch(task):
+        url, q_idx, tbm_idx, pg_idx, q, tbm = task
+        etiqueta_tbm = f" | tbm={tbm}" if tbm else ""
+        etiqueta_var = f" | variante {q_idx + 1}/{len(variantes)}" if len(variantes) > 1 else ""
+        if progress_callback:
+            progress_callback(f"Consultando SERP pagina {pg_idx + 1}/{total_pages}{etiqueta_var}{etiqueta_tbm}...")
+        result = _fetch_single_serp_page(url, keyword, search_context, session, rate_state, progress_callback)
+        return result
 
-                html = _hacer_request(
-                    url,
-                    progress_callback,
-                    search_context,
-                    session=session,
-                    rate_state=rate_state,
-                )
-                rate_state["last_request_ts"] = time.time()
-                if not html:
-                    continue
+    if max_workers > 1 and len(fetch_tasks) > 1:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_do_fetch, task): task for task in fetch_tasks}
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    if result:
+                        serp_pages_ok += 1
+                        if first_serp_analysis is None and result.get("serp_analysis"):
+                            first_serp_analysis = result["serp_analysis"]
+                        for item in result["paa"]:
+                            key = dedupe_key(item)
+                            if key and key not in vistas_paa_html:
+                                vistas_paa_html.add(key)
+                                paa_html.append(item)
+                        for item in result["rel"]:
+                            key = dedupe_key(item)
+                            if key and key not in vistas_rel_html:
+                                vistas_rel_html.add(key)
+                                rel_html.append(item)
+                except Exception:
+                    pass
+    else:
+        for url, q_idx, tbm_idx, pg_idx, query, tbm in fetch_tasks:
+            etiqueta_tbm = f" | tbm={tbm}" if tbm else ""
+            etiqueta_var = f" | variante {q_idx + 1}/{len(variantes)}" if len(variantes) > 1 else ""
+            if progress_callback:
+                progress_callback(f"Consultando SERP pagina {pg_idx + 1}/{total_pages}{etiqueta_var}{etiqueta_tbm}...")
+            result = _fetch_single_serp_page(url, keyword, search_context, session, rate_state, progress_callback)
+            if result:
                 serp_pages_ok += 1
-
-                if progress_callback:
-                    progress_callback("Parseando HTML de la SERP y analizando competidores...")
-                soup = BeautifulSoup(html, "lxml")
-                page_paa = _extraer_preguntas_paa_html(soup, keyword)
-                page_rel = _extraer_busquedas_relacionadas_html(soup, keyword)
-                page_rel.extend(_extraer_people_also_search_for_html(soup, keyword))
-
-                # Extraer análisis de debilidades y competidores de la primera página orgánica
-                if not resultado.get("serp_analysis"):
-                    from scraper.serp_analyzer import analizar_debilidades_serp
-
-                    resultado["serp_analysis"] = analizar_debilidades_serp(soup, keyword)
-                    if progress_callback and resultado["serp_analysis"].get("es_oportunidad_oro"):
-                        progress_callback("⭐ ¡Oportunidad de Oro detectada! (Foros o resultados débiles en Top 10)")
-
-                for item in page_paa:
+                if first_serp_analysis is None and result.get("serp_analysis"):
+                    first_serp_analysis = result["serp_analysis"]
+                for item in result["paa"]:
                     key = dedupe_key(item)
                     if key and key not in vistas_paa_html:
                         vistas_paa_html.add(key)
                         paa_html.append(item)
-
-                for item in page_rel:
+                for item in result["rel"]:
                     key = dedupe_key(item)
                     if key and key not in vistas_rel_html:
                         vistas_rel_html.add(key)
                         rel_html.append(item)
 
-                # Pausa siempre entre páginas (no solo en modo profundo)
-                if page_index < total_pages - 1:
-                    time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
+    if first_serp_analysis:
+        resultado["serp_analysis"] = first_serp_analysis
+        if progress_callback and first_serp_analysis.get("es_oportunidad_oro"):
+            progress_callback("⭐ ¡Oportunidad de Oro detectada! (Foros o resultados débiles en Top 10)")
 
     if paa_html and progress_callback:
         progress_callback(f"[OK] {len(paa_html)} preguntas PAA extraidas del HTML (multi-pagina)")

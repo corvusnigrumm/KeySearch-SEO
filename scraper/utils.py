@@ -69,27 +69,42 @@ def es_relevante_riguroso(keyword_base: str, sugerencia: str) -> bool:
     if kb in sug or sug in kb:
         return True
 
-    palabras_kb = [p for p in kb.split() if len(p) > 2]
+    palabras_kb = [p for p in kb.split() if len(p) > 1]
     if not palabras_kb:
-        # Si la keyword eran sólo conectores cortos, aceptamos si la sugerencia empieza o contiene la keyword
         return kb in sug
+
+    def _stem(word: str) -> str:
+        """Genera stem simple removiendo terminaciones comunes en español."""
+        if len(word) <= 3:
+            return word
+        # Remover terminaciones plurales y comunes
+        for suffix in ("aciones", "mientos", "miento", "amiento", "imiento", "iones",
+                        "nes", "res", "les", "ces", "ges", "xes", "zes", "ches",
+                        "ment", "ent", "ant", "ista", "ismo", "able", "ible",
+                        "oso", "osa", "oso", "esa", "ado", "ada", "ido", "ida",
+                        "ar", "er", "ir", "arse", "erse", "irse",
+                        "ando", "iendo", "yendo",
+                        "s", "a", "o", "e", "i"):
+            if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+                return word[:-len(suffix)]
+        return word
+
+    stems_kb = [_stem(p) for p in palabras_kb]
 
     # Para keywords de 1 a 2 palabras
     if len(palabras_kb) <= 2:
-        # Al menos una palabra principal debe estar presente o ser raíz
-        for p in palabras_kb:
-            stem = p[:-1] if (len(p) > 3 and p.endswith(("s", "a", "o", "e"))) else p
-            if stem in sug:
+        for i, p in enumerate(palabras_kb):
+            stem = stems_kb[i]
+            if stem in sug or p in sug:
                 return True
         return False
 
-    # Para keywords de 3 o más palabras (ej. "tarjetas de credito bancolombia")
-    # Exigimos que al menos el 50% de las palabras clave principales coincidan
+    # Para keywords de 3 o más palabras
     coincidencias = 0
-    for p in palabras_kb:
-        stem = p[:-1] if (len(p) > 3 and p.endswith(("s", "a", "o", "e"))) else p
-        if stem in sug:
+    for i, p in enumerate(palabras_kb):
+        stem = stems_kb[i]
+        if stem in sug or p in sug:
             coincidencias += 1
 
-    umbral_minimo = max(1, int(len(palabras_kb) * 0.45))
+    umbral_minimo = max(1, int(len(palabras_kb) * 0.30))
     return coincidencias >= umbral_minimo

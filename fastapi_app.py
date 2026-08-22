@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import secrets
+import time
 import urllib.parse
 import uuid
 from contextlib import asynccontextmanager
@@ -788,7 +789,7 @@ async def api_generate_schema(body: SchemaRequest, user: User = Depends(get_curr
 
         from scraper.ai_generator import generar_schema_y_meta_tags
 
-        schema_data = generar_schema_y_meta_tags(kw, questions, pais=country)
+        schema_data = generar_schema_y_meta_tags(kw, pais=country, top_keywords=questions)
         return JSONResponse(schema_data)
     except Exception as e:
         logger.error("Error generando schema: %s", e)
@@ -808,7 +809,7 @@ async def api_generate_ads_copy(body: AdsCopyRequest, user: User = Depends(get_c
 
         from scraper.ai_generator import generar_copywriting_ads_y_hooks as generar_ads_copy
 
-        ads_data = generar_ads_copy(kw, preguntas=questions, intencion=intent, pais=country)
+        ads_data = generar_ads_copy(kw, pais=country, intencion=intent, sugerencias=questions)
         return JSONResponse(ads_data)
     except Exception as e:
         logger.error("Error generando ads copy: %s", e)
@@ -1490,6 +1491,8 @@ async def _run_pipeline_task(
 class _StandaloneSessionState:
     """Estado de pipeline que persiste cambios via session_id con sesiones DB propias."""
 
+    _FLUSH_INTERVAL = 3.0  # Seconds between DB writes to reduce lock contention
+
     def __init__(self, session_id: str, initial_logs: list):
         self._session_id = session_id
         self.logs: list[dict] = list(initial_logs)
@@ -1500,6 +1503,8 @@ class _StandaloneSessionState:
         self._last_run_data = None
         self._error_msg = None
         self._user_id = None
+        self._last_flush_ts = 0.0
+        self._pending_flush = {}
         # Leer user_id inicial
         try:
             db = SessionLocal()
@@ -1600,8 +1605,21 @@ class _StandaloneSessionState:
         _PIPELINE_LOGS[self._session_id] = self.logs
 
     def flush(self, **kwargs):
-        """Escribe el estado actual a DB con una conexion propia."""
-        _db_update_pipeline(self._session_id, **kwargs)
+        """Escribe el estado actual a DB con throttling para reducir contention."""
+        now = time.time()
+        self._pending_flush.update(kwargs)
+        # Forzar flush si: intervalo alcanzado, is_running cambió, o hay error/last_run_data
+        force = (
+            (now - self._last_flush_ts) >= self._FLUSH_INTERVAL
+            or kwargs.get("is_running") is not None
+            or kwargs.get("error_msg") is not None
+            or kwargs.get("last_run_data") is not None
+        )
+        if not force:
+            return
+        _db_update_pipeline(self._session_id, **self._pending_flush)
+        self._pending_flush.clear()
+        self._last_flush_ts = now
 
 
 def _blocking_pipeline(user_state: SessionState, keywords: list[str], country_code: str, profile: str) -> list[dict]:
@@ -1619,19 +1637,19 @@ def _blocking_pipeline(user_state: SessionState, keywords: list[str], country_co
 
     for idx, kw in enumerate(keywords, start=1):
         try:
-            base_prog = int(((idx - 1) / total) * 90)
-            step_size = int(90 / total)
+            base_prog = round(((idx - 1) / total) * 90)
+            step_size = max(1, round(90 / total))
 
             user_state.add_log("INFO", f"[{idx}/{total}] Procesando: {kw}")
 
             user_state.status_msg = f"[{idx}/{total}] 🔍 Multi-Motor (Google/YT/Amazon/Bing): {kw}"
-            user_state.progress = max(1, base_prog + int(step_size * 0.15))
+            user_state.progress = max(1, base_prog + round(step_size * 0.15))
             es_extremo = profile.lower() == "extreme"
             sug = get_autocomplete_suggestions(kw, expandir=es_extremo, search_context=ctx)
             user_state.add_log("INFO", f"  → {len(sug)} sugerencias multi-motor obtenidas")
 
             user_state.status_msg = f"[{idx}/{total}] ❓ Preguntas & PAA: {kw}"
-            user_state.progress = base_prog + int(step_size * 0.35)
+            user_state.progress = base_prog + round(step_size * 0.35)
             preg_ac = get_question_suggestions(kw, search_context=ctx)
             serp = scrape_google(kw, search_context=ctx)
             paa = serp.get("preguntas_paa", [])
@@ -1661,7 +1679,7 @@ def _blocking_pipeline(user_state: SessionState, keywords: list[str], country_co
                 user_state.add_log("INFO", f"  → {len(ai_clusters)} clusters semánticos generados con IA")
 
             user_state.status_msg = f"[{idx}/{total}] 📊 Métricas Cuantitativas & Trends: {kw}"
-            user_state.progress = base_prog + int(step_size * 0.75)
+            user_state.progress = base_prog + round(step_size * 0.75)
             cat, sub = auto_categorizar(kw)
             vol = estimar_volumenes(
                 keyword_principal=kw,
@@ -1707,8 +1725,17 @@ def _blocking_pipeline(user_state: SessionState, keywords: list[str], country_co
 
             c_name = ctx.get("country_name", "Colombia")
             all_questions = paa + preg_ac
-            seo_schema = generar_schema_y_meta_tags(kw, all_questions, pais=c_name)
-            ads_copy = generar_copywriting_ads_y_hooks(kw, all_questions, intencion=cat, pais=c_name)
+            top_keywords_for_schema = sug[:10] + all_questions[:10] + rel[:5]
+            serp_analysis_data = serp.get("serp_analysis", {})
+            seo_schema = generar_schema_y_meta_tags(
+                kw, pais=c_name, top_keywords=top_keywords_for_schema,
+                intencion=cat, serp_analysis=serp_analysis_data,
+            )
+            trending_kws = [k for k, v in sorted(vol.items(), key=lambda x: x[1].get("score", 0), reverse=True) if k != kw][:10]
+            ads_copy = generar_copywriting_ads_y_hooks(
+                kw, pais=c_name, intencion=cat, sugerencias=sug,
+                serp_analysis=serp_analysis_data, trending_keywords=trending_kws,
+            )
 
             # Generación automática del módulo editorial en el Pipeline
             user_state.status_msg = f"[{idx}/{total}] ✍️ Estudio Editorial & Tags Google Trends: {kw}"

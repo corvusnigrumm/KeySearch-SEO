@@ -483,7 +483,7 @@
       currentSchemaData = schemaData;
       const title = schemaData.meta_title || `${keyword} - Guía Completa`;
       const desc = schemaData.meta_description || `Aprende todo sobre ${keyword}.`;
-      const slug = schemaData.slug_sugerido || keyword.toLowerCase().replace(/\\s+/g, '-');
+      const slug = schemaData.slug || keyword.toLowerCase().replace(/\\s+/g, '-');
 
       document.getElementById("serpTitlePreview").textContent = title;
       document.getElementById("serpDescPreview").textContent = desc;
@@ -502,16 +502,20 @@
 
       const faqAccordion = document.getElementById("serpFaqAccordion");
       faqAccordion.innerHTML = "";
-      if (schemaData.faq_items && schemaData.faq_items.length > 0) {
-        schemaData.faq_items.slice(0, 4).forEach((faq) => {
+      const faqEntity = schemaData.schema_faq_json && schemaData.schema_faq_json.mainEntity;
+      if (faqEntity && faqEntity.length > 0) {
+        faqEntity.slice(0, 4).forEach((faq) => {
+          const pregunta = faq.name || "";
+          const respuesta = (faq.acceptedAnswer && faq.acceptedAnswer.text) || "";
+          if (!pregunta || !respuesta) return;
           const details = document.createElement("details");
           details.className = "group text-xs text-slate-800 cursor-pointer border-b border-slate-100 pb-1";
           details.innerHTML = `
         <summary class="flex items-center justify-between font-medium text-[#1a0dab] hover:underline py-1 list-none">
-          <span>${faq.pregunta}</span>
+          <span>${pregunta}</span>
           <span class="material-symbols-outlined text-xs group-open:rotate-180 transition-transform">expand_more</span>
         </summary>
-        <p class="text-slate-600 mt-1 pl-2 text-xs border-l-2 border-slate-300">${faq.respuesta}</p>
+        <p class="text-slate-600 mt-1 pl-2 text-xs border-l-2 border-slate-300">${respuesta}</p>
       `;
           faqAccordion.appendChild(details);
         });
@@ -519,37 +523,35 @@
 
       const altContainer = document.getElementById("altTitlesContainer");
       altContainer.innerHTML = "";
-      if (schemaData.meta_titles_alternativos && schemaData.meta_titles_alternativos.length > 0) {
-        schemaData.meta_titles_alternativos.forEach((altTitle) => {
-          const div = document.createElement("div");
-          div.className = "flex items-center justify-between bg-surface-container/60 hover:bg-surface-container p-xs rounded-lg text-body-xs transition-colors";
-          div.innerHTML = `
-        <span class="text-on-surface truncate pr-2">${altTitle}</span>
-        <button onclick="usarTituloAlternativo('${altTitle.replace(/'/g, "\\'")}')" class="text-primary hover:underline font-bold text-label-xs shrink-0">Usar Este</button>
+      if (schemaData.meta_title) {
+        const div = document.createElement("div");
+        div.className = "flex items-center justify-between bg-surface-container/60 hover:bg-surface-container p-xs rounded-lg text-body-xs transition-colors";
+        div.innerHTML = `
+        <span class="text-on-surface truncate pr-2">${schemaData.meta_title}</span>
+        <button onclick="usarTituloAlternativo('${schemaData.meta_title.replace(/'/g, "\\'")}')" class="text-primary hover:underline font-bold text-label-xs shrink-0">Usar Este</button>
       `;
-          altContainer.appendChild(div);
-        });
+        altContainer.appendChild(div);
       }
 
-      document.getElementById("schemaCodeBox").textContent = schemaData.schema_faq_string || "// No generado";
+      document.getElementById("schemaCodeBox").textContent = schemaData.schema_all_string || schemaData.schema_faq_string || "// No generado";
       const metaHtml = `<title>${title}</title>\n<meta name="description" content="${desc}" />\n<link rel="canonical" href="https://tusitio.com/${slug}" />\n<meta property="og:title" content="${title}" />\n<meta property="og:description" content="${desc}" />\n<meta property="og:type" content="article" />`;
       document.getElementById("metaTagsHtmlBox").textContent = metaHtml;
     }
 
     function renderizarAdsData(adsData, keyword) {
       currentAdsData = adsData;
-      const gAds = adsData.google_ads || {};
-      const titulos = gAds.titulos || [];
-      const descripciones = gAds.descripciones || [];
+      const headlines = adsData.ads_headline || [];
+      const descriptions = adsData.ads_description || [];
+      const hooks = adsData.ad_hooks || [];
 
-      // Google Ads Preview
-      document.getElementById("gadsPreviewTitle").textContent = titulos.slice(0, 3).join(" | ") || `${keyword.toUpperCase()} - Oficial`;
-      document.getElementById("gadsPreviewDesc").textContent = descripciones[0] || `Encuentra las mejores opciones sobre ${keyword}.`;
+      // Ads Preview
+      document.getElementById("gadsPreviewTitle").textContent = headlines.slice(0, 3).join(" | ") || `${keyword.toUpperCase()} - Oficial`;
+      document.getElementById("gadsPreviewDesc").textContent = descriptions[0] || `Encuentra las mejores opciones sobre ${keyword}.`;
 
       // Headlines List
       const hList = document.getElementById("gadsHeadlinesList");
       hList.innerHTML = "";
-      titulos.forEach((t, i) => {
+      headlines.forEach((t, i) => {
         const len = t.length;
         const badgeCls = len <= 30 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800";
         const div = document.createElement("div");
@@ -564,7 +566,7 @@
       // Descriptions List
       const dList = document.getElementById("gadsDescriptionsList");
       dList.innerHTML = "";
-      descripciones.forEach((d, i) => {
+      descriptions.forEach((d, i) => {
         const len = d.length;
         const badgeCls = len <= 90 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800";
         const div = document.createElement("div");
@@ -576,33 +578,34 @@
         dList.appendChild(div);
       });
 
-      // Social Ads
-      const sAds = adsData.social_ads || {};
-      document.getElementById("socialHook").textContent = sAds.hook_scroll_stopper || `¿Buscando ${keyword}?`;
-      document.getElementById("socialBody").textContent = sAds.copy_pas || `Conoce todos los detalles sobre ${keyword}.`;
-      document.getElementById("socialCtaBtn").textContent = sAds.cta_boton || "Más Información";
+      // Social Ads (ad_hooks as social copy, cta_sugerido as CTA)
+      const primaryHook = hooks[0] || `¿Buscando ${keyword}?`;
+      const bodyCopy = descriptions[0] || `Conoce todos los detalles sobre ${keyword}.`;
+      const ctaBtn = adsData.cta_sugerido || "Más Información";
+      document.getElementById("socialHook").textContent = primaryHook;
+      document.getElementById("socialBody").textContent = bodyCopy;
+      document.getElementById("socialCtaBtn").textContent = ctaBtn;
 
-      // TikTok Hooks List
+      // TikTok Hooks List (ad_hooks)
       const tList = document.getElementById("tiktokHooksList");
       tList.innerHTML = "";
-      (adsData.tiktok_reels_hooks || []).forEach((hook, idx) => {
+      hooks.forEach((hook, idx) => {
         const div = document.createElement("div");
         div.className = "flex items-center justify-between p-xs bg-pink-50 border border-pink-100 rounded text-body-xs";
         div.innerHTML = `
-      <span class="text-pink-900 font-medium truncate mr-2">🔥 ${idx + 1}. ${hook}</span>
+      <span class="text-pink-900 font-medium truncate mr-2">${idx + 1}. ${hook}</span>
       <button onclick="navigator.clipboard.writeText('${hook.replace(/'/g, "\\'")}'); alert('Gancho copiado!');" class="text-pink-700 hover:underline font-bold text-[11px] shrink-0">Copiar</button>
     `;
         tList.appendChild(div);
       });
 
-      // Guion Video 30s
-      const vScript = adsData.guion_video_30s || {};
+      // Video Script (simplified: propuesta_valor + CTA)
       const vBox = document.getElementById("videoScriptBox");
       vBox.innerHTML = `
-    <div><span class="text-pink-400 font-bold">[0-3s Gancho]:</span> ${vScript.segundos_0_3_gancho || ''}</div>
-    <div><span class="text-amber-400 font-bold">[4-15s Problema]:</span> ${vScript.segundos_4_15_problema || ''}</div>
-    <div><span class="text-emerald-400 font-bold">[16-25s Solución]:</span> ${vScript.segundos_16_25_solucion || ''}</div>
-    <div><span class="text-blue-400 font-bold">[26-30s CTA]:</span> ${vScript.segundos_26_30_cta || ''}</div>
+    <div><span class="text-pink-400 font-bold">[Gancho]:</span> ${primaryHook}</div>
+    <div><span class="text-amber-400 font-bold">[Problema]:</span> ¿${keyword}? Muchos cometen errores al respecto.</div>
+    <div><span class="text-emerald-400 font-bold">[Solución]:</span> ${adsData.propuesta_valor || keyword}. Aplica esta estrategia probada.</div>
+    <div><span class="text-blue-400 font-bold">[CTA]:</span> ${ctaBtn}</div>
   `;
     }
 
@@ -650,8 +653,10 @@
     }
 
     function copiarSchemaCode() {
-      if (!currentSchemaData || !currentSchemaData.schema_faq_string) return;
-      navigator.clipboard.writeText(currentSchemaData.schema_faq_string);
+      if (!currentSchemaData) return;
+      const code = currentSchemaData.schema_all_string || currentSchemaData.schema_faq_string || "";
+      if (!code) return;
+      navigator.clipboard.writeText(code);
       const btnText = document.getElementById("btnCopySchemaText");
       btnText.textContent = "¡Copiado!";
       setTimeout(() => { btnText.textContent = "Copiar JSON-LD"; }, 2500);
@@ -668,9 +673,10 @@
     }
 
     function copiarGoogleAdsCopy() {
-      if (!currentAdsData || !currentAdsData.google_ads) return;
-      const g = currentAdsData.google_ads;
-      const text = `TÍTULOS GOOGLE ADS:\n${(g.titulos || []).join('\n')}\n\nDESCRIPCIONES:\n${(g.descripciones || []).join('\n')}`;
+      if (!currentAdsData) return;
+      const h = currentAdsData.ads_headline || [];
+      const d = currentAdsData.ads_description || [];
+      const text = `HEADLINES GOOGLE ADS:\n${h.join('\n')}\n\nDESCRIPCIONES:\n${d.join('\n')}`;
       navigator.clipboard.writeText(text);
       const btn = document.getElementById("btnCopyGAdsText");
       btn.textContent = "¡Copiado!";
@@ -678,17 +684,20 @@
     }
 
     function copiarSocialAdCopy() {
-      if (!currentAdsData || !currentAdsData.social_ads) return;
-      const s = currentAdsData.social_ads;
-      const text = `${s.hook_scroll_stopper || ''}\n\n${s.copy_pas || ''}\n\nCTA: ${s.cta_boton || 'Más Información'}`;
+      if (!currentAdsData) return;
+      const hook = (currentAdsData.ad_hooks || [])[0] || "";
+      const desc = (currentAdsData.ads_description || [])[0] || "";
+      const cta = currentAdsData.cta_sugerido || "Más Información";
+      const text = `${hook}\n\n${desc}\n\nCTA: ${cta}`;
       navigator.clipboard.writeText(text);
       alert("Copy de Facebook/Instagram copiado al portapapeles.");
     }
 
     function copiarVideoScript() {
-      if (!currentAdsData || !currentAdsData.guion_video_30s) return;
-      const v = currentAdsData.guion_video_30s;
-      const text = `GUION TIKTOK / REELS (30s):\n\n[0-3s Gancho]: ${v.segundos_0_3_gancho || ''}\n[4-15s Problema]: ${v.segundos_4_15_problema || ''}\n[16-25s Solución]: ${v.segundos_16_25_solucion || ''}\n[26-30s CTA]: ${v.segundos_26_30_cta || ''}`;
+      if (!currentAdsData) return;
+      const hook = (currentAdsData.ad_hooks || [])[0] || "";
+      const cta = currentAdsData.cta_sugerido || "";
+      const text = `GUION TIKTOK / REELS (30s):\n\n[Gancho]: ${hook}\n[Problema]: ¿Problema con el tema?\n[Solución]: ${currentAdsData.propuesta_valor || ''}\n[CTA]: ${cta}`;
       navigator.clipboard.writeText(text);
       alert("Guion de video copiado al portapapeles.");
     }
